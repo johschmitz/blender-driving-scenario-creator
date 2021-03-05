@@ -14,7 +14,7 @@
 import bpy
 
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
-from mathutils import Matrix
+from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_plane
 
 
@@ -24,15 +24,11 @@ class DSC_OT_road_straight(bpy.types.Operator):
     bl_description = 'Create a straight road'
     bl_options = {'REGISTER', 'UNDO'}
 
-    # For operator state machine 
-    # possible states: {'INIT','SELECTE_BEGINNING', 'SELECT_END'}
-    state = 'INIT'
-
     @classmethod
     def poll(cls, context):
         return True
 
-    def create_object(self, context, event):
+    def create_object_xodr(self, context, point_start, point_end):
         """
             Create a straight road object
         """
@@ -46,21 +42,33 @@ class DSC_OT_road_straight(bpy.types.Operator):
         collection.objects.link(obj)
 
         vertices = [(0.0, 0.0, 0.0),
-                    (0.0, 6.0, 0.0),
-                    (4.0, 6.0, 0.0),
+                    (0.0, 1.0, 0.0),
+                    (4.0, 1.0, 0.0),
                     (4.0, 0.0, 0.0),
                     (-4.0, 0.0, 0.0),
-                    (-4.0, 6.0, 0.0)
+                    (-4.0, 1.0, 0.0)
                     ]
-        edges = [[0,1]]
+        edges = [[0, 1],[1, 2],[2, 3],[3, 4],
+                    [0, 4,],[4, 5],[5, 1]]
         faces = [[0, 1, 2, 3],[0, 4, 5, 1]]
         mesh.from_pydata(vertices, edges, faces)
+
+        # Transform helper object to follow the mouse pointer
+        v1 = point_end - point_start
+        v2 = obj.data.vertices[1].co - obj.data.vertices[0].co
+        if v2.length > 0:
+            mat_rotation = v2.rotation_difference(v1).to_matrix().to_4x4()
+            mat_scale = Matrix.Scale(v1.length/v2.length, 4, v2)
+            mat_translation = Matrix.Translation(point_start)
+            # Apply transformation
+            obj.data.transform(mat_translation @ mat_rotation @ mat_scale)
+            obj.data.update()
 
         # OpenDRIVE custom properties
         obj['xodr'] = {'atribute_test':'999888777'}
         return obj
 
-    def create_draw_helper_object(self, context, point_start):
+    def create_draw_helper(self, context, point_start):
         """
             Create a helper object with fake user
             or find older one in bpy data and relink to scene
@@ -68,25 +76,25 @@ class DSC_OT_road_straight(bpy.types.Operator):
         """
         helper = bpy.data.objects.get('dsc_draw_helper_object')
         if helper is not None:
-            if context.scene.objects.get('dsc_draw_helper_line') is None:
+            if context.scene.objects.get('dsc_draw_helper_object') is None:
                 context.scene.collection.objects.link(helper)
         else:
             # Create object from mesh
             mesh = bpy.data.meshes.new("dsc_draw_helper_object")
             vertices = [(0.0, 0.0, 0.0),
-                        (0.0, 6.0, 0.0),
-                        (4.0, 6.0, 0.0),
+                        (0.0, 1.0, 0.0),
+                        (4.0, 1.0, 0.0),
                         (4.0, 0.0, 0.0),
                         (-4.0, 0.0, 0.0),
-                        (-4.0, 6.0, 0.0)
+                        (-4.0, 1.0, 0.0)
                         ]
             edges = [[0, 1],[1, 2],[2, 3],[3, 4],
                      [0, 4,],[4, 5],[5, 1]]
-            #faces = [[0, 1, 2, 3],[0, 4, 5, 1]]
             faces = []
             mesh.from_pydata(vertices, edges, faces)
             helper = bpy.data.objects.new("dsc_draw_helper_object", mesh)
-            helper.location = point_start
+            location = helper.location
+            helper.location = location + point_start
             # Link
             context.scene.collection.objects.link(helper)
             helper.use_fake_user = True
@@ -94,48 +102,23 @@ class DSC_OT_road_straight(bpy.types.Operator):
 
         return helper
 
-    def remove_draw_helper_object(self, context):
+    def update_draw_helper(self, point_raycast):
+        # Transform helper object to follow the mouse pointer
+        v1 = point_raycast - self.point_raycast_start
+        v2 = self.helper.data.vertices[1].co - self.helper.data.vertices[0].co
+        if v2.length > 0:
+            mat_rotation = v2.rotation_difference(v1).to_matrix().to_4x4()
+            mat_scale = Matrix.Scale(v1.length/v2.length, 4, v2)
+            # Apply transformation
+            self.helper.data.transform(mat_rotation @ mat_scale)
+            self.helper.data.update()
+
+    def remove_draw_helper(self):
         """
             Unlink helper
             currently only support OBJECT mode
         """
         helper = bpy.data.objects.get('dsc_draw_helper_object')
-        if helper is not None:
-            bpy.data.objects.remove(helper, do_unlink=True)
-
-    def create_draw_helper_line(self, context, point_start):
-        """
-            Create a helper line with fake user
-            or find older one in bpy data and relink to scene
-            currently only support OBJECT mode
-        """
-        helper = bpy.data.objects.get('dsc_draw_helper_line')
-        if helper is not None:
-            if context.scene.objects.get('dsc_draw_helper_line') is None:
-                context.scene.collection.objects.link(helper)
-        else:
-            # Create object from mesh
-            mesh = bpy.data.meshes.new("dsc_draw_helper_line")
-            vertices = [point_start,
-                        point_start,
-                        ]
-            edges = [[0,1]]
-            faces = []
-            mesh.from_pydata(vertices, edges, faces)
-            helper = bpy.data.objects.new("dsc_draw_helper_line", mesh)
-            # Link
-            context.scene.collection.objects.link(helper)
-            helper.use_fake_user = True
-            helper.data.use_fake_user = True
-
-        return helper
-
-    def remove_draw_helper_line(self, context):
-        """
-            Unlink helper
-            currently only support OBJECT mode
-        """
-        helper = bpy.data.objects.get('dsc_draw_helper_line')
         if helper is not None:
             bpy.data.objects.remove(helper, do_unlink=True)
 
@@ -156,53 +139,49 @@ class DSC_OT_road_straight(bpy.types.Operator):
         return point
 
     def modal(self, context, event):
-        # Display help
+        # Display help text
         if self.state == 'INIT':
             context.area.header_text_set("Place road by clicking, press ESCAPE, RIGHTMOUSE to exit.")
-            # Set custom cursor
-            bpy.context.window.cursor_modal_set('NONE')
+            ## Set custom cursor
+            bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.state = 'SELECT_BEGINNING'
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
-        # Update
+        # Update on move
         if event.type == 'MOUSEMOVE':
             point_raycast = self.mouse_to_xy_plane(context, event)
-            context.scene.cursor.location = point_raycast
-        # Select
+            if self.state == 'SELECT_BEGINNING':
+                context.scene.cursor.location = point_raycast
+            if self.state == 'SELECT_END':
+                self.update_draw_helper(point_raycast)
+        # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_BEGINNING':
                     # Find clickpoint in 3D and create helper line
-                    point_raycast = self.mouse_to_xy_plane(context, event)
-                    helper = self.create_draw_helper_line(context, point_raycast)
-                    helper.select_set(state=True)
-                    context.view_layer.objects.active = helper
+                    self.point_raycast_start = self.mouse_to_xy_plane(context, event)
+                    self.helper = self.create_draw_helper(context, self.point_raycast_start)
+                    self.helper.select_set(state=True)
+                    context.view_layer.objects.active = self.helper
                     # Set cursor and origin
-                    context.scene.cursor.location = point_raycast
+                    context.scene.cursor.location = self.point_raycast_start
                     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-                    # Select end point vertex
-                    bpy.ops.object.mode_set(mode = 'EDIT')
-                    bpy.ops.mesh.select_mode(type='VERT')
-                    bpy.ops.mesh.select_all(action='DESELECT')
-                    bpy.ops.object.mode_set(mode='OBJECT')
-                    helper.data.vertices[1].select = True
-                    bpy.ops.object.mode_set(mode='EDIT')
-                    # Use translate operator to move around
-                    bpy.ops.transform.translate('INVOKE_DEFAULT',
-                                                constraint_axis=(True, True, False),
-                                                orient_type='GLOBAL',
-                                                release_confirm=True)
                     self.state = 'SELECT_END'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_END':
                     # Set cursor to endpoint
-                    point_raycast = self.mouse_to_xy_plane(context, event)
-                    context.scene.cursor.location = point_raycast
-                    self.remove_draw_helper_line(context)
+                    self.point_raycast_end = self.mouse_to_xy_plane(context, event)
+                    context.scene.cursor.location = self.point_raycast_end
+                    # Create the final object
+                    self.create_object_xodr(context, self.point_raycast_start, self.point_raycast_end)
+                    # Remove draw helper and go back to initial state to draw again
+                    self.remove_draw_helper()
                     self.state = 'INIT'
                     return {'RUNNING_MODAL'}
         # Cancel
         elif event.type in {'ESC', 'RIGHTMOUSE'}:
+            # Make sure draw helper is removed
+            self.remove_draw_helper()
             # Remove header text with 'None'
             context.area.header_text_set(None)
             # Set custom cursor
@@ -219,6 +198,11 @@ class DSC_OT_road_straight(bpy.types.Operator):
     def invoke(self, context, event):
         self.init_loc_x = context.region.x
         self.value = event.mouse_x
+        # For operator state machine 
+        # possible states: {'INIT','SELECTE_BEGINNING', 'SELECT_END'}
+        self.state = 'INIT'
+
+        self.point_raycast_start = Vector((0.0,0.0,0.0))
 
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
