@@ -41,6 +41,7 @@ bl_info = {
     "category" : "Add Mesh"
 }
 
+# Global variables
 custom_icons = None
 
 class DSC_PT_panel_create(bpy.types.Panel):
@@ -143,3 +144,6 @@ def unregister():
         bpy.utils.unregister_class(c)
     # Get rid of custom icons
     bpy.utils.previews.remove(custom_icons)
+
+if __name__ == "__main__":
+    register()

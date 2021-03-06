@@ -16,6 +16,7 @@ import bpy
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_plane
+from . helpers import get_new_id_xodr
 
 
 class DSC_OT_road_straight(bpy.types.Operator):
@@ -35,12 +36,11 @@ class DSC_OT_road_straight(bpy.types.Operator):
         if self.point_raycast_end == self.point_raycast_start:
             self.report({"WARNING"}, "Impossible to create zero length road!")
             return
-        scene = context.scene
         mesh = bpy.data.meshes.new('road_straight')
         obj = bpy.data.objects.new(mesh.name, mesh)
         if not 'OpenDRIVE' in bpy.data.collections:
             collection = bpy.data.collections.new('OpenDRIVE')
-            scene.collection.children.link(collection)
+            context.scene.collection.children.link(collection)
         collection = bpy.data.collections.get('OpenDRIVE')
         collection.objects.link(obj)
 
@@ -67,8 +67,15 @@ class DSC_OT_road_straight(bpy.types.Operator):
             obj.data.transform(mat_translation @ mat_rotation @ mat_scale)
             obj.data.update()
 
-        # OpenDRIVE custom properties
-        obj['xodr'] = {'atribute_test':'999888777'}
+        # Set OpenDRIVE custom properties
+        obj['id_xodr'] = get_new_id_xodr(context)
+        obj['t_road_planView_geometry'] = 'line'
+        obj['t_road_planView_geometry_s'] = 0
+        obj['t_road_planView_geometry_x'] = point_start.x
+        obj['t_road_planView_geometry_y'] = point_start.y
+        obj['t_road_planView_geometry_hdg'] = v1.angle(Vector((1.0, 0.0, 0.0)))
+        obj['t_road_planView_geometry_length'] = v1.length
+
         return obj
 
     def create_draw_helper(self, context, point_start):
