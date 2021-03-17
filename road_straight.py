@@ -32,6 +32,9 @@ class DSC_OT_road_straight(bpy.types.Operator):
         """
             Create a straight road object
         """
+        if self.point_raycast_end == self.point_raycast_start:
+            self.report({"WARNING"}, "Impossible to create zero length road!")
+            return
         scene = context.scene
         mesh = bpy.data.meshes.new('road_straight')
         obj = bpy.data.objects.new(mesh.name, mesh)
@@ -82,11 +85,11 @@ class DSC_OT_road_straight(bpy.types.Operator):
             # Create object from mesh
             mesh = bpy.data.meshes.new("dsc_draw_helper_object")
             vertices = [(0.0, 0.0, 0.0),
-                        (0.0, 1.0, 0.0),
-                        (4.0, 1.0, 0.0),
+                        (0.0, 0.01, 0.0),
+                        (4.0, 0.01, 0.0),
                         (4.0, 0.0, 0.0),
                         (-4.0, 0.0, 0.0),
-                        (-4.0, 1.0, 0.0)
+                        (-4.0, 0.01, 0.0)
                         ]
             edges = [[0, 1],[1, 2],[2, 3],[3, 4],
                      [0, 4,],[4, 5],[5, 1]]
@@ -106,7 +109,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
         # Transform helper object to follow the mouse pointer
         v1 = point_raycast - self.point_raycast_start
         v2 = self.helper.data.vertices[1].co - self.helper.data.vertices[0].co
-        if v2.length > 0:
+        if v1.length > 0 and v2.length > 0:
             mat_rotation = v2.rotation_difference(v1).to_matrix().to_4x4()
             mat_scale = Matrix.Scale(v1.length/v2.length, 4, v2)
             # Apply transformation
