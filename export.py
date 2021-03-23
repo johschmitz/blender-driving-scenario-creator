@@ -60,8 +60,8 @@ class Scenario(ScenarioGenerator):
                 lanesec = xodr.LaneSection(0,centerlane)
                 lanes = xodr.Lanes()
                 lanes.add_lanesection(lanesec)
-                road = xodr.Road(obj['id_xodr'],planview,lanes)
-                print('Add road with ID', obj['id_xodr'])
+                road = xodr.Road(obj['id_opendrive'],planview,lanes)
+                print('Add road with ID', obj['id_opendrive'])
                 odr.add_road(road)
         odr.adjust_roads_and_lanes()
         return odr

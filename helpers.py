@@ -30,3 +30,8 @@ def link_object_openscenario(context, obj):
         context.scene.collection.children.link(collection)
     collection = bpy.data.collections.get('OpenSCENARIO')
     collection.objects.link(obj)
+
+def select_activate_object(context, obj):
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(state=True)
+    context.view_layer.objects.active = obj

@@ -16,9 +16,7 @@ import bpy
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_plane
-from . helpers import get_new_id_opendrive
-from . helpers import link_object_opendrive
-
+from . import helpers
 
 class DSC_OT_road_straight(bpy.types.Operator):
     bl_idname = 'dsc.road_straight'
@@ -30,7 +28,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, point_end):
+    def create_object_xodr(self, context):
         """
             Create a straight road object
         """
@@ -39,7 +37,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
             return
         mesh = bpy.data.meshes.new('road_straight')
         obj = bpy.data.objects.new(mesh.name, mesh)
-        link_object_opendrive(context, obj)
+        helpers.link_object_opendrive(context, obj)
 
         vertices = [(0.0, 0.0, 0.0),
                     (0.0, 1.0, 0.0),
@@ -53,29 +51,36 @@ class DSC_OT_road_straight(bpy.types.Operator):
         faces = [[0, 1, 2, 3],[0, 4, 5, 1]]
         mesh.from_pydata(vertices, edges, faces)
 
-        # Transform helper object to follow the mouse pointer
-        v1 = point_end - point_start
-        v2 = obj.data.vertices[1].co - obj.data.vertices[0].co
-        if v2.length > 0:
-            mat_rotation = v2.rotation_difference(v1).to_matrix().to_4x4()
-            mat_scale = Matrix.Scale(v1.length/v2.length, 4, v2)
-            mat_translation = Matrix.Translation(point_start)
-            # Apply transformation
-            obj.data.transform(mat_translation @ mat_rotation @ mat_scale)
-            obj.data.update()
+        # Make active object to set cursor and origin
+        helpers.select_activate_object(context, obj)
+        context.scene.cursor.location = self.point_raycast_start
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+        context.scene.cursor.location = self.point_raycast_end
+        # Rotate and translate to correct x,y, heading wrt to origin
+        mat_translation = Matrix.Translation(self.point_raycast_start - self.stencil.data.vertices[0].co)
+        mat_rotation = Matrix.Rotation(self.heading_start,4,'Z')
+        obj.data.transform(mat_translation @ mat_rotation)
+        obj.data.update()
+        # Transform mesh wrt to selected end point
+        self.transform_object_wrt_end(obj)
+
+        # Remember connecting points for tool snapping
+        obj['point_start'] = self.point_raycast_start
+        obj['point_end'] = self.point_raycast_end
 
         # Set OpenDRIVE custom properties
-        obj['id_xodr'] = get_new_id_opendrive(context)
+        obj['id_opendrive'] = helpers.get_new_id_opendrive(context)
         obj['t_road_planView_geometry'] = 'line'
         obj['t_road_planView_geometry_s'] = 0
-        obj['t_road_planView_geometry_x'] = point_start.x
-        obj['t_road_planView_geometry_y'] = point_start.y
-        obj['t_road_planView_geometry_hdg'] = v1.angle(Vector((1.0, 0.0, 0.0)))
-        obj['t_road_planView_geometry_length'] = v1.length
+        obj['t_road_planView_geometry_x'] = self.point_raycast_start.x
+        obj['t_road_planView_geometry_y'] = self.point_raycast_end.y
+        vector_start_end = self.point_raycast_end - self.point_raycast_start
+        obj['t_road_planView_geometry_hdg'] = vector_start_end.angle(Vector((0.0, 1.0, 0.0)))
+        obj['t_road_planView_geometry_length'] = vector_start_end.length
 
         return obj
 
-    def create_draw_helper(self, context, point_start):
+    def create_draw_helper(self, context):
         """
             Create a helper object with fake user
             or find older one in bpy data and relink to scene
@@ -99,88 +104,82 @@ class DSC_OT_road_straight(bpy.types.Operator):
                      [0, 4,],[4, 5],[5, 1]]
             faces = []
             mesh.from_pydata(vertices, edges, faces)
-            helper = bpy.data.objects.new("dsc_draw_helper_object", mesh)
-            location = helper.location
-            helper.location = location + point_start
+            self.stencil = bpy.data.objects.new("dsc_draw_helper_object", mesh)
+            # Rotate and translate to correct x,y, heading
+            mat_translation = Matrix.Translation(self.point_raycast_start - self.stencil.data.vertices[0].co)
+            mat_rotation = Matrix.Rotation(self.heading_start,4,'Z')
+            self.stencil.data.transform(mat_translation @ mat_rotation)
+            self.stencil.data.update()
             # Link
-            context.scene.collection.objects.link(helper)
-            helper.use_fake_user = True
-            helper.data.use_fake_user = True
-
-        return helper
-
-    def update_draw_helper(self, point_raycast):
-        # Transform helper object to follow the mouse pointer
-        v1 = point_raycast - self.point_raycast_start
-        v2 = self.helper.data.vertices[1].co - self.helper.data.vertices[0].co
-        if v1.length > 0 and v2.length > 0:
-            mat_rotation = v2.rotation_difference(v1).to_matrix().to_4x4()
-            mat_scale = Matrix.Scale(v1.length/v2.length, 4, v2)
-            # Apply transformation
-            self.helper.data.transform(mat_rotation @ mat_scale)
-            self.helper.data.update()
+            context.scene.collection.objects.link(self.stencil)
+            self.stencil.use_fake_user = True
+            self.stencil.data.use_fake_user = True
 
     def remove_draw_helper(self):
         """
-            Unlink helper
-            currently only support OBJECT mode
+            Unlink helper, needs to be in OBJECT mode
         """
         helper = bpy.data.objects.get('dsc_draw_helper_object')
         if helper is not None:
             bpy.data.objects.remove(helper, do_unlink=True)
 
-    def mouse_to_xy_plane(self, context, event):
-        """
-            Convert mouse pointer pos to 3D point in xy-plane
-        """
-        region = context.region
-        rv3d = context.region_data
-        co2d = (event.mouse_region_x, event.mouse_region_y)
-        view_vector_mouse = region_2d_to_vector_3d(region, rv3d, co2d)
-        ray_origin_mouse = region_2d_to_origin_3d(region, rv3d, co2d)
-        point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
-           (0, 0, 0), (0, 0, 1), False)
-        if point is None:
-            point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
-                (0, 0, 0), view_vector_mouse, False)
-        return point
+    def update_draw_helper(self):
+        # Transform helper object to follow the mouse pointer
+        self.transform_object_wrt_end(self.stencil)
+
+    def transform_object_wrt_end(self, obj):
+        # Transform object according to selected end point (no start point translation)
+        vector_selected = self.point_raycast_end - self.point_raycast_start
+        vector_object = obj.data.vertices[1].co - obj.data.vertices[0].co
+        if vector_selected.length > 0 and vector_object.length > 0:
+            # Apply transformation
+            if self.snapped_start:
+                dot_product = vector_object @ vector_selected
+                mat_scale = Matrix.Scale(dot_product/(vector_object.length*vector_object.length), 4, vector_object)
+                obj.data.transform(mat_scale)
+            else:
+                mat_rotation = vector_object.rotation_difference(vector_selected).to_matrix().to_4x4()
+                mat_scale = Matrix.Scale(vector_selected.length/vector_object.length, 4, vector_object)
+                obj.data.transform(mat_rotation @ mat_scale)
+            obj.data.update()
 
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
             context.area.header_text_set("Place road by clicking, press ESCAPE, RIGHTMOUSE to exit.")
-            ## Set custom cursor
+            # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
+            # Reset snapping
+            self.snapped_start = False
             self.state = 'SELECT_BEGINNING'
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
         # Update on move
         if event.type == 'MOUSEMOVE':
-            point_raycast = self.mouse_to_xy_plane(context, event)
-            if self.state == 'SELECT_BEGINNING':
-                context.scene.cursor.location = point_raycast
+            hit, self.point_raycast_end, self.heading_end = self.mouse_to_road_else_xy_raycast(context, event)
+            context.scene.cursor.location = self.point_raycast_end
             if self.state == 'SELECT_END':
-                self.update_draw_helper(point_raycast)
+                self.update_draw_helper()
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_BEGINNING':
-                    # Find clickpoint in 3D and create helper line
-                    self.point_raycast_start = self.mouse_to_xy_plane(context, event)
-                    self.helper = self.create_draw_helper(context, self.point_raycast_start)
-                    self.helper.select_set(state=True)
-                    context.view_layer.objects.active = self.helper
-                    # Set cursor and origin
+                    # Find clickpoint in 3D and create helper mesh
+                    hit, self.point_raycast_start, self.heading_start = self.mouse_to_road_else_xy_raycast(context, event)
+                    self.snapped_start = hit
+                    self.create_draw_helper(context)
+                    # Make helper active object to set cursor and origin
+                    helpers.select_activate_object(context, self.stencil)
                     context.scene.cursor.location = self.point_raycast_start
                     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
                     self.state = 'SELECT_END'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_END':
                     # Set cursor to endpoint
-                    self.point_raycast_end = self.mouse_to_xy_plane(context, event)
+                    hit, self.point_raycast_end, self.heading_end = self.mouse_to_road_else_xy_raycast(context, event)
                     context.scene.cursor.location = self.point_raycast_end
                     # Create the final object
-                    self.create_object_xodr(context, self.point_raycast_start, self.point_raycast_end)
+                    self.create_object_xodr(context)
                     # Remove draw helper and go back to initial state to draw again
                     self.remove_draw_helper()
                     self.state = 'INIT'
@@ -205,7 +204,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
     def invoke(self, context, event):
         self.init_loc_x = context.region.x
         self.value = event.mouse_x
-        # For operator state machine 
+        # For operator state machine
         # possible states: {'INIT','SELECTE_BEGINNING', 'SELECT_END'}
         self.state = 'INIT'
 
@@ -214,3 +213,44 @@ class DSC_OT_road_straight(bpy.types.Operator):
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
+
+    def mouse_to_xy_plane(self, context, event):
+        """
+            Convert mouse pointer position to 3D point in xy-plane
+        """
+        region = context.region
+        rv3d = context.region_data
+        co2d = (event.mouse_region_x, event.mouse_region_y)
+        view_vector_mouse = region_2d_to_vector_3d(region, rv3d, co2d)
+        ray_origin_mouse = region_2d_to_origin_3d(region, rv3d, co2d)
+        point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
+           (0, 0, 0), (0, 0, 1), False)
+        # Fix parallel plane issue
+        if point is None:
+            point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
+                (0, 0, 0), view_vector_mouse, False)
+        return point
+
+    def mouse_to_road_connector_raycast(self, context, event):
+        """
+            Convert mouse pointer position to road connect point
+        """
+        region = context.region
+        rv3d = context.region_data
+        co2d = (event.mouse_region_x, event.mouse_region_y)
+        view_vector_mouse = region_2d_to_vector_3d(region, rv3d, co2d)
+        ray_origin_mouse = region_2d_to_origin_3d(region, rv3d, co2d)
+        hit, point, normal, index_face, obj, matrix_world = context.scene.ray_cast(
+            depsgraph=context.view_layer.depsgraph,
+            origin=ray_origin_mouse,
+            direction=view_vector_mouse)
+        if hit and obj.data is not None and 'road_straight' in obj.name:
+            return True, Vector(obj['point_end']), obj['t_road_planView_geometry_hdg']
+        else:
+            return False, point, 0
+
+    def mouse_to_road_else_xy_raycast(self, context, event):
+        hit, point_raycast, heading = self.mouse_to_road_connector_raycast(context, event)
+        if not hit:
+            point_raycast = self.mouse_to_xy_plane(context, event)
+        return hit, point_raycast, heading
