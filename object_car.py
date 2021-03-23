@@ -14,6 +14,9 @@
 import bpy
 import bmesh
 
+from . helpers import link_object_openscenario
+
+
 class DSC_OT_object_car(bpy.types.Operator):
     bl_idname = "dsc.object_car"
     bl_label = "Car"
@@ -26,7 +29,6 @@ class DSC_OT_object_car(bpy.types.Operator):
         objects = bpy.data.objects
 
         bm = bmesh.new()
-        
 
         # Vertices
         verts = []
@@ -59,11 +61,7 @@ class DSC_OT_object_car(bpy.types.Operator):
         # OpenSCENARIO custom properties
         obj['xosc'] = {'asdf':"asdf"}
 
-        if not 'OpenSCENARIO' in bpy.data.collections:
-            collection = bpy.data.collections.new('OpenSCENARIO')
-            scene.collection.children.link(collection)
-
-        bpy.data.collections['OpenSCENARIO'].objects.link(obj)
+        link_object_openscenario(context, obj)
 
         bm.to_mesh(mesh)
         bm.free()

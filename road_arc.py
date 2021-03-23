@@ -14,6 +14,9 @@
 import bpy
 import bmesh
 
+from . helpers import link_object_opendrive
+
+
 class DSC_OT_road_arc(bpy.types.Operator):
     bl_idname = "dsc.road_arc"
     bl_label = "Arc"
@@ -46,17 +49,13 @@ class DSC_OT_road_arc(bpy.types.Operator):
         # Faces
         bm.faces.new(bm.verts)
 
-        mesh = meshes.new('road_straight')
-        obj = objects.new('road_straight', mesh)
+        mesh = meshes.new('road_arc')
+        obj = objects.new('road_arc', mesh)
 
         # OpenDRIVE custom properties
         obj['xodr'] = {'asdf':"asdf"}
 
-        if not 'OpenDRIVE' in bpy.data.collections:
-            collection = bpy.data.collections.new('OpenDRIVE')
-            scene.collection.children.link(collection)
-
-        bpy.data.collections['OpenDRIVE'].objects.link(obj)
+        link_object_opendrive(context, obj)
 
         bm.to_mesh(mesh)
         bm.free()

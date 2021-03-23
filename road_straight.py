@@ -16,7 +16,8 @@ import bpy
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_plane
-from . helpers import get_new_id_xodr
+from . helpers import get_new_id_opendrive
+from . helpers import link_object_opendrive
 
 
 class DSC_OT_road_straight(bpy.types.Operator):
@@ -38,11 +39,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
             return
         mesh = bpy.data.meshes.new('road_straight')
         obj = bpy.data.objects.new(mesh.name, mesh)
-        if not 'OpenDRIVE' in bpy.data.collections:
-            collection = bpy.data.collections.new('OpenDRIVE')
-            context.scene.collection.children.link(collection)
-        collection = bpy.data.collections.get('OpenDRIVE')
-        collection.objects.link(obj)
+        link_object_opendrive(context, obj)
 
         vertices = [(0.0, 0.0, 0.0),
                     (0.0, 1.0, 0.0),
@@ -68,7 +65,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
             obj.data.update()
 
         # Set OpenDRIVE custom properties
-        obj['id_xodr'] = get_new_id_xodr(context)
+        obj['id_xodr'] = get_new_id_opendrive(context)
         obj['t_road_planView_geometry'] = 'line'
         obj['t_road_planView_geometry_s'] = 0
         obj['t_road_planView_geometry_x'] = point_start.x
