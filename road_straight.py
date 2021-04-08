@@ -89,11 +89,11 @@ class DSC_OT_road_straight(bpy.types.Operator):
             # Create object from mesh
             mesh = bpy.data.meshes.new("dsc_stencil_object")
             vertices = [(0.0, 0.0, 0.0),
-                        (0.0, 0.01, 0.0),
-                        (4.0, 0.01, 0.0),
+                        (0.0, 1.01, 0.0),
+                        (4.0, 1.01, 0.0),
                         (4.0, 0.0, 0.0),
                         (-4.0, 0.0, 0.0),
-                        (-4.0, 0.01, 0.0)
+                        (-4.0, 1.01, 0.0)
                         ]
             edges = [[0, 1],[1, 2],[2, 3],[3, 4],
                      [0, 4,],[4, 5],[5, 1]]
@@ -136,13 +136,19 @@ class DSC_OT_road_straight(bpy.types.Operator):
         '''
         vector_selected = point_end - obj.location
         vector_object = obj.data.vertices[1].co - obj.data.vertices[0].co
+        # Make sure vectors are not 0 lenght to avoid division error
         if vector_selected.length > 0 and vector_object.length > 0:
-            mat_scale = Matrix.Scale(vector_selected.length/vector_object.length, 4, vector_object)
+
             # Apply transformation
+            mat_scale = Matrix.Scale(vector_selected.length/vector_object.length, 4, vector_object)
             if heading_fixed:
                 obj.data.transform(mat_scale)
             else:
-                mat_rotation = vector_object.rotation_difference(vector_selected).to_matrix().to_4x4()
+                if vector_selected.angle(vector_object)-pi > 0:
+                    # Avoid numerical issues due to vectors directly facing each other
+                    mat_rotation = Matrix.Rotation(pi, 4, 'Z')
+                else:
+                    mat_rotation = vector_object.rotation_difference(vector_selected).to_matrix().to_4x4()
                 obj.data.transform(mat_rotation @ mat_scale)
             obj.data.update()
 
@@ -150,68 +156,70 @@ class DSC_OT_road_straight(bpy.types.Operator):
         '''
             Project selected point to road end point.
         '''
-        print(point_selected)
-        print('start',point_start)
         vector_selected = point_selected - point_start
-        print(vector_selected)
         if vector_selected.length > 0:
             vector_object = Vector((0.0, 1.0, 0.0))
             vector_object.rotate(Matrix.Rotation(heading_start, 4, 'Z'))
-            print(vector_object)
-            print('r',vector_selected.project(vector_object))
             return point_start + vector_selected.project(vector_object)
         else:
-            return point_start
+            return point_selected
 
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
-            context.area.header_text_set("Place road by clicking, press ESCAPE, RIGHTMOUSE to exit.")
+            context.workspace.status_text_set("Place road by clicking, hold CTRL to snap to grid, "
+                "press ESCAPE, RIGHTMOUSE to exit.")
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             # Reset road snap
             self.snapped_start = False
-            self.state = 'SELECT_BEGINNING'
+            self.state = 'SELECT_START'
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
         # Update on move
         if event.type == 'MOUSEMOVE':
-            hit, point_selected_end, heading_end = self.raycast_mouse_to_road_else_xy(context, event)
-            context.scene.cursor.location = point_selected_end
+            # Snap to existing road objects if any, otherwise xy plane
+            self.hit, point_selected, heading_selected = \
+                self.raycast_mouse_to_road_else_xy(context, event)
+            context.scene.cursor.location = point_selected
+            # CTRL activates grid snapping if not snapped to object
+            if event.ctrl and not self.hit:
+                bpy.ops.view3d.snap_cursor_to_grid()
+                point_selected = context.scene.cursor.location
+            # Process and remember points according to modal state machine
+            if self.state == 'SELECT_START':
+                self.point_selected_start = point_selected.copy()
+                self.heading_selected_start = heading_selected
+                # Make sure end point and heading is set even if mouse is not moved
+                self.point_selected_end = point_selected
+                self.heading_selected_end = heading_selected
             if self.state == 'SELECT_END':
+                # For snapped straight roads use projected end point
                 if self.snapped_start:
-                    point_end = self.project_point_end(self.point_selected_start, self.heading_start,
-                        point_selected_end)
-                    self.update_stencil(point_end, heading_fixed=True)
+                    point_selected = self.project_point_end(
+                        self.point_selected_start, self.heading_selected_start, point_selected)
+                    context.scene.cursor.location = point_selected
+                    self.update_stencil(point_selected, heading_fixed=True)
                 else:
-                    self.update_stencil(point_selected_end, heading_fixed=False)
+                    self.update_stencil(point_selected, heading_fixed=False)
+                self.point_selected_end = point_selected
+                self.heading_selected_end = heading_selected
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
-                if self.state == 'SELECT_BEGINNING':
+                if self.state == 'SELECT_START':
                     # Find clickpoint in 3D and create stencil mesh
-                    hit, self.point_selected_start, self.heading_start = \
-                        self.raycast_mouse_to_road_else_xy(context, event)
-                    self.snapped_start = hit
-                    self.create_stencil(context, self.point_selected_start, self.heading_start)
+                    self.snapped_start = self.hit
+                    self.create_stencil(context, context.scene.cursor.location, self.heading_selected_start)
                     # Make stencil active object
                     helpers.select_activate_object(context, self.stencil)
-                    context.scene.cursor.location = self.point_selected_start
                     self.state = 'SELECT_END'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_END':
-                    # Set cursor to endpoint
-                    hit, point_selected_end, heading_end = self.raycast_mouse_to_road_else_xy(context, event)
                     # Create the final object
-                    if self.snapped_start:
-                        point_end = self.project_point_end(self.point_selected_start, self.heading_start,
-                            point_selected_end)
-                    else:
-                        point_end = point_selected_end
-                    self.create_object_xodr(context, self.point_selected_start, point_end)
+                    self.create_object_xodr(context, self.point_selected_start, self.point_selected_end)
                     # Remove stencil and go back to initial state to draw again
                     self.remove_stencil()
-                    context.scene.cursor.location = point_selected_end
                     self.state = 'INIT'
                     return {'RUNNING_MODAL'}
         # Cancel
@@ -219,7 +227,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
             # Make sure stencil is removed
             self.remove_stencil()
             # Remove header text with 'None'
-            context.area.header_text_set(None)
+            context.workspace.status_text_set(None)
             # Set custom cursor
             bpy.context.window.cursor_modal_restore()
             # Make sure to exit edit mode
@@ -261,7 +269,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
 
     def raycast_mouse_to_road(self, context, event, obj_type):
         '''
-            Convert mouse pointer position to specified hit obj.
+            Convert mouse pointer position to hit obj of specified type.
         '''
         region = context.region
         rv3d = context.region_data
@@ -273,10 +281,10 @@ class DSC_OT_road_straight(bpy.types.Operator):
             origin=ray_origin_mouse,
             direction=view_vector_mouse)
         # Filter object type
-        if hit and obj['t_road_planView_geometry'] is obj_type:
+        if hit and 't_road_planView_geometry' in obj:
             return hit, obj
         else:
-            return hit, obj
+            return False, None
 
     def raycast_mouse_to_road_else_xy(self, context, event):
         '''
