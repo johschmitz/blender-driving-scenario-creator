@@ -12,9 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils import Vector, Matrix
-from mathutils.geometry import intersect_line_plane
 
 from math import pi
 
@@ -38,7 +36,8 @@ class DSC_OT_road_straight(bpy.types.Operator):
         if point_end == point_start:
             self.report({"WARNING"}, "Impossible to create zero length road!")
             return
-        mesh = bpy.data.meshes.new('road_straight')
+        obj_id = helpers.get_new_id_opendrive(context)
+        mesh = bpy.data.meshes.new('road_straight_' + str(obj_id))
         obj = bpy.data.objects.new(mesh.name, mesh)
         helpers.link_object_opendrive(context, obj)
 
@@ -65,7 +64,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
         obj['point_end'] = point_end
 
         # Set OpenDRIVE custom properties
-        obj['id_opendrive'] = helpers.get_new_id_opendrive(context)
+        obj['id_opendrive'] = obj_id
         obj['t_road_planView_geometry'] = 'line'
         obj['t_road_planView_geometry_s'] = 0
         obj['t_road_planView_geometry_x'] = point_start.x
@@ -89,11 +88,11 @@ class DSC_OT_road_straight(bpy.types.Operator):
             # Create object from mesh
             mesh = bpy.data.meshes.new("dsc_stencil_object")
             vertices = [(0.0, 0.0, 0.0),
-                        (0.0, 1.01, 0.0),
-                        (4.0, 1.01, 0.0),
+                        (0.0, 0.01, 0.0),
+                        (4.0, 0.01, 0.0),
                         (4.0, 0.0, 0.0),
                         (-4.0, 0.0, 0.0),
-                        (-4.0, 1.01, 0.0)
+                        (-4.0, 0.01, 0.0)
                         ]
             edges = [[0, 1],[1, 2],[2, 3],[3, 4],
                      [0, 4,],[4, 5],[5, 1]]
@@ -154,7 +153,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
 
     def project_point_end(self, point_start, heading_start, point_selected):
         '''
-            Project selected point to road end point.
+            Project selected point to direction vector.
         '''
         vector_selected = point_selected - point_start
         if vector_selected.length > 0:
@@ -180,7 +179,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
         if event.type == 'MOUSEMOVE':
             # Snap to existing road objects if any, otherwise xy plane
             self.hit, point_selected, heading_selected = \
-                self.raycast_mouse_to_road_else_xy(context, event)
+                helpers.raycast_mouse_to_object_else_xy(context, event)
             context.scene.cursor.location = point_selected
             # CTRL activates grid snapping if not snapped to object
             if event.ctrl and not self.hit:
@@ -249,56 +248,3 @@ class DSC_OT_road_straight(bpy.types.Operator):
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
-
-    def mouse_to_xy_plane(self, context, event):
-        '''
-            Convert mouse pointer position to 3D point in xy-plane.
-        '''
-        region = context.region
-        rv3d = context.region_data
-        co2d = (event.mouse_region_x, event.mouse_region_y)
-        view_vector_mouse = region_2d_to_vector_3d(region, rv3d, co2d)
-        ray_origin_mouse = region_2d_to_origin_3d(region, rv3d, co2d)
-        point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
-           (0, 0, 0), (0, 0, 1), False)
-        # Fix parallel plane issue
-        if point is None:
-            point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
-                (0, 0, 0), view_vector_mouse, False)
-        return point
-
-    def raycast_mouse_to_road(self, context, event, obj_type):
-        '''
-            Convert mouse pointer position to hit obj of specified type.
-        '''
-        region = context.region
-        rv3d = context.region_data
-        co2d = (event.mouse_region_x, event.mouse_region_y)
-        view_vector_mouse = region_2d_to_vector_3d(region, rv3d, co2d)
-        ray_origin_mouse = region_2d_to_origin_3d(region, rv3d, co2d)
-        hit, point, normal, index_face, obj, matrix_world = context.scene.ray_cast(
-            depsgraph=context.view_layer.depsgraph,
-            origin=ray_origin_mouse,
-            direction=view_vector_mouse)
-        # Filter object type
-        if hit and 't_road_planView_geometry' in obj:
-            return hit, point, obj
-        else:
-            return False, point, None
-
-    def raycast_mouse_to_road_else_xy(self, context, event):
-        '''
-            Get a snapping point from an existing road or just an xy-plane intersection
-            point.
-        '''
-        hit, point_raycast, obj = self.raycast_mouse_to_road(context, event, obj_type='line')
-        if not hit:
-            point_raycast = self.mouse_to_xy_plane(context, event)
-            return False, point_raycast, 0
-        else:
-            dist_start = (Vector(obj['point_start']) - point_raycast).length
-            dist_end = (Vector(obj['point_end']) - point_raycast).length
-            if dist_start < dist_end:
-                return True , Vector(obj['point_start']), obj['t_road_planView_geometry_hdg'] - pi
-            else:
-                return True , Vector(obj['point_end']), obj['t_road_planView_geometry_hdg']
