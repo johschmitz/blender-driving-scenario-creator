@@ -282,18 +282,23 @@ class DSC_OT_road_straight(bpy.types.Operator):
             direction=view_vector_mouse)
         # Filter object type
         if hit and 't_road_planView_geometry' in obj:
-            return hit, obj
+            return hit, point, obj
         else:
-            return False, None
+            return False, point, None
 
     def raycast_mouse_to_road_else_xy(self, context, event):
         '''
             Get a snapping point from an existing road or just an xy-plane intersection
             point.
         '''
-        hit, obj = self.raycast_mouse_to_road(context, event, obj_type='line')
+        hit, point_raycast, obj = self.raycast_mouse_to_road(context, event, obj_type='line')
         if not hit:
             point_raycast = self.mouse_to_xy_plane(context, event)
             return False, point_raycast, 0
         else:
-            return True , Vector(obj['point_end']), obj['t_road_planView_geometry_hdg']
+            dist_start = (Vector(obj['point_start']) - point_raycast).length
+            dist_end = (Vector(obj['point_end']) - point_raycast).length
+            if dist_start < dist_end:
+                return True , Vector(obj['point_start']), obj['t_road_planView_geometry_hdg'] - pi
+            else:
+                return True , Vector(obj['point_end']), obj['t_road_planView_geometry_hdg']
