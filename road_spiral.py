@@ -19,6 +19,10 @@ class DSC_OT_road_spiral(bpy.types.Operator):
     bl_description = "Create a spiral road"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        return False
+
     def execute(self, context):
         self.report({'INFO'}, "Not implemented.")
 

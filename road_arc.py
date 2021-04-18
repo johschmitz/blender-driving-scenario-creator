@@ -25,56 +25,9 @@ class DSC_OT_road_arc(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        return False
 
-    def add_object(self, context, event):
-        scene = context.scene
-        meshes = bpy.data.meshes
-        objects = bpy.data.objects
+    def execute(self, context):
+        self.report({'INFO'}, "Not implemented.")
 
-        bm = bmesh.new()
-
-        # Vertices
-        verts = []
-        verts.append(bm.verts.new((4.0, 4.0, 0.0)))
-        verts.append(bm.verts.new((-4.0, 4.0, 0.0)))
-        verts.append(bm.verts.new((-4.0, -4.0, 0.0)))
-        verts.append(bm.verts.new((4.0, -4.0, 0.0)))
-
-        # Edges
-        for i in range(len(verts)-1):
-            bm.edges.new([verts[i], verts[i+1]])
-        bm.edges.new([verts[-1], verts[0]])
-
-        # Faces
-        bm.faces.new(bm.verts)
-
-        mesh = meshes.new('road_arc')
-        obj = objects.new('road_arc', mesh)
-
-        # OpenDRIVE custom properties
-        obj['xodr'] = {'asdf':"asdf"}
-
-        link_object_opendrive(context, obj)
-
-        bm.to_mesh(mesh)
-        bm.free()
-
-    def modal(self, context, event):
-        if event.type == 'MOUSEMOVE':  # Apply
-            self.value = event.mouse_x
-        elif event.type == 'LEFTMOUSE':  # Confirm
-            self.add_object(context, event)
-            return {'FINISHED'}
-        elif event.type in {'RIGHTMOUSE', 'ESC'}:  # Cancel
-            context.object.region.x = self.init_loc_x
-            return {'CANCELLED'}
-
-        return {'RUNNING_MODAL'}
-
-    def invoke(self, context, event):
-        self.init_loc_x = context.region.x
-        self.value = event.mouse_x
-
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
+        return {'FINISHED'}

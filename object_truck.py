@@ -20,6 +20,10 @@ class DSC_OT_object_truck(bpy.types.Operator):
     bl_description = "Place a truck object"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        return False
+
     def execute(self, context):
         self.report({'INFO'}, "Not implemented.")
 

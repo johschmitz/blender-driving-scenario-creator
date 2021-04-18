@@ -20,6 +20,10 @@ class DSC_OT_trajectory_curve(bpy.types.Operator):
     bl_description = "Place a Bezier curve trajectory"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        return False
+
     def execute(self, context):
         self.report({'INFO'}, "Not implemented.")
 

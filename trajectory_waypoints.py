@@ -20,27 +20,11 @@ class DSC_OT_trajectory_waypoints(bpy.types.Operator):
     bl_description = "Place a waypoints trajectory"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        return False
+
     def execute(self, context):
-        scene = context.scene
-        meshes = scene.meshes
-        objects = scene.objects
-
-        bm = bmesh.new()
-        verts = [bm.verts.new((0, 0, z)) for z in range(5)]
-
-        for i in range(len(verts)-1):
-            bm.edges.new([verts[i], verts[i+1]])
-
-        me = meshes.new('placeholder_mesh')
-        mesh_obj = objects.new('polyline', me)
-
-        if not "OpenSCENARIO" in scene.collections:
-            collection = scene.collections.new("OpenSCENARIO")
-            scene.collection.children.link(collection)
-
-        scene.collections['OpenSCENARIO'].objects.link(mesh_obj)
-
-        bm.to_mesh(me)
-        bm.free()
+        self.report({'INFO'}, "Not implemented.")
 
         return {'FINISHED'}
