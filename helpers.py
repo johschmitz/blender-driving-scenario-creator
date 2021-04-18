@@ -15,6 +15,7 @@ import bpy
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils.geometry import intersect_line_plane
 from mathutils import Vector
+from idprop.types import IDPropertyArray
 
 from math import pi
 
@@ -37,6 +38,9 @@ def get_new_id_opendrive(context):
     return id_next
 
 def link_object_opendrive(context, obj):
+    '''
+        Link object to OpenDRIVE scene collection.
+    '''
     if not 'OpenDRIVE' in bpy.data.collections:
         collection = bpy.data.collections.new('OpenDRIVE')
         context.scene.collection.children.link(collection)
@@ -44,13 +48,67 @@ def link_object_opendrive(context, obj):
     collection.objects.link(obj)
 
 def link_object_openscenario(context, obj):
+    '''
+        Link object to OpenSCENARIO scene collection.
+    '''
     if not 'OpenSCENARIO' in bpy.data.collections:
         collection = bpy.data.collections.new('OpenSCENARIO')
         context.scene.collection.children.link(collection)
     collection = bpy.data.collections.get('OpenSCENARIO')
     collection.objects.link(obj)
 
+def get_object_xodr_by_id(context, id_xodr):
+    '''
+        Get reference to OpenDRIVE object by ID.
+    '''
+    collection = bpy.data.collections.get('OpenDRIVE')
+    for obj in collection.objects:
+        if 'id_xodr' in obj:
+            if obj['id_xodr'] == id_xodr:
+                return obj
+
+def create_object_xodr_links(context, obj, link_type, id_other, cp_type):
+    '''
+        Create OpenDRIVE predecessor/successor linkage for current object with
+        other object.
+    '''
+    if 'road' in obj.name:
+        if link_type == 'start':
+            obj['t_road_link_predecessor'] =  id_other
+            obj['t_road_link_predecessor_cp'] = cp_type
+        else:
+            obj['t_road_link_successor'] = id_other
+            obj['t_road_link_successor_cp'] = cp_type
+    elif 'junction' in obj.name:
+        if link_type == 'start':
+            obj['incoming_roads']['cp_down'] = id_other
+        else:
+            obj['incoming_roads']['cp_up'] = id_other
+    obj_other = get_object_xodr_by_id(context, id_other)
+    if 'road' in obj_other.name:
+        if 'road' in obj.name:
+            if link_type == 'start':
+                cp_type_other = 'cp_start'
+            else:
+                cp_type_other = 'cp_end'
+        if 'junction' in obj.name:
+            if link_type == 'start':
+                cp_type_other = 'cp_down'
+            else:
+                cp_type_other = 'cp_up'
+        if cp_type == 'start':
+            obj_other['t_road_link_predecessor'] = obj['id_xodr']
+            obj_other['t_road_link_predecessor_cp'] = cp_type_other
+        else:
+            obj_other['t_road_link_successor'] = obj['id_xodr']
+            obj_other['t_road_link_successor_cp'] = cp_type_other
+    elif 'junction' in obj_other.name:
+        obj_other['incoming_roads'][cp_type] = obj['id_xodr']
+
 def select_activate_object(context, obj):
+    '''
+        Select and activate object.
+    '''
     bpy.ops.object.select_all(action='DESELECT')
     obj.select_set(state=True)
     context.view_layer.objects.active = obj
@@ -96,28 +154,27 @@ def point_to_road_connector(obj, point):
     '''
         Get a snapping point and heading from an existing road.
     '''
-    dist_start = (Vector(obj['point_start']) - point).length
-    dist_end = (Vector(obj['point_end']) - point).length
+    dist_start = (Vector(obj['cp_start']) - point).length
+    dist_end = (Vector(obj['cp_end']) - point).length
     if dist_start < dist_end:
-        return Vector(obj['point_start']), obj['t_road_planView_geometry_hdg'] - pi
+        return 'cp_start', Vector(obj['cp_start']), obj['t_road_planView_geometry_hdg'] - pi
     else:
-        return Vector(obj['point_end']), obj['t_road_planView_geometry_hdg']
+        return 'cp_end', Vector(obj['cp_end']), obj['t_road_planView_geometry_hdg']
 
 def point_to_junction_connector(obj, point):
     '''
         Get a snapping point and heading from an existing junction.
     '''
-    # Calculate which connector point is closest to input point
-    dist_down = (Vector(obj['point_down']) - point).length
-    dist_left = (Vector(obj['point_left']) - point).length
-    dist_up = (Vector(obj['point_up']) - point).length
-    dist_right = (Vector(obj['point_right']) - point).length
-    dist_lst = [dist_down, dist_left, dist_up, dist_right]
-    arg_min_dist = dist_lst.index(min(dist_lst))
-    vec_connector_lst = [Vector(obj['point_down']), Vector(obj['point_left']),
-               Vector(obj['point_up']), Vector(obj['point_right'])]
-    vec_hdg_lst = [obj['hdg_down'], obj['hdg_left'], obj['hdg_up'], obj['hdg_right']]
-    return vec_connector_lst[arg_min_dist], vec_hdg_lst[arg_min_dist]
+    # Calculate which connecting point is closest to input point
+    cps = ['cp_down', 'cp_left', 'cp_up', 'cp_right']
+    distances = []
+    cp_vectors = []
+    for cp in cps:
+        distances.append((Vector(obj[cp]) - point).length)
+        cp_vectors.append(Vector(obj[cp]))
+    headings = [obj['hdg_down'], obj['hdg_left'], obj['hdg_up'], obj['hdg_right']]
+    arg_min_dist = distances.index(min(distances))
+    return cps[arg_min_dist], cp_vectors[arg_min_dist], headings[arg_min_dist]
 
 def raycast_mouse_to_object_else_xy(context, event):
     '''
@@ -126,11 +183,13 @@ def raycast_mouse_to_object_else_xy(context, event):
     hit, point_raycast, obj = raycast_mouse_to_odr_object(context, event, obj_type='line')
     if not hit:
         point_raycast = mouse_to_xy_plane(context, event)
-        return False, point_raycast, 0
+        return False, -1, 'cp_none', point_raycast, 0
     else:
         if 't_road_planView_geometry' in obj:
-            point, heading = point_to_road_connector(obj, point_raycast)
-            return True, point, heading
+            cp_type, cp, heading = point_to_road_connector(obj, point_raycast)
+            id_xodr = obj['id_xodr']
+            return True, id_xodr, cp_type, cp, heading
         if 't_junction_e_junction_type' in obj:
-            point, heading = point_to_junction_connector(obj, point_raycast)
-            return True, point, heading
+            cp_type, cp, heading = point_to_junction_connector(obj, point_raycast)
+            id_xodr = obj['id_xodr']
+            return True, id_xodr, cp_type, cp, heading

@@ -29,7 +29,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, point_end):
+    def create_object_xodr(self, context, point_start, point_end, snapped_start):
         '''
             Create a straight road object
         '''
@@ -41,12 +41,19 @@ class DSC_OT_road_straight(bpy.types.Operator):
         obj = bpy.data.objects.new(mesh.name, mesh)
         helpers.link_object_opendrive(context, obj)
 
+        # vertices = [(0.0, 0.0, 0.0),
+        #             (0.0, 1.0, 0.0),
+        #             (4.0, 1.0, 0.0),
+        #             (4.0, 0.0, 0.0),
+        #             (-4.0, 0.0, 0.0),
+        #             (-4.0, 1.0, 0.0)
+        #             ]
         vertices = [(0.0, 0.0, 0.0),
-                    (0.0, 1.0, 0.0),
-                    (4.0, 1.0, 0.0),
-                    (4.0, 0.0, 0.0),
-                    (-4.0, 0.0, 0.0),
-                    (-4.0, 1.0, 0.0)
+                    (1.0, 0.0, 0.0),
+                    (1.0, -4.0, 0.0),
+                    (0.0, -4.0, 0.0),
+                    (0.0, 4.0, 0.0),
+                    (1.0, 4.0, 0.0)
                     ]
         edges = [[0, 1],[1, 2],[2, 3],[3, 4],
                     [0, 4,],[4, 5],[5, 1]]
@@ -55,22 +62,26 @@ class DSC_OT_road_straight(bpy.types.Operator):
 
         helpers.select_activate_object(context, obj)
 
-        # Rotate, translate, scale to according to selected points
-        self.transform_object_wrt_start(obj, point_start, heading_start=0)
-        self.transform_object_wrt_end(obj, point_end)
+        # Rotate, translate, scale according to selected points
+        vector_start_end_xy = (point_end - point_start).to_2d()
+        vector_obj = obj.data.vertices[1].co - obj.data.vertices[0].co
+        heading_start = vector_start_end_xy.angle_signed(vector_obj.to_2d())
+        self.transform_object_wrt_start(obj, point_start, heading_start)
+        vector_obj = obj.data.vertices[1].co - obj.data.vertices[0].co
+        self.transform_object_wrt_end(obj, vector_obj, point_end, snapped_start)
 
         # Remember connecting points for road snapping
-        obj['point_start'] = point_start
-        obj['point_end'] = point_end
+        obj['cp_start'] = point_start
+        obj['cp_end'] = point_end
 
         # Set OpenDRIVE custom properties
-        obj['id_opendrive'] = obj_id
+        obj['id_xodr'] = obj_id
         obj['t_road_planView_geometry'] = 'line'
         obj['t_road_planView_geometry_s'] = 0
         obj['t_road_planView_geometry_x'] = point_start.x
-        obj['t_road_planView_geometry_y'] = point_end.y
+        obj['t_road_planView_geometry_y'] = point_start.y
         vector_start_end = point_end - point_start
-        obj['t_road_planView_geometry_hdg'] = vector_start_end.to_2d().angle_signed(Vector((0.0, 1.0)))
+        obj['t_road_planView_geometry_hdg'] = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
         obj['t_road_planView_geometry_length'] = vector_start_end.length
 
         return obj
@@ -78,7 +89,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
     def create_stencil(self, context, point_start, heading_start):
         '''
             Create a stencil object with fake user or find older one in bpy data and
-            relink to scene currently only support OBJECT mode.
+            relink to scene, currently only support OBJECT mode.
         '''
         stencil = bpy.data.objects.get('dsc_stencil_object')
         if stencil is not None:
@@ -87,12 +98,12 @@ class DSC_OT_road_straight(bpy.types.Operator):
         else:
             # Create object from mesh
             mesh = bpy.data.meshes.new("dsc_stencil_object")
-            vertices = [(0.0, 0.0, 0.0),
-                        (0.0, 0.01, 0.0),
-                        (4.0, 0.01, 0.0),
-                        (4.0, 0.0, 0.0),
-                        (-4.0, 0.0, 0.0),
-                        (-4.0, 0.01, 0.0)
+            vertices = [(0.0,   0.0, 0.0),
+                        (0.01,  0.0, 0.0),
+                        (0.01, -4.0, 0.0),
+                        (0.0,  -4.0, 0.0),
+                        (0.0,   4.0, 0.0),
+                        (0.01,  4.0, 0.0)
                         ]
             edges = [[0, 1],[1, 2],[2, 3],[3, 4],
                      [0, 4,],[4, 5],[5, 1]]
@@ -104,6 +115,8 @@ class DSC_OT_road_straight(bpy.types.Operator):
             context.scene.collection.objects.link(self.stencil)
             self.stencil.use_fake_user = True
             self.stencil.data.use_fake_user = True
+        # Make stencil active object
+        helpers.select_activate_object(context, self.stencil)
 
     def remove_stencil(self):
         '''
@@ -113,12 +126,10 @@ class DSC_OT_road_straight(bpy.types.Operator):
         if stencil is not None:
             bpy.data.objects.remove(stencil, do_unlink=True)
 
-    def update_stencil(self, point_end, heading_fixed):
+    def update_stencil(self, point_end, snapped_start):
         # Transform stencil object to follow the mouse pointer
-        if self.snapped_start:
-            self.transform_object_wrt_end(self.stencil, point_end, heading_fixed=True)
-        else:
-            self.transform_object_wrt_end(self.stencil, point_end, heading_fixed=False)
+        vector_obj = self.stencil.data.vertices[1].co - self.stencil.data.vertices[0].co
+        self.transform_object_wrt_end(self.stencil, vector_obj, point_end, snapped_start)
 
     def transform_object_wrt_start(self, obj, point_start, heading_start):
         '''
@@ -129,25 +140,24 @@ class DSC_OT_road_straight(bpy.types.Operator):
         obj.data.transform(mat_rotation)
         obj.data.update()
 
-    def transform_object_wrt_end(self, obj, point_end, heading_fixed=False):
+    def transform_object_wrt_end(self, obj, vector_obj, point_end, snapped_start):
         '''
             Transform object according to selected end point (keep start point fixed).
         '''
         vector_selected = point_end - obj.location
-        vector_object = obj.data.vertices[1].co - obj.data.vertices[0].co
-        # Make sure vectors are not 0 lenght to avoid division error
-        if vector_selected.length > 0 and vector_object.length > 0:
+        # Make sure vectors are not 0 length to avoid division error
+        if vector_selected.length > 0 and vector_obj.length > 0:
 
             # Apply transformation
-            mat_scale = Matrix.Scale(vector_selected.length/vector_object.length, 4, vector_object)
-            if heading_fixed:
+            mat_scale = Matrix.Scale(vector_selected.length/vector_obj.length, 4, vector_obj)
+            if snapped_start:
                 obj.data.transform(mat_scale)
             else:
-                if vector_selected.angle(vector_object)-pi > 0:
+                if vector_selected.angle(vector_obj)-pi > 0:
                     # Avoid numerical issues due to vectors directly facing each other
                     mat_rotation = Matrix.Rotation(pi, 4, 'Z')
                 else:
-                    mat_rotation = vector_object.rotation_difference(vector_selected).to_matrix().to_4x4()
+                    mat_rotation = vector_obj.rotation_difference(vector_selected).to_matrix().to_4x4()
                 obj.data.transform(mat_rotation @ mat_scale)
             obj.data.update()
 
@@ -157,7 +167,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
         '''
         vector_selected = point_selected - point_start
         if vector_selected.length > 0:
-            vector_object = Vector((0.0, 1.0, 0.0))
+            vector_object = Vector((1.0, 0.0, 0.0))
             vector_object.rotate(Matrix.Rotation(heading_start, 4, 'Z'))
             return point_start + vector_selected.project(vector_object)
         else:
@@ -178,7 +188,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
         # Update on move
         if event.type == 'MOUSEMOVE':
             # Snap to existing road objects if any, otherwise xy plane
-            self.hit, point_selected, heading_selected = \
+            self.hit, self.id_xodr_hit, self.cp_type, point_selected, heading_selected = \
                 helpers.raycast_mouse_to_object_else_xy(context, event)
             context.scene.cursor.location = point_selected
             # CTRL activates grid snapping if not snapped to object
@@ -198,45 +208,61 @@ class DSC_OT_road_straight(bpy.types.Operator):
                     point_selected = self.project_point_end(
                         self.point_selected_start, self.heading_selected_start, point_selected)
                     context.scene.cursor.location = point_selected
-                    self.update_stencil(point_selected, heading_fixed=True)
+                    self.update_stencil(point_selected, snapped_start=True)
                 else:
-                    self.update_stencil(point_selected, heading_fixed=False)
+                    self.update_stencil(point_selected, snapped_start=False)
                 self.point_selected_end = point_selected
                 self.heading_selected_end = heading_selected
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_START':
-                    # Find clickpoint in 3D and create stencil mesh
                     self.snapped_start = self.hit
+                    self.id_xodr_start = self.id_xodr_hit
+                    self.cp_type_start = self.cp_type
                     self.create_stencil(context, context.scene.cursor.location, self.heading_selected_start)
-                    # Make stencil active object
-                    helpers.select_activate_object(context, self.stencil)
                     self.state = 'SELECT_END'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_END':
+                    self.snapped_end = self.hit
+                    cp_type_end = self.cp_type
                     # Create the final object
-                    self.create_object_xodr(context, self.point_selected_start, self.point_selected_end)
+                    obj = self.create_object_xodr(context, self.point_selected_start,
+                        self.point_selected_end, self.snapped_start)
+                    if self.snapped_start:
+                        link_type = 'start'
+                        helpers.create_object_xodr_links(context, obj, link_type, self.id_xodr_start, self.cp_type_start)
+                    if self.snapped_end:
+                        link_type = 'end'
+                        helpers.create_object_xodr_links(context, obj, link_type, self.id_xodr_hit, cp_type_end)
                     # Remove stencil and go back to initial state to draw again
                     self.remove_stencil()
                     self.state = 'INIT'
                     return {'RUNNING_MODAL'}
-        # Cancel
-        elif event.type in {'ESC', 'RIGHTMOUSE'}:
-            # Make sure stencil is removed
-            self.remove_stencil()
-            # Remove header text with 'None'
-            context.workspace.status_text_set(None)
-            # Set custom cursor
-            bpy.context.window.cursor_modal_restore()
-            # Make sure to exit edit mode
-            if bpy.context.active_object:
-                if bpy.context.active_object.mode == 'EDIT':
-                    bpy.ops.object.mode_set(mode='OBJECT')
-            self.state = 'INIT'
-            return {'CANCELLED'}
+        # Cancel step by step
+        elif event.type in {'RIGHTMOUSE'} and event.value in {'RELEASE'}:
+            # Back to beginning
+            if self.state == 'SELECT_END':
+                self.remove_stencil()
+                self.state = 'INIT'
+                return {'RUNNING_MODAL'}
+            # Exit
+            if self.state == 'SELECT_START':
+                self.clean_up(context)
+                return {'FINISHED'}
+        # Exit immediately
+        elif event.type in {'ESC'}:
+            self.clean_up(context)
+            return {'FINISHED'}
+        # Zoom
+        elif event.type in {'WHEELUPMOUSE'}:
+            bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
+        elif event.type in {'WHEELDOWNMOUSE'}:
+            bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
 
+        # Catch everything else arriving here
         return {'RUNNING_MODAL'}
+
 
     def invoke(self, context, event):
         self.init_loc_x = context.region.x
@@ -248,3 +274,16 @@ class DSC_OT_road_straight(bpy.types.Operator):
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
+
+    def clean_up(self, context):
+        # Make sure stencil is removed
+        self.remove_stencil()
+        # Remove header text with 'None'
+        context.workspace.status_text_set(None)
+        # Set custom cursor
+        bpy.context.window.cursor_modal_restore()
+        # Make sure to exit edit mode
+        if bpy.context.active_object:
+            if bpy.context.active_object.mode == 'EDIT':
+                bpy.ops.object.mode_set(mode='OBJECT')
+        self.state = 'INIT'

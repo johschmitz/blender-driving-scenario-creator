@@ -18,13 +18,16 @@ welcomed if they are maintainable.
 
 ## Credits
 
-Credits go to the [Archipack](https://github.com/s-leger/archipack) add-on
-developer(s). I took some inspiration from them for the menu and tool design.
+Credits go to 
+- [pyoscx/scenarigeneration](https://github.com/pyoscx/scenariogeneration)
+  developers for the .xodr/.xosc generating/writing lib used as backend
+- [Archipack](https://github.com/s-leger/archipack) add-on developer(s) for
+  Blender add-on tool inspiration
 
 ## Main author/maintainer contact
 
 Please open issues and pull requests on GitHub to discuss openly. For private
 support inquiries contact the repository owner via email, Twitter or create an
-issue to initiate the communication. If you consider to contribute new large
-features please consider to have a discussion before beginning with the
+issue to initiate the communication. If you consider contributing large new
+features please consider to have a discussion before beginning with the clean
 implementation.

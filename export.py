@@ -17,6 +17,8 @@ from scenariogeneration import xosc
 from scenariogeneration import xodr
 from scenariogeneration import ScenarioGenerator
 
+from math import pi
+
 from pathlib import Path
 
 class DSC_OT_export(bpy.types.Operator):
@@ -46,24 +48,110 @@ class Scenario(ScenarioGenerator):
         self.context = context
 
     def road(self):
-        odr = xodr.OpenDrive('blender_dsc_map')
-        # Create OpenDRIVE road from object collection
+        odr = xodr.OpenDrive('blender_dsc')
+        roads = []
+        # Create OpenDRIVE roads from object collection
         for obj in bpy.data.collections['OpenDRIVE'].all_objects:
             if 'road_straight' in obj.name:
                 planview = xodr.PlanView()
                 planview.set_start_point(obj['t_road_planView_geometry_x'],obj['t_road_planView_geometry_y'],obj['t_road_planView_geometry_hdg'])
                 line = xodr.Line(obj['t_road_planView_geometry_length'])
                 planview.add_geometry(line)
-                marking = xodr.RoadMark(xodr.RoadMarkType.solid,0.2)
-                centerlane = xodr.Lane(a=2)
-                centerlane.add_roadmark(marking)
-                lanesec = xodr.LaneSection(0,centerlane)
+                # Create simple lanes
                 lanes = xodr.Lanes()
-                lanes.add_lanesection(lanesec)
-                road = xodr.Road(obj['id_opendrive'],planview,lanes)
-                print('Add road with ID', obj['id_opendrive'])
+                lanesection = xodr.LaneSection(0,xodr.standard_lane())
+                lanesection.add_left_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
+                lanesection.add_right_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
+                lanes.add_lanesection(lanesection)
+                road = xodr.Road(obj['id_xodr'],planview,lanes)
+                # Add road level linking
+                if 't_road_link_predecessor' in obj:
+                    element_type = self.get_element_type_by_id(obj['t_road_link_predecessor'])
+                    if obj['t_road_link_predecessor_cp'] == 'cp_start':
+                        cp_type = xodr.ContactPoint.start
+                    elif obj['t_road_link_predecessor_cp'] == 'cp_end':
+                        cp_type = xodr.ContactPoint.end
+                    else:
+                        cp_type = None
+                    road.add_predecessor(element_type, obj['t_road_link_predecessor'], cp_type)
+                if 't_road_link_successor' in obj:
+                    element_type = self.get_element_type_by_id(obj['t_road_link_successor'])
+                    if obj['t_road_link_successor_cp'] == 'cp_start':
+                        cp_type = xodr.ContactPoint.start
+                    elif obj['t_road_link_successor_cp'] == 'cp_end':
+                        cp_type = xodr.ContactPoint.end
+                    else:
+                        cp_type = None
+                    road.add_successor(element_type, obj['t_road_link_successor'], cp_type)
+                print('Add road with ID', obj['id_xodr'])
                 odr.add_road(road)
-        odr.adjust_roads_and_lanes()
+                roads.append(road)
+        # Add lane level linking for all roads
+        for road in roads:
+            if road.predecessor:
+                road_pre = self.get_road_by_id(roads, road.predecessor.element_id)
+                if road_pre:
+                    xodr.create_lane_links(road, road_pre)
+            if road.successor:
+                road_suc = self.get_road_by_id(roads, road.successor.element_id)
+                if road_suc:
+                    xodr.create_lane_links(road, road_suc)
+        # Create OpenDRIVE junctions from object collection
+        num_junctions = 0
+        for obj in bpy.data.collections['OpenDRIVE'].all_objects:
+            if 'junction' in obj.name:
+                incoming_roads = []
+                angles = []
+                junction_id = obj['id_xodr']
+                # Create junction roads based on incoming road angles (simple 4-way for now)
+                for idx in range(4):
+                    angles.append(idx * 2 * pi /len(obj['incoming_roads']))
+                # 0 angle road must point in 'right' direction
+                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_right']))
+                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_up']))
+                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_left']))
+                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_down']))
+                print(num_junctions)
+                junction_roads = xodr.create_junction_roads_standalone(angles, 3.4, junction_id,
+                    spiral_part=0.1, arc_part=0.8, startnum=1000+6*num_junctions)
+                i = 0
+                # Create connecting roads and link them to incoming roads
+                for j in range(len(incoming_roads) - 1):
+                    for k in range(j + 1, len(incoming_roads)):
+                        # FIXME this will create problems when a single road is
+                        # connected to a junction twice
+                        if incoming_roads[j].predecessor:
+                            if incoming_roads[j].predecessor.element_id == junction_id:
+                                cp_type_j = xodr.ContactPoint.start
+                        if incoming_roads[j].successor:
+                            if incoming_roads[j].successor.element_id == junction_id:
+                                cp_type_j = xodr.ContactPoint.end
+                        if incoming_roads[k].predecessor:
+                            if incoming_roads[k].predecessor.element_id == junction_id:
+                                cp_type_k = xodr.ContactPoint.start
+                        if incoming_roads[k].successor:
+                            if incoming_roads[k].successor.element_id == junction_id:
+                                cp_type_k = xodr.ContactPoint.end
+                        # Link incoming with connecting road
+                        junction_roads[i].add_predecessor(
+                            xodr.ElementType.road, incoming_roads[j].id, cp_type_j)
+                        # FIXME is redundant lane linking needed?
+                        xodr.create_lane_links(junction_roads[i], incoming_roads[j])
+                        junction_roads[i].add_successor(
+                            xodr.ElementType.road, incoming_roads[k].id, cp_type_k)
+                        # FIXME is redundant lane linking needed?
+                        xodr.create_lane_links(junction_roads[i], incoming_roads[k])
+                        i += 1
+                # Finally create the junction
+                junction = xodr.create_junction(
+                    junction_roads, junction_id, incoming_roads, 'junction_' + str(junction_id))
+                num_junctions += 1
+                print('Add junction with ID', junction_id)
+                odr.add_junction(junction)
+                for road in junction_roads:
+                    odr.add_road(road)
+
+        odr.adjust_startpoints()
         return odr
 
     def scenario(self):
@@ -93,3 +181,25 @@ class Scenario(ScenarioGenerator):
         sce = xosc.Scenario('my scenario','Mandolin',xosc.ParameterDeclarations(),entities,sb,road,catalog)
 
         return sce
+
+    def get_element_type_by_id(self, id):
+        '''
+            Return element type of an OpenDRIVE element with given ID
+        '''
+        for obj in bpy.data.collections['OpenDRIVE'].all_objects:
+            if 'road' in obj.name:
+                if obj['id_xodr'] == id:
+                    return xodr.ElementType.road
+            elif 'junction' in obj.name:
+                if obj['id_xodr'] == id:
+                    return xodr.ElementType.junction
+
+    def get_road_by_id(self, roads, id):
+        '''
+            Return road with given ID
+        '''
+        for road in roads:
+            if road.id == id:
+                return road
+            else:
+                return None
