@@ -16,10 +16,11 @@ from mathutils import Vector, Matrix
 
 from math import pi
 
+from .operator_snap_draw import DSC_OT_snap_draw
 from . import helpers
 
 
-class DSC_OT_road_straight(bpy.types.Operator):
+class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
     bl_idname = 'dsc.road_straight'
     bl_label = 'Straight'
     bl_description = 'Create a straight road'
@@ -86,7 +87,7 @@ class DSC_OT_road_straight(bpy.types.Operator):
 
         return obj
 
-    def create_stencil(self, context, point_start, heading_start):
+    def create_stencil(self, context, point_start, heading_start, snapped_start):
         '''
             Create a stencil object with fake user or find older one in bpy data and
             relink to scene, currently only support OBJECT mode.
@@ -118,28 +119,6 @@ class DSC_OT_road_straight(bpy.types.Operator):
         # Make stencil active object
         helpers.select_activate_object(context, self.stencil)
 
-    def remove_stencil(self):
-        '''
-            Unlink stencil, needs to be in OBJECT mode.
-        '''
-        stencil = bpy.data.objects.get('dsc_stencil_object')
-        if stencil is not None:
-            bpy.data.objects.remove(stencil, do_unlink=True)
-
-    def update_stencil(self, point_end, snapped_start):
-        # Transform stencil object to follow the mouse pointer
-        vector_obj = self.stencil.data.vertices[1].co - self.stencil.data.vertices[0].co
-        self.transform_object_wrt_end(self.stencil, vector_obj, point_end, snapped_start)
-
-    def transform_object_wrt_start(self, obj, point_start, heading_start):
-        '''
-            Rotate and translate origin to start point and rotate to start heading.
-        '''
-        obj.location = point_start
-        mat_rotation = Matrix.Rotation(heading_start, 4, 'Z')
-        obj.data.transform(mat_rotation)
-        obj.data.update()
-
     def transform_object_wrt_end(self, obj, vector_obj, point_end, snapped_start):
         '''
             Transform object according to selected end point (keep start point fixed).
@@ -160,130 +139,3 @@ class DSC_OT_road_straight(bpy.types.Operator):
                     mat_rotation = vector_obj.rotation_difference(vector_selected).to_matrix().to_4x4()
                 obj.data.transform(mat_rotation @ mat_scale)
             obj.data.update()
-
-    def project_point_end(self, point_start, heading_start, point_selected):
-        '''
-            Project selected point to direction vector.
-        '''
-        vector_selected = point_selected - point_start
-        if vector_selected.length > 0:
-            vector_object = Vector((1.0, 0.0, 0.0))
-            vector_object.rotate(Matrix.Rotation(heading_start, 4, 'Z'))
-            return point_start + vector_selected.project(vector_object)
-        else:
-            return point_selected
-
-    def modal(self, context, event):
-        # Display help text
-        if self.state == 'INIT':
-            context.workspace.status_text_set("Place road by clicking, hold CTRL to snap to grid, "
-                "press ESCAPE, RIGHTMOUSE to exit.")
-            # Set custom cursor
-            bpy.context.window.cursor_modal_set('CROSSHAIR')
-            # Reset road snap
-            self.snapped_start = False
-            self.state = 'SELECT_START'
-        if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
-            return {'PASS_THROUGH'}
-        # Update on move
-        if event.type == 'MOUSEMOVE':
-            # Snap to existing road objects if any, otherwise xy plane
-            self.hit, self.id_xodr_hit, self.cp_type, point_selected, heading_selected = \
-                helpers.raycast_mouse_to_object_else_xy(context, event)
-            context.scene.cursor.location = point_selected
-            # CTRL activates grid snapping if not snapped to object
-            if event.ctrl and not self.hit:
-                bpy.ops.view3d.snap_cursor_to_grid()
-                point_selected = context.scene.cursor.location
-            # Process and remember points according to modal state machine
-            if self.state == 'SELECT_START':
-                self.point_selected_start = point_selected.copy()
-                self.heading_selected_start = heading_selected
-                # Make sure end point and heading is set even if mouse is not moved
-                self.point_selected_end = point_selected
-                self.heading_selected_end = heading_selected
-            if self.state == 'SELECT_END':
-                # For snapped straight roads use projected end point
-                if self.snapped_start:
-                    point_selected = self.project_point_end(
-                        self.point_selected_start, self.heading_selected_start, point_selected)
-                    context.scene.cursor.location = point_selected
-                    self.update_stencil(point_selected, snapped_start=True)
-                else:
-                    self.update_stencil(point_selected, snapped_start=False)
-                self.point_selected_end = point_selected
-                self.heading_selected_end = heading_selected
-        # Select start and end
-        elif event.type == 'LEFTMOUSE':
-            if event.value == 'RELEASE':
-                if self.state == 'SELECT_START':
-                    self.snapped_start = self.hit
-                    self.id_xodr_start = self.id_xodr_hit
-                    self.cp_type_start = self.cp_type
-                    self.create_stencil(context, context.scene.cursor.location, self.heading_selected_start)
-                    self.state = 'SELECT_END'
-                    return {'RUNNING_MODAL'}
-                if self.state == 'SELECT_END':
-                    self.snapped_end = self.hit
-                    cp_type_end = self.cp_type
-                    # Create the final object
-                    obj = self.create_object_xodr(context, self.point_selected_start,
-                        self.point_selected_end, self.snapped_start)
-                    if self.snapped_start:
-                        link_type = 'start'
-                        helpers.create_object_xodr_links(context, obj, link_type, self.id_xodr_start, self.cp_type_start)
-                    if self.snapped_end:
-                        link_type = 'end'
-                        helpers.create_object_xodr_links(context, obj, link_type, self.id_xodr_hit, cp_type_end)
-                    # Remove stencil and go back to initial state to draw again
-                    self.remove_stencil()
-                    self.state = 'INIT'
-                    return {'RUNNING_MODAL'}
-        # Cancel step by step
-        elif event.type in {'RIGHTMOUSE'} and event.value in {'RELEASE'}:
-            # Back to beginning
-            if self.state == 'SELECT_END':
-                self.remove_stencil()
-                self.state = 'INIT'
-                return {'RUNNING_MODAL'}
-            # Exit
-            if self.state == 'SELECT_START':
-                self.clean_up(context)
-                return {'FINISHED'}
-        # Exit immediately
-        elif event.type in {'ESC'}:
-            self.clean_up(context)
-            return {'FINISHED'}
-        # Zoom
-        elif event.type in {'WHEELUPMOUSE'}:
-            bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
-        elif event.type in {'WHEELDOWNMOUSE'}:
-            bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
-
-        # Catch everything else arriving here
-        return {'RUNNING_MODAL'}
-
-
-    def invoke(self, context, event):
-        self.init_loc_x = context.region.x
-        self.value = event.mouse_x
-        # For operator state machine
-        # possible states: {'INIT','SELECTE_BEGINNING', 'SELECT_END'}
-        self.state = 'INIT'
-
-        bpy.ops.object.select_all(action='DESELECT')
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def clean_up(self, context):
-        # Make sure stencil is removed
-        self.remove_stencil()
-        # Remove header text with 'None'
-        context.workspace.status_text_set(None)
-        # Set custom cursor
-        bpy.context.window.cursor_modal_restore()
-        # Make sure to exit edit mode
-        if bpy.context.active_object:
-            if bpy.context.active_object.mode == 'EDIT':
-                bpy.ops.object.mode_set(mode='OBJECT')
-        self.state = 'INIT'
