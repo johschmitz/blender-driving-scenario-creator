@@ -23,6 +23,9 @@ class DSC_OT_snap_draw(bpy.types.Operator):
     bl_label = 'DSC snap draw operator'
     bl_options = {'INTERNAL'}
 
+    def __init__(self):
+        self.object_snapping = True
+
     @classmethod
     def poll(cls, context):
         return True
@@ -98,7 +101,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         if event.type == 'MOUSEMOVE':
             # Snap to existing objects if any, otherwise xy plane
             self.hit, self.id_xodr_hit, self.cp_type, point_selected, heading_selected = \
-                helpers.raycast_mouse_to_object_else_xy(context, event)
+                helpers.raycast_mouse_to_object_else_xy(context, event, self.object_snapping)
             context.scene.cursor.location = point_selected
             # CTRL activates grid snapping if not snapped to object
             if event.ctrl and not self.hit:

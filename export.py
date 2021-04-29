@@ -111,7 +111,6 @@ class Scenario(ScenarioGenerator):
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_up']))
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_left']))
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_down']))
-                print(num_junctions)
                 junction_roads = xodr.create_junction_roads_standalone(angles, 3.4, junction_id,
                     spiral_part=0.1, arc_part=0.8, startnum=1000+6*num_junctions)
                 i = 0
@@ -155,32 +154,25 @@ class Scenario(ScenarioGenerator):
         return odr
 
     def scenario(self):
-        # create a simple scenario
-        road = xosc.RoadNetwork(self.road_file)
-        egoname = 'Ego'
+        init = xosc.Init()
         entities = xosc.Entities()
-        entities.add_scenario_object(egoname,xosc.CatalogReference('VehicleCatalog','car_white'))
+        for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
+            if 'car' in obj.name:
+                car_name = obj.name
+                print('Add car with ID', obj['id_xosc'])
+                entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog','car_white'))
+                init.add_init_action(car_name, xosc.TeleportAction(
+                    xosc.WorldPosition(x=obj['x'], y=obj['y'], z=obj['z'], h=obj['hdg'])))
+                init.add_init_action(car_name,xosc.AbsoluteSpeedAction(
+                    5,xosc.TransitionDynamics(xosc.DynamicsShapes.step,xosc.DynamicsDimension.time,1)))
 
+        road = xosc.RoadNetwork(self.road_file)
         catalog = xosc.Catalog()
         catalog.add_catalog('VehicleCatalog','../xosc/Catalogs/Vehicles')
+        storyboard = xosc.StoryBoard(init,stoptrigger=xosc.ValueTrigger('start_trigger ', 3, xosc.ConditionEdge.none,xosc.SimulationTimeCondition(13,xosc.Rule.greaterThan),'stop'))
+        scenario = xosc.Scenario('dsc_scenario','blender_dsc',xosc.ParameterDeclarations(),entities,storyboard,road,catalog)
 
-        init = xosc.Init()
-
-        init.add_init_action(egoname,xosc.TeleportAction(xosc.LanePosition(50,0,-2,0)))
-        init.add_init_action(egoname,xosc.AbsoluteSpeedAction(50,xosc.TransitionDynamics(xosc.DynamicsShapes.step,xosc.DynamicsDimension.time,1)))
-
-        event = xosc.Event('my event',xosc.Priority.overwrite)
-        event.add_action('lane change',xosc.AbsoluteLaneChangeAction(-1,xosc.TransitionDynamics(xosc.DynamicsShapes.sinusoidal,xosc.DynamicsDimension.time,4)))
-        event.add_trigger(xosc.ValueTrigger('start_trigger ',0,xosc.ConditionEdge.none,xosc.SimulationTimeCondition(4,xosc.Rule.greaterThan)))
-
-        man = xosc.Maneuver('maneuver')
-        man.add_event(event)
-
-        sb = xosc.StoryBoard(init,stoptrigger=xosc.ValueTrigger('start_trigger ',0,xosc.ConditionEdge.none,xosc.SimulationTimeCondition(13,xosc.Rule.greaterThan),'stop'))
-        sb.add_maneuver(man,egoname)
-        sce = xosc.Scenario('my scenario','Mandolin',xosc.ParameterDeclarations(),entities,sb,road,catalog)
-
-        return sce
+        return scenario
 
     def get_element_type_by_id(self, id):
         '''

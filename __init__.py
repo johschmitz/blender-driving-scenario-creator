@@ -47,11 +47,10 @@ custom_icons = None
 class DSC_PT_panel_create(bpy.types.Panel):
     bl_idname = "DSC_PT_panel_create"
     bl_label = "Driving Scenario Creator"
-    bl_category = "Create"
+    bl_category = "Driving Scenario Creator"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_context = "objectmode"
-    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
         global custom_icons

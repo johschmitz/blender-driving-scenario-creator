@@ -42,13 +42,6 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
         obj = bpy.data.objects.new(mesh.name, mesh)
         helpers.link_object_opendrive(context, obj)
 
-        # vertices = [(0.0, 0.0, 0.0),
-        #             (0.0, 1.0, 0.0),
-        #             (4.0, 1.0, 0.0),
-        #             (4.0, 0.0, 0.0),
-        #             (-4.0, 0.0, 0.0),
-        #             (-4.0, 1.0, 0.0)
-        #             ]
         vertices = [(0.0, 0.0, 0.0),
                     (1.0, 0.0, 0.0),
                     (1.0, -4.0, 0.0),

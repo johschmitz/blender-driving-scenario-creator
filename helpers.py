@@ -25,16 +25,33 @@ def get_new_id_opendrive(context):
         Generate and return new ID for OpenDRIVE objects using a dummy object
         for storage.
     '''
-    dummy_obj = context.scene.objects.get('id_next')
+    dummy_obj = context.scene.objects.get('id_xodr_next')
     if dummy_obj is None:
-        dummy_obj = bpy.data.objects.new('id_next',None)
+        dummy_obj = bpy.data.objects.new('id_xodr_next',None)
         # Do not render
         dummy_obj.hide_viewport = True
         dummy_obj.hide_render = True
-        dummy_obj['id_next'] = 0
+        dummy_obj['id_xodr_next'] = 0
         link_object_opendrive(context, dummy_obj)
-    id_next = dummy_obj['id_next']
-    dummy_obj['id_next'] += 1
+    id_next = dummy_obj['id_xodr_next']
+    dummy_obj['id_xodr_next'] += 1
+    return id_next
+
+def get_new_id_openscenario(context):
+    '''
+        Generate and return new ID for OpenSCENARIO objects using a dummy object
+        for storage.
+    '''
+    dummy_obj = context.scene.objects.get('id_xosc_next')
+    if dummy_obj is None:
+        dummy_obj = bpy.data.objects.new('id_xosc_next',None)
+        # Do not render
+        dummy_obj.hide_viewport = True
+        dummy_obj.hide_render = True
+        dummy_obj['id_xosc_next'] = 0
+        link_object_openscenario(context, dummy_obj)
+    id_next = dummy_obj['id_xosc_next']
+    dummy_obj['id_xosc_next'] += 1
     return id_next
 
 def link_object_opendrive(context, obj):
@@ -176,12 +193,12 @@ def point_to_junction_connector(obj, point):
     arg_min_dist = distances.index(min(distances))
     return cps[arg_min_dist], cp_vectors[arg_min_dist], headings[arg_min_dist]
 
-def raycast_mouse_to_object_else_xy(context, event):
+def raycast_mouse_to_object_else_xy(context, event, snap):
     '''
         Get a snapping point and heading or just an xy-plane intersection point.
     '''
     hit, point_raycast, obj = raycast_mouse_to_odr_object(context, event, obj_type='line')
-    if not hit:
+    if not hit or not snap:
         point_raycast = mouse_to_xy_plane(context, event)
         return False, -1, 'cp_none', point_raycast, 0
     else:
