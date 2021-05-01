@@ -19,33 +19,58 @@ from scenariogeneration import ScenarioGenerator
 
 from math import pi
 
-from pathlib import Path
+import pathlib
+import subprocess
 
 class DSC_OT_export(bpy.types.Operator):
-    bl_idname = "dsc.export_driving_scenario"
-    bl_label = "Export driving scenario"
-    bl_description = "Export driving scenario as OpenDRIVE, OpenSCENARIO and Mesh (e.g. FBX, glTF 2.0)"
+    bl_idname = 'dsc.export_driving_scenario'
+    bl_label = 'Export driving scenario'
+    bl_description = 'Export driving scenario as OpenDRIVE, OpenSCENARIO and Mesh (e.g. OBJ, FBX, glTF 2.0)'
 
-    filepath: bpy.props.StringProperty(
-        name="File Path", description="Target filename for OpenDRIVE(.xosc) and OpenSCENARIO(.xodr)")
+    directory: bpy.props.StringProperty(
+        name='Export directory', description='Target directory for export.')
     
     @classmethod
     def poll(cls, context):
         return context.object is not None
 
     def execute(self, context):
-        s = Scenario(context)
-        s.generate_single(self.filepath)
+        self.export_scenegraph_file()
+        s = Scenario(context, self.directory)
+        s.generate_single(self.directory)
         return {'FINISHED'}
 
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
+    def export_scenegraph_file(self):
+        # Export the scene mesh to file
+        scenegraph_path = pathlib.Path(self.directory) / 'scenegraph' / 'export.obj'
+        scenegraph_path.parent.mkdir(parents=True, exist_ok=True)
+        bpy.ops.object.select_all(action='SELECT')
+        for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
+            obj.select_set(False)
+        bpy.ops.export_scene.obj(filepath=str(scenegraph_path), check_existing=True,
+                                 filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
+                                 use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
+                                 use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
+                                 use_materials=False, use_triangles=False, use_nurbs=False,
+                                 use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
+                                 group_by_material=False, keep_vertex_order=False, global_scale=1.0,
+                                 path_mode='STRIP', axis_forward='-Z', axis_up='Y')
+        bpy.ops.object.select_all(action='DESELECT')
+        try:
+            subprocess.run(['osgconv', str(scenegraph_path), str(scenegraph_path.with_suffix('.osgb'))])
+        except FileNotFoundError:
+            self.report({'ERROR'}, 'Executable \"osgconv\" required to produce .osgb scenegraph file. '
+                'Try installing openscenegraph.')
+
 class Scenario(ScenarioGenerator):
-    def __init__(self, context):
+    def __init__(self, context, directory):
         ScenarioGenerator.__init__(self)
         self.context = context
+        self.directory = directory
 
     def road(self):
         odr = xodr.OpenDrive('blender_dsc')
@@ -164,9 +189,9 @@ class Scenario(ScenarioGenerator):
                 init.add_init_action(car_name, xosc.TeleportAction(
                     xosc.WorldPosition(x=obj['x'], y=obj['y'], z=obj['z'], h=obj['hdg'])))
                 init.add_init_action(car_name,xosc.AbsoluteSpeedAction(
-                    5,xosc.TransitionDynamics(xosc.DynamicsShapes.step,xosc.DynamicsDimension.time,1)))
+                    1,xosc.TransitionDynamics(xosc.DynamicsShapes.step,xosc.DynamicsDimension.time,1)))
 
-        road = xosc.RoadNetwork(self.road_file)
+        road = xosc.RoadNetwork(self.road_file,'./scenegraph/export.osgb')
         catalog = xosc.Catalog()
         catalog.add_catalog('VehicleCatalog','../xosc/Catalogs/Vehicles')
         storyboard = xosc.StoryBoard(init,stoptrigger=xosc.ValueTrigger('start_trigger ', 3, xosc.ConditionEdge.none,xosc.SimulationTimeCondition(13,xosc.Rule.greaterThan),'stop'))
