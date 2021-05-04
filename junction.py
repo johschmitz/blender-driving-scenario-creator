@@ -31,7 +31,8 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, point_end, snapped_start):
+    def create_object_xodr(self, context, point_start, heading_start, snapped_start,
+                           point_end, heading_end, snapped_end):
         '''
             Create a junction object
         '''
@@ -43,31 +44,28 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
         mesh = bpy.data.meshes.new('junction_' + str(obj_id))
         obj = bpy.data.objects.new(mesh.name, mesh)
         helpers.link_object_opendrive(context, obj)
-
-        vertices = [(0.0, -4.0, 0.0),
-                    (-4.0, -4.0, 0.0),
-                    (-4.0, 0.0, 0.0),
+        vertices = [(-4.0, 0.0, 0.0),
                     (-4.0, 4.0, 0.0),
                     (0.0, 4.0, 0.0),
                     (4.0, 4.0, 0.0),
                     (4.0, 0.0, 0.0),
                     (4.0, -4.0, 0.0),
+                    (0.0, -4.0, 0.0),
+                    (-4.0, -4.0, 0.0),
                     ]
         edges = [[0, 1],[1, 2],[2, 3],[3, 4],[4, 5],[5, 6],[6, 7],[7, 0]]
         faces = [[0, 1, 2, 3, 4, 5, 6, 7]]
         mesh.from_pydata(vertices, edges, faces)
         if snapped_start:
             # Use start point instead of center point as origin
-            matrix = Matrix.Translation((0.0, 4.0, 0.0))
+            matrix = Matrix.Translation((4.0, 0.0, 0.0))
             obj.data.transform(matrix)
+        self.transform_object_wrt_start(obj, point_start, heading_start)
+        # Rotate, translate, according to selected points
+        vector_obj = obj.data.vertices[4].co - obj.data.vertices[0].co
+        self.transform_object_wrt_end(obj, vector_obj, point_end, snapped_start)
 
         helpers.select_activate_object(context, obj)
-
-        # Rotate, translate, according to selected points
-        vector_start_end_xy = (point_end - point_start).to_2d()
-        vector_obj = obj.data.vertices[4].co - obj.data.vertices[0].co
-        heading_start = vector_start_end_xy.angle_signed(vector_obj.to_2d())
-        self.transform_object_wrt_start(obj, point_start, heading_start)
 
         # Remember connecting points for snapping
         obj['cp_down'] = obj.location + obj.data.vertices[0].co
@@ -84,11 +82,11 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
         vector_hdg_left = obj.data.vertices[2].co - obj.data.vertices[6].co
         vector_hdg_up = obj.data.vertices[4].co - obj.data.vertices[0].co
         vector_hdg_right = obj.data.vertices[6].co - obj.data.vertices[2].co
-        vec_0_1 = Vector((1.0, 0.0))
-        obj['hdg_down'] = vector_hdg_down.to_2d().angle_signed(vec_0_1)
-        obj['hdg_left'] = vector_hdg_left.to_2d().angle_signed(vec_0_1)
-        obj['hdg_up'] = vector_hdg_up.to_2d().angle_signed(vec_0_1)
-        obj['hdg_right'] = vector_hdg_right.to_2d().angle_signed(vec_0_1)
+        vec_1_0 = Vector((1.0, 0.0))
+        obj['hdg_down'] = vector_hdg_down.to_2d().angle_signed(vec_1_0)
+        obj['hdg_left'] = vector_hdg_left.to_2d().angle_signed(vec_1_0)
+        obj['hdg_up'] = vector_hdg_up.to_2d().angle_signed(vec_1_0)
+        obj['hdg_right'] = vector_hdg_right.to_2d().angle_signed(vec_1_0)
 
         obj['incoming_roads'] = {'cp_down': None, 'cp_left': None, 'cp_up': None, 'cp_right': None}
 
@@ -147,3 +145,15 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
                     mat_rotation = vector_obj.rotation_difference(vector_selected).to_matrix().to_4x4()
                 obj.data.transform(mat_rotation)
                 obj.data.update()
+
+    def project_point_end(self, point_start, heading_start, point_selected):
+        '''
+            Project selected point to direction vector.
+        '''
+        vector_selected = point_selected - point_start
+        if vector_selected.length > 0:
+            vector_object = Vector((1.0, 0.0, 0.0))
+            vector_object.rotate(Matrix.Rotation(heading_start, 4, 'Z'))
+            return point_start + vector_selected.project(vector_object)
+        else:
+            return point_selected

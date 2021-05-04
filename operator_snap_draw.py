@@ -30,7 +30,8 @@ class DSC_OT_snap_draw(bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, point_end, snapped_start):
+    def create_object_xodr(self, context, point_start, heading_start, snapped_start,
+                           point_end, heading_end, snapped_end):
         '''
             Create a junction object
         '''
@@ -51,7 +52,8 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         if stencil is not None:
             bpy.data.objects.remove(stencil, do_unlink=True)
 
-    def update_stencil(self, point_end, snapped_start):
+    def update_stencil(self, point_start, heading_start, snapped_start,
+                             point_end, heading_end, snapped_end):
         '''
             Transform stencil object to follow the mouse pointer.
         '''
@@ -77,19 +79,13 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         '''
             Project selected point to direction vector.
         '''
-        vector_selected = point_selected - point_start
-        if vector_selected.length > 0:
-            vector_object = Vector((1.0, 0.0, 0.0))
-            vector_object.rotate(Matrix.Rotation(heading_start, 4, 'Z'))
-            return point_start + vector_selected.project(vector_object)
-        else:
-            return point_selected
+        raise NotImplementedError()
 
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
             context.workspace.status_text_set("Place object by clicking, hold CTRL to snap to grid, "
-                "press ESCAPE, RIGHTMOUSE to exit.")
+                "press RIGHTMOUSE to cancel selection, press ESCAPE to exit.")
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             # Reset snapping
@@ -120,11 +116,12 @@ class DSC_OT_snap_draw(bpy.types.Operator):
                     point_selected = self.project_point_end(
                         self.point_selected_start, self.heading_selected_start, point_selected)
                     context.scene.cursor.location = point_selected
-                    self.update_stencil(point_selected, self.snapped_start)
-                else:
-                    self.update_stencil(point_selected, self.snapped_start)
+                self.update_stencil(
+                    self.point_selected_start, self.heading_selected_start, self.snapped_start,
+                    point_selected, heading_selected, self.hit)
                 self.point_selected_end = point_selected
                 self.heading_selected_end = heading_selected
+                self.snapped_end = self.hit
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
@@ -138,17 +135,19 @@ class DSC_OT_snap_draw(bpy.types.Operator):
                     self.state = 'SELECT_END'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_END':
-                    snapped_end = self.hit
                     cp_type_end = self.cp_type
                     # Create the final object
-                    obj = self.create_object_xodr(context, self.point_selected_start,
-                        self.point_selected_end, self.snapped_start)
+                    obj = self.create_object_xodr(context,
+                        self.point_selected_start, self.heading_selected_start, self.snapped_start,
+                        self.point_selected_end, self.heading_selected_end, self.snapped_end)
                     if self.snapped_start:
                         link_type = 'start'
-                        helpers.create_object_xodr_links(context, obj, link_type, self.id_xodr_start, self.cp_type_start)
-                    if snapped_end:
+                        helpers.create_object_xodr_links(context, obj, link_type,
+                            self.id_xodr_start, self.cp_type_start)
+                    if self.snapped_end:
                         link_type = 'end'
-                        helpers.create_object_xodr_links(context, obj, link_type, self.id_xodr_hit, cp_type_end)
+                        helpers.create_object_xodr_links(context, obj, link_type,
+                            self.id_xodr_hit, cp_type_end)
                     # Remove stencil and go back to initial state to draw again
                     self.remove_stencil()
                     self.state = 'INIT'

@@ -49,8 +49,9 @@ class DSC_OT_export(bpy.types.Operator):
         scenegraph_path = pathlib.Path(self.directory) / 'scenegraph' / 'export.obj'
         scenegraph_path.parent.mkdir(parents=True, exist_ok=True)
         bpy.ops.object.select_all(action='SELECT')
-        for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
-            obj.select_set(False)
+        if 'OpenSCENARIO' in bpy.data.collections:
+            for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
+                obj.select_set(False)
         bpy.ops.export_scene.obj(filepath=str(scenegraph_path), check_existing=True,
                                  filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
                                  use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
@@ -58,7 +59,7 @@ class DSC_OT_export(bpy.types.Operator):
                                  use_materials=False, use_triangles=False, use_nurbs=False,
                                  use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
                                  group_by_material=False, keep_vertex_order=False, global_scale=1.0,
-                                 path_mode='STRIP', axis_forward='-Z', axis_up='Y')
+                                     path_mode='STRIP', axis_forward='-Z', axis_up='Y')
         bpy.ops.object.select_all(action='DESELECT')
         try:
             subprocess.run(['osgconv', str(scenegraph_path), str(scenegraph_path.with_suffix('.osgb'))])
@@ -77,18 +78,34 @@ class Scenario(ScenarioGenerator):
         roads = []
         # Create OpenDRIVE roads from object collection
         for obj in bpy.data.collections['OpenDRIVE'].all_objects:
-            if 'road_straight' in obj.name:
-                planview = xodr.PlanView()
-                planview.set_start_point(obj['t_road_planView_geometry_x'],obj['t_road_planView_geometry_y'],obj['t_road_planView_geometry_hdg'])
-                line = xodr.Line(obj['t_road_planView_geometry_length'])
-                planview.add_geometry(line)
-                # Create simple lanes
-                lanes = xodr.Lanes()
-                lanesection = xodr.LaneSection(0,xodr.standard_lane())
-                lanesection.add_left_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
-                lanesection.add_right_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
-                lanes.add_lanesection(lanesection)
-                road = xodr.Road(obj['id_xodr'],planview,lanes)
+            if 'road' in obj.name:
+                if obj['t_road_planView_geometry'] == 'line':
+                    planview = xodr.PlanView()
+                    planview.set_start_point(obj['t_road_planView_geometry_x'],
+                        obj['t_road_planView_geometry_y'],obj['t_road_planView_geometry_hdg'])
+                    line = xodr.Line(obj['t_road_planView_geometry_length'])
+                    planview.add_geometry(line)
+                    # Create simple lanes
+                    lanes = xodr.Lanes()
+                    lanesection = xodr.LaneSection(0,xodr.standard_lane())
+                    lanesection.add_left_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
+                    lanesection.add_right_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
+                    lanes.add_lanesection(lanesection)
+                    road = xodr.Road(obj['id_xodr'],planview,lanes)
+                if obj['t_road_planView_geometry'] == 'arc':
+                    planview = xodr.PlanView()
+                    planview.set_start_point(obj['t_road_planView_geometry_x'],
+                        obj['t_road_planView_geometry_y'],obj['t_road_planView_geometry_hdg'])
+                    arc = xodr.Arc(obj['t_road_planView_geometry_curvature'],
+                        angle=obj['t_road_planView_geometry_angle'])
+                    planview.add_geometry(arc)
+                    # Create simple lanes
+                    lanes = xodr.Lanes()
+                    lanesection = xodr.LaneSection(0,xodr.standard_lane())
+                    lanesection.add_left_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
+                    lanesection.add_right_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
+                    lanes.add_lanesection(lanesection)
+                    road = xodr.Road(obj['id_xodr'],planview,lanes)
                 # Add road level linking
                 if 't_road_link_predecessor' in obj:
                     element_type = self.get_element_type_by_id(obj['t_road_link_predecessor'])
@@ -112,6 +129,7 @@ class Scenario(ScenarioGenerator):
                 odr.add_road(road)
                 roads.append(road)
         # Add lane level linking for all roads
+        # TODO: Improve performance by exploiting symmetry
         for road in roads:
             if road.predecessor:
                 road_pre = self.get_road_by_id(roads, road.predecessor.element_id)
@@ -136,12 +154,13 @@ class Scenario(ScenarioGenerator):
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_up']))
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_left']))
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_down']))
+                # Create connecting roads and link them to incoming roads
                 junction_roads = xodr.create_junction_roads_standalone(angles, 3.4, junction_id,
                     spiral_part=0.1, arc_part=0.8, startnum=1000+6*num_junctions)
                 i = 0
-                # Create connecting roads and link them to incoming roads
                 for j in range(len(incoming_roads) - 1):
                     for k in range(j + 1, len(incoming_roads)):
+                        print(j)
                         # FIXME this will create problems when a single road is
                         # connected to a junction twice
                         if incoming_roads[j].predecessor:
@@ -181,15 +200,18 @@ class Scenario(ScenarioGenerator):
     def scenario(self):
         init = xosc.Init()
         entities = xosc.Entities()
-        for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
-            if 'car' in obj.name:
-                car_name = obj.name
-                print('Add car with ID', obj['id_xosc'])
-                entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog','car_white'))
-                init.add_init_action(car_name, xosc.TeleportAction(
-                    xosc.WorldPosition(x=obj['x'], y=obj['y'], z=obj['z'], h=obj['hdg'])))
-                init.add_init_action(car_name,xosc.AbsoluteSpeedAction(
-                    1,xosc.TransitionDynamics(xosc.DynamicsShapes.step,xosc.DynamicsDimension.time,1)))
+        if 'OpenSCENARIO' in bpy.data.collections:
+            for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
+                if 'car' in obj.name:
+                    car_name = obj.name
+                    print('Add car with ID', obj['id_xosc'])
+                    entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog','car_white'))
+                    init.add_init_action(car_name, xosc.TeleportAction(
+                        xosc.WorldPosition(x=obj['x'], y=obj['y'], z=obj['z'], h=obj['hdg'])))
+                    init.add_init_action(car_name, xosc.AbsoluteSpeedAction(
+                        30, xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.time, 1)))
+                    init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
+                        xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.rate, 1)))
 
         road = xosc.RoadNetwork(self.road_file,'./scenegraph/export.osgb')
         catalog = xosc.Catalog()
@@ -218,5 +240,5 @@ class Scenario(ScenarioGenerator):
         for road in roads:
             if road.id == id:
                 return road
-            else:
-                return None
+        print('ERROR: No road with ID {} found.'.format(id))
+        return None

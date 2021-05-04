@@ -23,6 +23,8 @@ Credits go to
   developers for the .xodr/.xosc generating/writing lib used as backend
 - [Archipack](https://github.com/s-leger/archipack) add-on developer(s) for
   Blender add-on tool inspiration
+- Blender Add Curve: Extra Objects extension authors for inspiration on ring
+  segments
 
 ## Main author/maintainer contact
 

@@ -33,7 +33,8 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, point_end, snapped_start):
+    def create_object_xodr(self, context, point_start, heading_start, snapped_start,
+                           point_end, heading_end, snapped_end):
         '''
             Create a car object
         '''
@@ -62,10 +63,9 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
         helpers.select_activate_object(context, obj)
 
         # Rotate, translate, according to selected points
-        vector_start_end_xy = (point_end - point_start).to_2d()
-        vector_obj = obj.data.vertices[1].co - obj.data.vertices[0].co
-        heading_start = vector_start_end_xy.angle_signed(vector_obj.to_2d())
         self.transform_object_wrt_start(obj, point_start, heading_start)
+        vector_obj = obj.data.vertices[1].co - obj.data.vertices[0].co
+        self.transform_object_wrt_end(obj, vector_obj, point_end, snapped_start)
 
         # Remember connecting points for snapping
         obj['cp_down'] = obj.location + obj.data.vertices[0].co

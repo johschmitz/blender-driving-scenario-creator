@@ -30,7 +30,8 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, point_end, snapped_start):
+    def create_object_xodr(self, context, point_start, heading_start, snapped_start,
+                           point_end, heading_end, snapped_end):
         '''
             Create a straight road object
         '''
@@ -57,9 +58,6 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
         helpers.select_activate_object(context, obj)
 
         # Rotate, translate, scale according to selected points
-        vector_start_end_xy = (point_end - point_start).to_2d()
-        vector_obj = obj.data.vertices[1].co - obj.data.vertices[0].co
-        heading_start = vector_start_end_xy.angle_signed(vector_obj.to_2d())
         self.transform_object_wrt_start(obj, point_start, heading_start)
         vector_obj = obj.data.vertices[1].co - obj.data.vertices[0].co
         self.transform_object_wrt_end(obj, vector_obj, point_end, snapped_start)
@@ -132,3 +130,15 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
                     mat_rotation = vector_obj.rotation_difference(vector_selected).to_matrix().to_4x4()
                 obj.data.transform(mat_rotation @ mat_scale)
             obj.data.update()
+
+    def project_point_end(self, point_start, heading_start, point_selected):
+        '''
+            Project selected point to direction vector.
+        '''
+        vector_selected = point_selected - point_start
+        if vector_selected.length > 0:
+            vector_object = Vector((1.0, 0.0, 0.0))
+            vector_object.rotate(Matrix.Rotation(heading_start, 4, 'Z'))
+            return point_start + vector_selected.project(vector_object)
+        else:
+            return point_selected

@@ -113,7 +113,7 @@ def create_object_xodr_links(context, obj, link_type, id_other, cp_type):
                 cp_type_other = 'cp_down'
             else:
                 cp_type_other = 'cp_up'
-        if cp_type == 'start':
+        if cp_type == 'cp_start':
             obj_other['t_road_link_predecessor'] = obj['id_xodr']
             obj_other['t_road_link_predecessor_cp'] = cp_type_other
         else:
@@ -210,3 +210,4 @@ def raycast_mouse_to_object_else_xy(context, event, snap):
             cp_type, cp, heading = point_to_junction_connector(obj, point_raycast)
             id_xodr = obj['id_xodr']
             return True, id_xodr, cp_type, cp, heading
+
