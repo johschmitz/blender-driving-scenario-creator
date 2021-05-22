@@ -26,6 +26,8 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
     bl_description = "Place a car object"
     bl_options = {'REGISTER', 'UNDO'}
 
+    object_type = 'car'
+
     def __init__(self):
         self.object_snapping = False
 
@@ -33,20 +35,50 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, heading_start, snapped_start,
-                           point_end, heading_end, snapped_end):
+    def create_object_xodr(self, context):
         '''
             Create a car object
         '''
-        if point_end == point_start:
-            self.report({"WARNING"}, "First and second selection are equal, "
-                "direction can not be determined!")
+        valid, mesh, params = self.get_mesh_and_params(for_stencil=False)
+        if not valid:
             return None
-        obj_id = helpers.get_new_id_openscenario(context)
-        mesh = bpy.data.meshes.new('car_' + str(obj_id))
-        obj = bpy.data.objects.new(mesh.name, mesh)
-        helpers.link_object_openscenario(context, obj)
+        else:
+            obj_id = helpers.get_new_id_openscenario(context)
+            mesh.name = self.object_type + '_' + str(obj_id)
+            obj = bpy.data.objects.new(mesh.name, mesh)
+            obj.location = self.point_start
+            helpers.link_object_openscenario(context, obj)
 
+            helpers.select_activate_object(context, obj)
+
+        # Remember connecting points for snapping
+        obj['cp_down'] = obj.location + obj.data.vertices[0].co
+        obj['cp_left'] = obj.location + obj.data.vertices[2].co
+        obj['cp_up'] = obj.location + obj.data.vertices[4].co
+        obj['cp_right'] = obj.location + obj.data.vertices[6].co
+
+        # Set OpenSCENARIO custom properties
+        obj['id_xosc'] = obj_id
+        obj['x'] = self.point_start.x
+        obj['y'] = self.point_start.y
+        obj['z'] = self.point_start.z
+        obj['hdg'] = params['heading_start']
+
+        return obj
+
+    def get_mesh_and_params(self, for_stencil):
+        '''
+            Calculate and return the vertices, edges and faces to create a road mesh.
+        '''
+        if self.point_start == self.point_selected_end:
+            self.report({"WARNING"}, "Start and end point can not be the same!")
+            valid = False
+            return valid, None, {}
+        vector_start_end = self.point_selected_end - self.point_start
+        heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
+        params = {'point_start': self.point_selected_end,
+                  'heading_start': heading,
+                  'point_end': self.point_selected_end}
         vertices = [(2.0, 1.0, 0.0),
                     (-2.0, 1.0, 0.0),
                     (-2.0, -1.0, 0.0),
@@ -57,84 +89,14 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
                     (2.0, -1.0, 1.5),
                     ]
         edges = [[0, 1],[1, 2],[2, 3],[3, 0],[4, 5],[5, 6],[6, 7],[7, 4],[0, 4],[1, 5],[2, 6],[3, 7]]
-        faces = [[0, 1, 2, 3],[4, 5, 6, 7],[0, 1, 5, 4],[ 2, 3, 7, 6], [0, 3, 7, 4], [1, 2, 6, 5]]
-        mesh.from_pydata(vertices, edges, faces)
-
-        helpers.select_activate_object(context, obj)
-
-        # Rotate, translate, according to selected points
-        self.transform_object_wrt_start(obj, point_start, heading_start)
-        vector_obj = obj.data.vertices[1].co - obj.data.vertices[0].co
-        self.transform_object_wrt_end(obj, vector_obj, point_end, snapped_start)
-
-        # Remember connecting points for snapping
-        obj['cp_down'] = obj.location + obj.data.vertices[0].co
-        obj['cp_left'] = obj.location + obj.data.vertices[2].co
-        obj['cp_up'] = obj.location + obj.data.vertices[4].co
-        obj['cp_right'] = obj.location + obj.data.vertices[6].co
-
-        # Set OpenSCENARIO custom properties
-        obj['id_xosc'] = obj_id
-        obj['x'] = point_start.x
-        obj['y'] = point_start.y
-        obj['z'] = point_start.z
-        vector_start_end = point_end - point_start
-        obj['hdg'] = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
-
-        return obj
-
-    def create_stencil(self, context, point_start, heading_start, snapped_start):
-        '''
-            Create a stencil object with fake user or find older one in bpy data and
-            relink to scene currently only support OBJECT mode.
-        '''
-        stencil = bpy.data.objects.get('dsc_stencil_object')
-        if stencil is not None:
-            if context.scene.objects.get('dsc_stencil_object') is None:
-                context.scene.collection.objects.link(stencil)
-        else:
-            # Create object from mesh
-            mesh = bpy.data.meshes.new("dsc_stencil_object")
-            vertices = [(2.0, 1.0, 0.0),
-                        (-2.0, 1.0, 0.0),
-                        (-2.0, -1.0, 0.0),
-                        (2.0, -1.0, 0.0),
-                        (2.0, 1.0, 1.5),
-                        (-2.0, 1.0, 1.5),
-                        (-2.0, -1.0, 1.5),
-                        (2.0, -1.0, 1.5),
-                        ]
-            edges = [[0, 1],[1, 2],[2, 3],[3, 0],[4, 5],[5, 6],[6, 7],[7, 4],[0, 4],[1, 5],[2, 6],[3, 7]]
+        if for_stencil:
             faces = []
-            mesh.from_pydata(vertices, edges, faces)
-            self.stencil = bpy.data.objects.new("dsc_stencil_object", mesh)
-            if snapped_start:
-                # Use start point instead of center point as origin
-                matrix = Matrix.Translation((4.0, 0.0, 0.0))
-                self.stencil.data.transform(matrix)
-            self.transform_object_wrt_start(self.stencil, point_start, heading_start)
-            # Link
-            context.scene.collection.objects.link(self.stencil)
-            self.stencil.use_fake_user = True
-            self.stencil.data.use_fake_user = True
-        # Make stencil active object
-        helpers.select_activate_object(context, self.stencil)
-
-    def transform_object_wrt_end(self, obj, vector_obj, point_end, snapped_start):
-        '''
-            Transform object according to selected end point (keep start point fixed).
-        '''
-        vector_selected = point_end - obj.location
-        # Make sure vectors are not 0 lenght to avoid division error
-        if vector_selected.length > 0 and vector_obj.length > 0:
-            # Apply transformation
-            if snapped_start:
-                return
-            else:
-                if vector_selected.angle(vector_obj)-pi > 0:
-                    # Avoid numerical issues due to vectors directly facing each other
-                    mat_rotation = Matrix.Rotation(pi, 4, 'Z')
-                else:
-                    mat_rotation = vector_obj.rotation_difference(vector_selected).to_matrix().to_4x4()
-                obj.data.transform(mat_rotation)
-                obj.data.update()
+        else:
+            faces = [[0, 1, 2, 3],[4, 5, 6, 7],[0, 1, 5, 4],[ 2, 3, 7, 6], [0, 3, 7, 4], [1, 2, 6, 5]]
+        # Create blender mesh
+        mesh = bpy.data.meshes.new('temp')
+        mesh.from_pydata(vertices, edges, faces)
+        # Rotate and translate mesh according to selected start point
+        self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
+        valid = True
+        return valid, mesh, params

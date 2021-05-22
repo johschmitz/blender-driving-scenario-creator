@@ -12,9 +12,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import bmesh
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils.geometry import intersect_line_plane
-from mathutils import Vector
+from mathutils import Vector, Matrix
 from idprop.types import IDPropertyArray
 
 from math import pi
@@ -91,11 +92,11 @@ def create_object_xodr_links(context, obj, link_type, id_other, cp_type):
     '''
     if 'road' in obj.name:
         if link_type == 'start':
-            obj['t_road_link_predecessor'] =  id_other
-            obj['t_road_link_predecessor_cp'] = cp_type
+            obj['link_predecessor'] =  id_other
+            obj['link_predecessor_cp'] = cp_type
         else:
-            obj['t_road_link_successor'] = id_other
-            obj['t_road_link_successor_cp'] = cp_type
+            obj['link_successor'] = id_other
+            obj['link_successor_cp'] = cp_type
     elif 'junction' in obj.name:
         if link_type == 'start':
             obj['incoming_roads']['cp_down'] = id_other
@@ -114,11 +115,11 @@ def create_object_xodr_links(context, obj, link_type, id_other, cp_type):
             else:
                 cp_type_other = 'cp_up'
         if cp_type == 'cp_start':
-            obj_other['t_road_link_predecessor'] = obj['id_xodr']
-            obj_other['t_road_link_predecessor_cp'] = cp_type_other
+            obj_other['link_predecessor'] = obj['id_xodr']
+            obj_other['link_predecessor_cp'] = cp_type_other
         else:
-            obj_other['t_road_link_successor'] = obj['id_xodr']
-            obj_other['t_road_link_successor_cp'] = cp_type_other
+            obj_other['link_successor'] = obj['id_xodr']
+            obj_other['link_successor_cp'] = cp_type_other
     elif 'junction' in obj_other.name:
         obj_other['incoming_roads'][cp_type] = obj['id_xodr']
 
@@ -162,7 +163,7 @@ def raycast_mouse_to_odr_object(context, event, obj_type):
         direction=view_vector_mouse)
     # Filter object type
     if hit:
-        if 't_road_planView_geometry' or 't_junction_e_junction_type' in obj:
+        if 'geometry' or 't_junction_e_junction_type' in obj:
             return hit, point, obj
     else:
         return False, point, None
@@ -174,9 +175,9 @@ def point_to_road_connector(obj, point):
     dist_start = (Vector(obj['cp_start']) - point).length
     dist_end = (Vector(obj['cp_end']) - point).length
     if dist_start < dist_end:
-        return 'cp_start', Vector(obj['cp_start']), obj['t_road_planView_geometry_hdg'] - pi
+        return 'cp_start', Vector(obj['cp_start']), obj['geometry_hdg_start'] - pi
     else:
-        return 'cp_end', Vector(obj['cp_end']), obj['t_road_planView_geometry_hdg']
+        return 'cp_end', Vector(obj['cp_end']), obj['geometry_hdg_end']
 
 def point_to_junction_connector(obj, point):
     '''
@@ -193,6 +194,18 @@ def point_to_junction_connector(obj, point):
     arg_min_dist = distances.index(min(distances))
     return cps[arg_min_dist], cp_vectors[arg_min_dist], headings[arg_min_dist]
 
+def project_point_vector(point_selected, point_start, heading_start):
+    '''
+        Project selected point to vector.
+    '''
+    vector_selected = point_selected - point_start
+    if vector_selected.length > 0:
+        vector_object = Vector((1.0, 0.0, 0.0))
+        vector_object.rotate(Matrix.Rotation(heading_start, 4, 'Z'))
+        return point_start + vector_selected.project(vector_object)
+    else:
+        return point_selected
+
 def raycast_mouse_to_object_else_xy(context, event, snap):
     '''
         Get a snapping point and heading or just an xy-plane intersection point.
@@ -202,7 +215,7 @@ def raycast_mouse_to_object_else_xy(context, event, snap):
         point_raycast = mouse_to_xy_plane(context, event)
         return False, -1, 'cp_none', point_raycast, 0
     else:
-        if 't_road_planView_geometry' in obj:
+        if 'geometry' in obj:
             cp_type, cp, heading = point_to_road_connector(obj, point_raycast)
             id_xodr = obj['id_xodr']
             return True, id_xodr, cp_type, cp, heading
@@ -211,3 +224,42 @@ def raycast_mouse_to_object_else_xy(context, event, snap):
             id_xodr = obj['id_xodr']
             return True, id_xodr, cp_type, cp, heading
 
+def assign_road_materials(obj):
+    '''
+        Assign materials for asphalt and markings to object.
+    '''
+    # Get road material
+    material = bpy.data.materials.get("road_asphalt")
+    if material is None:
+        # Create material
+        material = bpy.data.materials.new(name="road_asphalt")
+        material.diffuse_color = [.3,.3,.3,1]
+    obj.data.materials.append(material)
+    # Get lane line material
+    material = bpy.data.materials.get("road_surface_marking")
+    if material is None:
+        # Create material
+        material = bpy.data.materials.new(name="road_surface_marking")
+        material.diffuse_color = [.9,.9,.9,1]
+    # Assign to object's 2nd material slot
+    obj.data.materials.append(material)
+
+def get_material_index(obj, material_name):
+    '''
+        Return index of material slot based on material name.
+    '''
+    for idx, material in enumerate(obj.data.materials):
+        if material.name == material_name:
+            return idx
+    return None
+
+def replace_mesh(obj, mesh):
+    # Delete old mesh data
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    verts = [v for v in bm.verts]
+    bmesh.ops.delete(bm, geom=verts, context='VERTS')
+    bm.to_mesh(obj.data)
+    bm.free()
+    # Set new mesh data
+    obj.data = mesh

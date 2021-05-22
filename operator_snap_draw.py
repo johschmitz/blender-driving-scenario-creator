@@ -12,6 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import bmesh
 from mathutils import Vector, Matrix
 
 from math import pi
@@ -30,8 +31,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context, point_start, heading_start, snapped_start,
-                           point_end, heading_end, snapped_end):
+    def create_object_xodr(self, context):
         '''
             Create a junction object
         '''
@@ -42,7 +42,25 @@ class DSC_OT_snap_draw(bpy.types.Operator):
             Create a stencil object with fake user or find older one in bpy data and
             relink to scene currently only support OBJECT mode.
         '''
-        raise NotImplementedError()
+        stencil = bpy.data.objects.get('dsc_stencil_object')
+        if stencil is not None:
+            if context.scene.objects.get('dsc_stencil_object') is None:
+                context.scene.collection.objects.link(stencil)
+        else:
+            # Create object from mesh
+            mesh = bpy.data.meshes.new("dsc_stencil_object")
+            vertices, edges, faces = self.get_initial_vertices_edges_faces()
+            mesh.from_pydata(vertices, edges, faces)
+            # Rotate in start heading direction
+            self.transform_mesh_wrt_start(mesh, point_start, heading_start, snapped_start)
+            self.stencil = bpy.data.objects.new("dsc_stencil_object", mesh)
+            self.stencil.location = self.point_start
+            # Link
+            context.scene.collection.objects.link(self.stencil)
+            self.stencil.use_fake_user = True
+            self.stencil.data.use_fake_user = True
+        # Make stencil active object
+        helpers.select_activate_object(context, self.stencil)
 
     def remove_stencil(self):
         '''
@@ -52,34 +70,51 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         if stencil is not None:
             bpy.data.objects.remove(stencil, do_unlink=True)
 
-    def update_stencil(self, point_start, heading_start, snapped_start,
-                             point_end, heading_end, snapped_end):
+    def update_stencil(self):
         '''
             Transform stencil object to follow the mouse pointer.
         '''
-        vector_obj = self.stencil.data.vertices[1].co - self.stencil.data.vertices[0].co
-        self.transform_object_wrt_end(self.stencil, vector_obj, point_end, snapped_start)
+        if self.point_selected_end == self.point_start:
+            # This can happen due to start point snapping -> ignore
+            return self.point_selected_end
+        # Try getting data for a new mesh
+        valid, mesh, params = self.get_mesh_and_params(for_stencil=True)
+        # If cursor is not in line with connection we get a solution and update the mesh
+        if valid:
+            helpers.replace_mesh(self.stencil, mesh)
+            return params['point_end']
+        else:
+            return self.point_selected_end
 
-    def transform_object_wrt_start(self, obj, point_start, heading_start):
+    def get_initial_vertices_edges_faces(self):
+        '''
+            Calculate and return the vertices, edges and faces to create the initial stencil mesh.
+        '''
+        vertices = [(0.0,   0.0, 0.0),
+                    (0.01,  0.0, 0.0),
+                    (0.01, -4.0, 0.0),
+                    (0.0,  -4.0, 0.0),
+                    (0.0,   4.0, 0.0),
+                    (0.01,  4.0, 0.0)
+                    ]
+        edges = [[0, 1],[1, 2],[2, 3],[3, 4],
+                [0, 4,],[4, 5],[5, 1]]
+        faces = []
+        return vertices, edges, faces
+
+    def get_mesh_and_params(self, for_stencil=True):
+        '''
+            Calculate and return the vertices, edges and faces to create a road mesh.
+        '''
+        raise NotImplementedError()
+
+    def transform_mesh_wrt_start(self, mesh, point_start, heading_start, snapped_start):
         '''
             Rotate and translate origin to start point and rotate to start heading.
         '''
-        obj.location = point_start
         mat_rotation = Matrix.Rotation(heading_start, 4, 'Z')
-        obj.data.transform(mat_rotation)
-        obj.data.update()
-
-    def transform_object_wrt_end(self, obj, vector_obj, point_end, snapped_start):
-        '''
-            Transform object according to selected end point (keep start point fixed).
-        '''
-        raise NotImplementedError()
-
-    def project_point_end(self, point_start, heading_start, point_selected):
-        '''
-            Project selected point to direction vector.
-        '''
-        raise NotImplementedError()
+        mesh.transform(mat_rotation)
+        mesh.update()
 
     def modal(self, context, event):
         # Display help text
@@ -105,23 +140,19 @@ class DSC_OT_snap_draw(bpy.types.Operator):
                 point_selected = context.scene.cursor.location
             # Process and remember points according to modal state machine
             if self.state == 'SELECT_START':
-                self.point_selected_start = point_selected.copy()
-                self.heading_selected_start = heading_selected
-                # Make sure end point and heading is set even if mouse is not moved
+                self.point_start = point_selected.copy()
+                self.heading_start = heading_selected
+                # Make sure end point and heading are set even if mouse is not moved
                 self.point_selected_end = point_selected
-                self.heading_selected_end = heading_selected
+                self.heading_end = heading_selected
             if self.state == 'SELECT_END':
                 # For snapped case use projected end point
-                if self.snapped_start:
-                    point_selected = self.project_point_end(
-                        self.point_selected_start, self.heading_selected_start, point_selected)
-                    context.scene.cursor.location = point_selected
-                self.update_stencil(
-                    self.point_selected_start, self.heading_selected_start, self.snapped_start,
-                    point_selected, heading_selected, self.hit)
                 self.point_selected_end = point_selected
-                self.heading_selected_end = heading_selected
+                self.heading_end = heading_selected
                 self.snapped_end = self.hit
+                point_end = self.update_stencil()
+                context.scene.cursor.location = point_end
+                self.heading_end = heading_selected
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
@@ -131,15 +162,14 @@ class DSC_OT_snap_draw(bpy.types.Operator):
                     self.cp_type_start = self.cp_type
                     # Create helper stencil mesh
                     self.create_stencil(context, context.scene.cursor.location,
-                        self.heading_selected_start, self.snapped_start)
+                        self.heading_start, self.snapped_start)
                     self.state = 'SELECT_END'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_END':
+                    self.snapped_end = self.hit
                     cp_type_end = self.cp_type
                     # Create the final object
-                    obj = self.create_object_xodr(context,
-                        self.point_selected_start, self.heading_selected_start, self.snapped_start,
-                        self.point_selected_end, self.heading_selected_end, self.snapped_end)
+                    obj = self.create_object_xodr(context)
                     if self.snapped_start:
                         link_type = 'start'
                         helpers.create_object_xodr_links(context, obj, link_type,

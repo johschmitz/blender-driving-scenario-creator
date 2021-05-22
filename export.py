@@ -56,10 +56,10 @@ class DSC_OT_export(bpy.types.Operator):
                                  filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
                                  use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
                                  use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
-                                 use_materials=False, use_triangles=False, use_nurbs=False,
+                                 use_materials=True, use_triangles=False, use_nurbs=False,
                                  use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
                                  group_by_material=False, keep_vertex_order=False, global_scale=1.0,
-                                     path_mode='STRIP', axis_forward='-Z', axis_up='Y')
+                                     path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
         bpy.ops.object.select_all(action='DESELECT')
         try:
             subprocess.run(['osgconv', str(scenegraph_path), str(scenegraph_path.with_suffix('.osgb'))])
@@ -79,11 +79,11 @@ class Scenario(ScenarioGenerator):
         # Create OpenDRIVE roads from object collection
         for obj in bpy.data.collections['OpenDRIVE'].all_objects:
             if 'road' in obj.name:
-                if obj['t_road_planView_geometry'] == 'line':
+                if obj['geometry'] == 'line':
                     planview = xodr.PlanView()
-                    planview.set_start_point(obj['t_road_planView_geometry_x'],
-                        obj['t_road_planView_geometry_y'],obj['t_road_planView_geometry_hdg'])
-                    line = xodr.Line(obj['t_road_planView_geometry_length'])
+                    planview.set_start_point(obj['geometry_x'],
+                        obj['geometry_y'],obj['geometry_hdg_start'])
+                    line = xodr.Line(obj['geometry_length'])
                     planview.add_geometry(line)
                     # Create simple lanes
                     lanes = xodr.Lanes()
@@ -92,12 +92,12 @@ class Scenario(ScenarioGenerator):
                     lanesection.add_right_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
                     lanes.add_lanesection(lanesection)
                     road = xodr.Road(obj['id_xodr'],planview,lanes)
-                if obj['t_road_planView_geometry'] == 'arc':
+                if obj['geometry'] == 'arc':
                     planview = xodr.PlanView()
-                    planview.set_start_point(obj['t_road_planView_geometry_x'],
-                        obj['t_road_planView_geometry_y'],obj['t_road_planView_geometry_hdg'])
-                    arc = xodr.Arc(obj['t_road_planView_geometry_curvature'],
-                        angle=obj['t_road_planView_geometry_angle'])
+                    planview.set_start_point(obj['geometry_x'],
+                        obj['geometry_y'],obj['geometry_hdg_start'])
+                    arc = xodr.Arc(obj['geometry_curvature'],
+                        angle=obj['geometry_angle'])
                     planview.add_geometry(arc)
                     # Create simple lanes
                     lanes = xodr.Lanes()
@@ -107,24 +107,24 @@ class Scenario(ScenarioGenerator):
                     lanes.add_lanesection(lanesection)
                     road = xodr.Road(obj['id_xodr'],planview,lanes)
                 # Add road level linking
-                if 't_road_link_predecessor' in obj:
-                    element_type = self.get_element_type_by_id(obj['t_road_link_predecessor'])
-                    if obj['t_road_link_predecessor_cp'] == 'cp_start':
+                if 'link_predecessor' in obj:
+                    element_type = self.get_element_type_by_id(obj['link_predecessor'])
+                    if obj['link_predecessor_cp'] == 'cp_start':
                         cp_type = xodr.ContactPoint.start
-                    elif obj['t_road_link_predecessor_cp'] == 'cp_end':
+                    elif obj['link_predecessor_cp'] == 'cp_end':
                         cp_type = xodr.ContactPoint.end
                     else:
                         cp_type = None
-                    road.add_predecessor(element_type, obj['t_road_link_predecessor'], cp_type)
-                if 't_road_link_successor' in obj:
-                    element_type = self.get_element_type_by_id(obj['t_road_link_successor'])
-                    if obj['t_road_link_successor_cp'] == 'cp_start':
+                    road.add_predecessor(element_type, obj['link_predecessor'], cp_type)
+                if 'link_successor' in obj:
+                    element_type = self.get_element_type_by_id(obj['link_successor'])
+                    if obj['link_successor_cp'] == 'cp_start':
                         cp_type = xodr.ContactPoint.start
-                    elif obj['t_road_link_successor_cp'] == 'cp_end':
+                    elif obj['link_successor_cp'] == 'cp_end':
                         cp_type = xodr.ContactPoint.end
                     else:
                         cp_type = None
-                    road.add_successor(element_type, obj['t_road_link_successor'], cp_type)
+                    road.add_successor(element_type, obj['link_successor'], cp_type)
                 print('Add road with ID', obj['id_xodr'])
                 odr.add_road(road)
                 roads.append(road)
@@ -160,7 +160,6 @@ class Scenario(ScenarioGenerator):
                 i = 0
                 for j in range(len(incoming_roads) - 1):
                     for k in range(j + 1, len(incoming_roads)):
-                        print(j)
                         # FIXME this will create problems when a single road is
                         # connected to a junction twice
                         if incoming_roads[j].predecessor:
