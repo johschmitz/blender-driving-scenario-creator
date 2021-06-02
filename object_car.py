@@ -92,7 +92,7 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
         if for_stencil:
             faces = []
         else:
-            faces = [[0, 1, 2, 3],[4, 5, 6, 7],[0, 1, 5, 4],[ 2, 3, 7, 6], [0, 3, 7, 4], [1, 2, 6, 5]]
+            faces = [[3, 2, 1, 0], [4, 5, 6, 7], [0, 1, 5, 4],[ 2, 3, 7, 6], [4, 7, 3, 0], [1, 2, 6, 5]]
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)

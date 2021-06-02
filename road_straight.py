@@ -48,7 +48,8 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
 
             # Paint some road markings
             helpers.assign_road_materials(obj)
-            obj.data.polygons[0].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[0].material_index = helpers.get_material_index(obj, 'road_asphalt')
+            obj.data.polygons[1].material_index = helpers.get_material_index(obj, 'road_surface_marking')
 
             helpers.select_activate_object(context, obj)
 
@@ -89,19 +90,20 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
                   'heading_start': heading,
                   'point_end': point_end,
                   'length': length }
-        vertices = [(0.0, 0.0, 0.0),
+        vertices = [(0.0, 4.0, 0.0),
+                    (length, 4.0, 0.0),
+                    (0.0, 0.0, 0.0),
                     (length, 0.0, 0.0),
-                    (length, -4.0, 0.0),
                     (0.0, -4.0, 0.0),
-                    (0.0, 4.0, 0.0),
-                    (length, 4.0, 0.0)
+                    (length, -4.0, 0.0),
                     ]
-        edges = [[0, 1],[1, 2],[2, 3],[3, 4],
-                    [0, 4,],[4, 5],[5, 1]]
+        edges = [[0, 2],[2, 3],[3, 1],[1, 0],
+                 [2, 4],[4, 5],[5, 3], [3, 2]]
         if for_stencil:
             faces = []
         else:
-            faces = [[0, 1, 2, 3],[0, 4, 5, 1]]
+            # Make sure we define faces counterclockwise for correct normals
+            faces = [[0, 2, 3, 1],[2, 4, 5, 3]]
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)

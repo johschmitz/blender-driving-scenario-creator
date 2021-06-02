@@ -90,15 +90,8 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         '''
             Calculate and return the vertices, edges and faces to create the initial stencil mesh.
         '''
-        vertices = [(0.0,   0.0, 0.0),
-                    (0.01,  0.0, 0.0),
-                    (0.01, -4.0, 0.0),
-                    (0.0,  -4.0, 0.0),
-                    (0.0,   4.0, 0.0),
-                    (0.01,  4.0, 0.0)
-                    ]
-        edges = [[0, 1],[1, 2],[2, 3],[3, 4],
-                [0, 4,],[4, 5],[5, 1]]
+        vertices = [(0.0,   0.0, 0.0)]
+        edges = []
         faces = []
         return vertices, edges, faces
 

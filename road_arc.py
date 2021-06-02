@@ -49,7 +49,8 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
 
             # Paint some road markings
             helpers.assign_road_materials(obj)
-            obj.data.polygons[0].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[0].material_index = helpers.get_material_index(obj, 'road_asphalt')
+            obj.data.polygons[1].material_index = helpers.get_material_index(obj, 'road_surface_marking')
 
             helpers.select_activate_object(context, obj)
 
@@ -147,8 +148,13 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
             if for_stencil:
                 faces = []
             else:
-                faces = [[v for v in range(steps+1)]+[v for v in range(2*steps+1, steps, -1)],
-                        [v for v in range(steps+1, 2*steps+2)]+[v for v in range(3*steps+2, 2*steps+1, -1)]]
+                # Make sure we define faces counterclockwise for correct normals
+                if determinant > 0:
+                    faces = [[v for v in range(steps+1, 2*steps+2)]+[v for v in range(steps, -1, -1)],
+                            [v for v in range(2*steps+2, 3*steps+3)]+[v for v in range(2*steps+1, steps, -1)]]
+                else:
+                    faces = [[v for v in range(steps+1)]+[v for v in range(2*steps+1, steps, -1)],
+                            [v for v in range(steps+1, 2*steps+2)]+[v for v in range(3*steps+2, 2*steps+1, -1)]]
             # Create blender mesh
             mesh = bpy.data.meshes.new('temp')
             mesh.from_pydata(vertices, edges, faces)

@@ -52,10 +52,10 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
             helpers.select_activate_object(context, obj)
 
             # Remember connecting points for snapping
-            obj['cp_down'] = obj.location + obj.data.vertices[0].co
-            obj['cp_left'] = obj.location + obj.data.vertices[2].co
-            obj['cp_up'] = obj.location + obj.data.vertices[4].co
-            obj['cp_right'] = obj.location + obj.data.vertices[6].co
+            obj['cp_left'] = obj.location + obj.data.vertices[1].co
+            obj['cp_down'] = obj.location + obj.data.vertices[3].co
+            obj['cp_right'] = obj.location + obj.data.vertices[5].co
+            obj['cp_up'] = obj.location + obj.data.vertices[7].co
 
             # Set OpenDRIVE custom properties
             obj['id_xodr'] = obj_id
@@ -86,19 +86,40 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
             self.report({"WARNING"}, "Start and end point can not be the same!")
             valid = False
             return valid, None, {}
-        vertices = [(-4.0, 0.0, 0.0),
-                    (-4.0, 4.0, 0.0),
-                    (0.0, 4.0, 0.0),
-                    (4.0, 4.0, 0.0),
-                    (4.0, 0.0, 0.0),
-                    (4.0, -4.0, 0.0),
-                    (0.0, -4.0, 0.0),
+        # Parameters
+        vector_start_end = point_end - self.point_start
+        heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
+        vector_hdg_left = Vector((-1.0, 0.0))
+        vector_hdg_down = Vector((0.0, -1.0))
+        vector_hdg_right = Vector((1.0, 0.0))
+        vector_hdg_up = Vector((0.0, 1.0))
+        hdg_left = vector_hdg_left.to_2d().angle_signed(vector_start_end.to_2d())
+        hdg_down = vector_hdg_down.to_2d().angle_signed(vector_start_end.to_2d())
+        hdg_right = vector_hdg_right.to_2d().angle_signed(vector_start_end.to_2d())
+        hdg_up = vector_hdg_up.to_2d().angle_signed(vector_start_end.to_2d())
+        params = {'point_start': self.point_start,
+                  'heading_start': heading,
+                  'point_end': point_end,
+                  'hdg_left': hdg_left,
+                  'hdg_down': hdg_down,
+                  'hdg_right': hdg_right,
+                  'hdg_up': hdg_up,
+                  }
+        # Mesh
+        vertices = [(-4.0, 4.0, 0.0),
+                    (-4.0, 0.0, 0.0),
                     (-4.0, -4.0, 0.0),
+                    (0.0, -4.0, 0.0),
+                    (4.0, -4.0, 0.0),
+                    (4.0, 0.0, 0.0),
+                    (4.0, 4.0, 0.0),
+                    (0.0, 4.0, 0.0),
                     ]
         edges = [[0, 1],[1, 2],[2, 3],[3, 4],[4, 5],[5, 6],[6, 7],[7, 0]]
         if for_stencil:
             faces = []
         else:
+            # Make sure we define faces counterclockwise for correct normals
             faces = [[0, 1, 2, 3, 4, 5, 6, 7]]
         # Shift origin to connection point
         if self.snapped_start:
@@ -107,27 +128,8 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)
         # Rotate and translate mesh according to selected start point
-        self.transform_mesh_wrt_start(mesh, self.point_start, self.heading_start, self.snapped_start)
+        self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
 
-        # Parameters
-        vector_start_end = point_end - self.point_start
-        heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
-        vector_hdg_down = Vector((-1.0, 0.0))
-        vector_hdg_left = Vector((0.0, -1.0))
-        vector_hdg_up = Vector((1.0, 0.0))
-        vector_hdg_right = Vector((0.0, 1.0))
-        hdg_down = vector_start_end.to_2d().angle_signed(vector_hdg_down.to_2d())
-        hdg_left = vector_start_end.to_2d().angle_signed(vector_hdg_left.to_2d())
-        hdg_up = vector_start_end.to_2d().angle_signed(vector_hdg_up.to_2d())
-        hdg_right = vector_start_end.to_2d().angle_signed(vector_hdg_right.to_2d())
-        params = {'point_start': self.point_start,
-                  'heading_start': heading,
-                  'point_end': point_end,
-                  'hdg_down': hdg_down,
-                  'hdg_left': hdg_left,
-                  'hdg_up': hdg_up,
-                  'hdg_right': hdg_right,
-                  }
         valid = True
         return valid, mesh, params
 

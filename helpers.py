@@ -184,13 +184,13 @@ def point_to_junction_connector(obj, point):
         Get a snapping point and heading from an existing junction.
     '''
     # Calculate which connecting point is closest to input point
-    cps = ['cp_down', 'cp_left', 'cp_up', 'cp_right']
+    cps = ['cp_left', 'cp_down', 'cp_right', 'cp_up']
     distances = []
     cp_vectors = []
     for cp in cps:
         distances.append((Vector(obj[cp]) - point).length)
         cp_vectors.append(Vector(obj[cp]))
-    headings = [obj['hdg_down'], obj['hdg_left'], obj['hdg_up'], obj['hdg_right']]
+    headings = [obj['hdg_left'], obj['hdg_down'], obj['hdg_right'], obj['hdg_up']]
     arg_min_dist = distances.index(min(distances))
     return cps[arg_min_dist], cp_vectors[arg_min_dist], headings[arg_min_dist]
 
