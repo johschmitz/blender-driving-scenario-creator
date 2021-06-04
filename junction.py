@@ -59,9 +59,9 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
 
             # Set OpenDRIVE custom properties
             obj['id_xodr'] = obj_id
-            obj['t_junction_e_junction_type'] = 'default'
-            obj['t_junction_planView_geometry_x'] = self.point_start.x
-            obj['t_junction_planView_geometry_y'] = self.point_start.y
+            obj['junction_type'] = 'default'
+            obj['planView_geometry_x'] = self.point_start.x
+            obj['planView_geometry_y'] = self.point_start.y
             obj['hdg_down'] = params['hdg_down']
             obj['hdg_left'] = params['hdg_left']
             obj['hdg_up'] = params['hdg_up']

@@ -163,8 +163,10 @@ def raycast_mouse_to_odr_object(context, event, obj_type):
         direction=view_vector_mouse)
     # Filter object type
     if hit:
-        if 'geometry' or 't_junction_e_junction_type' in obj:
+        if 'geometry' in obj or 'junction_type' in obj:
             return hit, point, obj
+        else:
+            return False, point, None
     else:
         return False, point, None
 
@@ -219,7 +221,7 @@ def raycast_mouse_to_object_else_xy(context, event, snap):
             cp_type, cp, heading = point_to_road_connector(obj, point_raycast)
             id_xodr = obj['id_xodr']
             return True, id_xodr, cp_type, cp, heading
-        if 't_junction_e_junction_type' in obj:
+        if 'junction_type' in obj:
             cp_type, cp, heading = point_to_junction_connector(obj, point_raycast)
             id_xodr = obj['id_xodr']
             return True, id_xodr, cp_type, cp, heading
