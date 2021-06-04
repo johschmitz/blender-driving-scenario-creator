@@ -99,9 +99,9 @@ def create_object_xodr_links(context, obj, link_type, id_other, cp_type):
             obj['link_successor_cp'] = cp_type
     elif 'junction' in obj.name:
         if link_type == 'start':
-            obj['incoming_roads']['cp_down'] = id_other
+            obj['incoming_roads']['cp_left'] = id_other
         else:
-            obj['incoming_roads']['cp_up'] = id_other
+            obj['incoming_roads']['cp_right'] = id_other
     obj_other = get_object_xodr_by_id(context, id_other)
     if 'road' in obj_other.name:
         if 'road' in obj.name:

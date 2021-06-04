@@ -148,7 +148,7 @@ class Scenario(ScenarioGenerator):
                 junction_id = obj['id_xodr']
                 # Create junction roads based on incoming road angles (simple 4-way for now)
                 for idx in range(4):
-                    angles.append(idx * 2 * pi /len(obj['incoming_roads']))
+                    angles.append(idx * 2 * pi / len(obj['incoming_roads']))
                 # 0 angle road must point in 'right' direction
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_right']))
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_up']))
@@ -239,5 +239,5 @@ class Scenario(ScenarioGenerator):
         for road in roads:
             if road.id == id:
                 return road
-        print('ERROR: No road with ID {} found.'.format(id))
+        print('WARNING: No road with ID {} found. Maybe a junction?'.format(id))
         return None

@@ -62,10 +62,10 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
             obj['junction_type'] = 'default'
             obj['planView_geometry_x'] = self.point_start.x
             obj['planView_geometry_y'] = self.point_start.y
-            obj['hdg_down'] = params['hdg_down']
             obj['hdg_left'] = params['hdg_left']
-            obj['hdg_up'] = params['hdg_up']
+            obj['hdg_down'] = params['hdg_down']
             obj['hdg_right'] = params['hdg_right']
+            obj['hdg_up'] = params['hdg_up']
 
             obj['incoming_roads'] = {'cp_down': None, 'cp_left': None, 'cp_up': None, 'cp_right': None}
 
@@ -88,17 +88,21 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
             return valid, None, {}
         # Parameters
         vector_start_end = point_end - self.point_start
-        heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
+        vector_1_0 = Vector((1.0, 0.0))
+        heading = vector_start_end.to_2d().angle_signed(vector_1_0)
         vector_hdg_left = Vector((-1.0, 0.0))
         vector_hdg_down = Vector((0.0, -1.0))
         vector_hdg_right = Vector((1.0, 0.0))
         vector_hdg_up = Vector((0.0, 1.0))
-        hdg_left = vector_hdg_left.to_2d().angle_signed(vector_start_end.to_2d())
-        hdg_down = vector_hdg_down.to_2d().angle_signed(vector_start_end.to_2d())
-        hdg_right = vector_hdg_right.to_2d().angle_signed(vector_start_end.to_2d())
-        hdg_up = vector_hdg_up.to_2d().angle_signed(vector_start_end.to_2d())
+        vector_hdg_left.rotate(Matrix.Rotation(heading, 2))
+        vector_hdg_down.rotate(Matrix.Rotation(heading, 2))
+        vector_hdg_right.rotate(Matrix.Rotation(heading, 2))
+        vector_hdg_up.rotate(Matrix.Rotation(heading, 2))
+        hdg_left = vector_hdg_left.angle_signed(vector_1_0)
+        hdg_down = vector_hdg_down.angle_signed(vector_1_0)
+        hdg_right = vector_hdg_right.angle_signed(vector_1_0)
+        hdg_up = vector_hdg_up.angle_signed(vector_1_0)
         params = {'point_start': self.point_start,
-                  'heading_start': heading,
                   'point_end': point_end,
                   'hdg_left': hdg_left,
                   'hdg_down': hdg_down,
