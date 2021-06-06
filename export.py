@@ -32,7 +32,10 @@ class DSC_OT_export(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-        return context.object is not None
+        if 'OpenDRIVE' in bpy.data.collections:
+            return True
+        else:
+            return False
 
     def execute(self, context):
         self.export_scenegraph_file()
