@@ -3,6 +3,64 @@
 This Blender add-on lets you create OpenDRIVE/OpenSCENARIO based scenarios for
 testing of assistant and autonomous driving functions.
 
+## How to install
+
+Let us assume that Blender has been downloaded and installed to
+
+    /opt/blender/
+
+Then we first need to install the scenariogeneration library into the Blender
+Python environment since the add-on uses the library as a backend to write
+OpenDRIVE and OpenSCENARIO files.
+
+    cd /opt/blender/2.93/python/bin
+
+if pip is not there already then run
+
+    sudo ./python3.9 -m ensurepip
+
+Now install the lib
+
+    sudo ./pip3 install scenariogeneration
+
+For the esmini export functionality we also need to install
+[OpenSceneGraph](http://www.openscenegraph.org/) to have the `osgconv` tool
+available. This is necessary because Blender is unable to directly export to the
+.osgb scenegraph format, while esmini can only process this particular format.
+On a Debian/Ubuntu/Mint system this can be achieved with
+
+    sudo apt install openscenegraph
+
+If you manually install OpenSceneGraph make sure that `osgconv` can be found
+through your `PATH` environment variable, otherwise the export for esmini will
+fail.
+
+Finally download the driving scenario generator release .zip archive. Open
+Blender and go to Edit -> Preferences -> Add-ons. Click "Install...". Select the
+.zip archive and confirm.
+
+## How to use
+
+When you are in the Blender "Layout" workspace press <kbd>N</kbd> or click the
+little arrow next to the navigation gizmo to toggle the sidebar. Click
+<kbd>Driving Scenario Creator</kbd> in the sidebar. From here you can create
+roads and vehicles using the mouse by clicking the buttons in the "Driving
+Scenario Creator" menu. Add additional Blender objects as desired. Then export
+everything together by clicking <kbd>Export driving scenario</kbd>. Choose a
+**directory** for the export and confirm.
+
+## How to run exported scenarios
+
+First install [esmini](ttps://github.com/esmini/esmini/releases). Preferably to
+`/opt/esmini` and then put `/opt/esmini/bin` it in your `PATH` environment
+variable with an `export PATH=$PATH:/opt/esmini/bin` at the end of the
+`~/.bashrc`.
+
+With esmini available the exported scenario can be run with
+
+    cd <export_directory>
+    esmini --osc xosc/export0.xosc --window 50 50 800 400
+
 ## License
 
 The source code of this tool is distributed under the GPL version 3.0 license as
@@ -18,7 +76,7 @@ welcomed if they are maintainable.
 
 ## Credits
 
-Credits go to 
+Credits go to
 - [pyoscx/scenarigeneration](https://github.com/pyoscx/scenariogeneration)
   developers for the .xodr/.xosc generating/writing lib used as backend
 - [Archipack](https://github.com/s-leger/archipack) add-on developer(s) for
