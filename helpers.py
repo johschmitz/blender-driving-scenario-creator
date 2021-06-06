@@ -32,7 +32,7 @@ def get_new_id_opendrive(context):
         # Do not render
         dummy_obj.hide_viewport = True
         dummy_obj.hide_render = True
-        dummy_obj['id_xodr_next'] = 0
+        dummy_obj['id_xodr_next'] = 1
         link_object_opendrive(context, dummy_obj)
     id_next = dummy_obj['id_xodr_next']
     dummy_obj['id_xodr_next'] += 1
@@ -55,13 +55,24 @@ def get_new_id_openscenario(context):
     dummy_obj['id_xosc_next'] += 1
     return id_next
 
+def ensure_collection_opendrive(context):
+    if not 'OpenDRIVE' in bpy.data.collections:
+        collection = bpy.data.collections.new('OpenDRIVE')
+        context.scene.collection.children.link(collection)
+
+def ensure_collection_openscenario(context):
+    if not 'OpenSCENARIO' in bpy.data.collections:
+        collection = bpy.data.collections.new('OpenSCENARIO')
+        context.scene.collection.children.link(collection)
+    if not 'Models' in bpy.data.collections['OpenSCENARIO'].children:
+        collection = bpy.data.collections.new('Models')
+        bpy.data.collections['OpenSCENARIO'].children.link(collection)
+
 def link_object_opendrive(context, obj):
     '''
         Link object to OpenDRIVE scene collection.
     '''
-    if not 'OpenDRIVE' in bpy.data.collections:
-        collection = bpy.data.collections.new('OpenDRIVE')
-        context.scene.collection.children.link(collection)
+    ensure_collection_opendrive(context)
     collection = bpy.data.collections.get('OpenDRIVE')
     collection.objects.link(obj)
 
@@ -69,9 +80,7 @@ def link_object_openscenario(context, obj):
     '''
         Link object to OpenSCENARIO scene collection.
     '''
-    if not 'OpenSCENARIO' in bpy.data.collections:
-        collection = bpy.data.collections.new('OpenSCENARIO')
-        context.scene.collection.children.link(collection)
+    ensure_collection_openscenario(context)
     collection = bpy.data.collections.get('OpenSCENARIO')
     collection.objects.link(obj)
 

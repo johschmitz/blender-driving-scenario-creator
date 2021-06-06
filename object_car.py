@@ -35,11 +35,11 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context):
+    def create_object(self, context):
         '''
             Create a car object
         '''
-        valid, mesh, params = self.get_mesh_and_params(for_stencil=False)
+        valid, mesh, params = self.get_mesh_and_params(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -66,7 +66,7 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
 
         return obj
 
-    def get_mesh_and_params(self, for_stencil):
+    def get_mesh_and_params(self, context, for_stencil):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
@@ -79,6 +79,42 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
         params = {'point_start': self.point_selected_end,
                   'heading_start': heading,
                   'point_end': self.point_selected_end}
+        vertices, edges, faces = self.get_vertices_edges_faces()
+        # Create blender mesh
+        if for_stencil:
+            faces = []
+            mesh = bpy.data.meshes.new('temp')
+            mesh.from_pydata(vertices, edges, faces)
+        else:
+            # Create object from template, use template for model export
+            obj_template = self.get_object_template(context)
+            mesh = obj_template.data.copy()
+            mesh.name = 'temp'
+        # Rotate and translate mesh according to selected start point
+        self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
+        valid = True
+        return valid, mesh, params
+
+    def get_object_template(self, context):
+        '''
+            Create a template object to copy other instances from.
+        '''
+        helpers.ensure_collection_openscenario(context)
+        # Look for model
+        for obj in bpy.data.collections['OpenSCENARIO'].children['Models'].all_objects:
+            if obj.name == 'car':
+                return obj
+        # Model not found so create new one
+        vertices, edges, faces = self.get_vertices_edges_faces()
+        mesh = bpy.data.meshes.new('car')
+        mesh.from_pydata(vertices, edges, faces)
+        obj = bpy.data.objects.new('car', mesh)
+        obj.hide_viewport = True
+        obj.hide_render = True
+        bpy.data.collections['OpenSCENARIO'].children['Models'].objects.link(obj)
+        return obj
+
+    def get_vertices_edges_faces(self):
         vertices = [(-2.2, -1.0, 0.0),
                     ( 2.2, -1.0, 0.0),
                     ( 2.2, -1.0, 0.5),
@@ -100,17 +136,8 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
                  [15 ,14],[14 ,13],[13 ,12],[12 ,11],[11 ,10],[10 ,9], [9 ,8], [8, 15],
                  [0, 8], [7 ,15], [6 ,14], [5 ,13], [4 ,12], [3 ,11], [2 ,10], [1 ,9],
                 ]
-        if for_stencil:
-            faces = []
-        else:
-            faces = [[0, 1, 2, 3, 4, 5, 6, 7, 0],[15, 14, 13, 12, 11, 10, 9, 8, 15],
-                     [0, 7, 15, 8], [7, 6, 14, 15], [6, 5, 13, 14], [5, 4, 12, 13],
-                     [4, 3, 11, 12], [3, 2, 10, 11], [2, 1, 9, 10], [8, 9, 1, 0]
-                    ]
-        # Create blender mesh
-        mesh = bpy.data.meshes.new('temp')
-        mesh.from_pydata(vertices, edges, faces)
-        # Rotate and translate mesh according to selected start point
-        self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
-        valid = True
-        return valid, mesh, params
+        faces = [[0, 1, 2, 3, 4, 5, 6, 7, 0],[15, 14, 13, 12, 11, 10, 9, 8, 15],
+                    [0, 7, 15, 8], [7, 6, 14, 15], [6, 5, 13, 14], [5, 4, 12, 13],
+                    [4, 3, 11, 12], [3, 2, 10, 11], [2, 1, 9, 10], [8, 9, 1, 0]
+                ]
+        return vertices, edges, faces

@@ -33,11 +33,11 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context):
+    def create_object(self, context):
         '''
             Create a junction object
         '''
-        valid, mesh, params = self.get_mesh_and_params(for_stencil=False)
+        valid, mesh, params = self.get_mesh_and_params(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -71,7 +71,7 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
 
             return obj
 
-    def get_mesh_and_params(self, for_stencil):
+    def get_mesh_and_params(self, context, for_stencil):
         '''
             Calculate and return the vertices, edges and faces to create a road
             mesh and road parameters.

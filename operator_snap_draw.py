@@ -31,7 +31,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
     def poll(cls, context):
         return True
 
-    def create_object_xodr(self, context):
+    def create_object(self, context):
         '''
             Create a junction object
         '''
@@ -70,7 +70,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         if stencil is not None:
             bpy.data.objects.remove(stencil, do_unlink=True)
 
-    def update_stencil(self):
+    def update_stencil(self, context):
         '''
             Transform stencil object to follow the mouse pointer.
         '''
@@ -78,7 +78,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
             # This can happen due to start point snapping -> ignore
             return self.point_selected_end
         # Try getting data for a new mesh
-        valid, mesh, params = self.get_mesh_and_params(for_stencil=True)
+        valid, mesh, params = self.get_mesh_and_params(context, for_stencil=True)
         # If cursor is not in line with connection we get a solution and update the mesh
         if valid:
             helpers.replace_mesh(self.stencil, mesh)
@@ -95,7 +95,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         faces = []
         return vertices, edges, faces
 
-    def get_mesh_and_params(self, for_stencil=True):
+    def get_mesh_and_params(self, context, for_stencil=True):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
@@ -143,7 +143,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
                 self.point_selected_end = point_selected
                 self.heading_end = heading_selected
                 self.snapped_end = self.hit
-                point_end = self.update_stencil()
+                point_end = self.update_stencil(context)
                 context.scene.cursor.location = point_end
                 self.heading_end = heading_selected
         # Select start and end
@@ -162,7 +162,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
                     self.snapped_end = self.hit
                     cp_type_end = self.cp_type
                     # Create the final object
-                    obj = self.create_object_xodr(context)
+                    obj = self.create_object(context)
                     if self.snapped_start:
                         link_type = 'start'
                         helpers.create_object_xodr_links(context, obj, link_type,

@@ -29,7 +29,7 @@ class DSC_OT_export(bpy.types.Operator):
 
     directory: bpy.props.StringProperty(
         name='Export directory', description='Target directory for export.')
-    
+
     @classmethod
     def poll(cls, context):
         if 'OpenDRIVE' in bpy.data.collections:
@@ -38,6 +38,7 @@ class DSC_OT_export(bpy.types.Operator):
             return False
 
     def execute(self, context):
+        self.export_vehicle_models()
         self.export_scenegraph_file()
         s = Scenario(context, self.directory)
         s.generate_single(self.directory)
@@ -48,14 +49,16 @@ class DSC_OT_export(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def export_scenegraph_file(self):
-        # Export the scene mesh to file
-        scenegraph_path = pathlib.Path(self.directory) / 'scenegraph' / 'export.obj'
-        scenegraph_path.parent.mkdir(parents=True, exist_ok=True)
+        '''
+            Export the scene mesh to file
+        '''
+        file_path = pathlib.Path(self.directory) / 'scenegraph' / 'export.obj'
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         bpy.ops.object.select_all(action='SELECT')
         if 'OpenSCENARIO' in bpy.data.collections:
             for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
                 obj.select_set(False)
-        bpy.ops.export_scene.obj(filepath=str(scenegraph_path), check_existing=True,
+        bpy.ops.export_scene.obj(filepath=str(file_path), check_existing=True,
                                  filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
                                  use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
                                  use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
@@ -64,8 +67,53 @@ class DSC_OT_export(bpy.types.Operator):
                                  group_by_material=False, keep_vertex_order=False, global_scale=1.0,
                                      path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
         bpy.ops.object.select_all(action='DESELECT')
+        self.convert_to_osgb(file_path)
+
+    def export_vehicle_models(self):
+        '''
+            Export vehicle models to files.
+        '''
+        model_dir = pathlib.Path(self.directory) / 'models' / 'car.obj'
+        model_dir.parent.mkdir(parents=True, exist_ok=True)
+        catalog_path = pathlib.Path(self.directory) / 'catalogs' / 'vehicles' / 'VehicleCatalog.xosc'
+        catalog_path.parent.mkdir(parents=True, exist_ok=True)
+        # Select a car
+        bpy.ops.object.select_all(action='DESELECT')
+        if 'OpenSCENARIO' in bpy.data.collections:
+            if 'Models' in bpy.data.collections['OpenSCENARIO'].children:
+                for obj in bpy.data.collections['OpenSCENARIO'].children['Models'].all_objects:
+                    model_path = pathlib.Path(self.directory) / 'models' / str(obj.name + '.obj')
+                    obj.hide_viewport = False
+                    obj.select_set(True)
+                    bpy.ops.export_scene.obj(filepath=str(model_path), check_existing=True,
+                                            filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
+                                            use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
+                                            use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
+                                            use_materials=True, use_triangles=False, use_nurbs=False,
+                                            use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
+                                            group_by_material=False, keep_vertex_order=False, global_scale=1.0,
+                                            path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
+                    bpy.ops.object.select_all(action='DESELECT')
+                    obj.hide_viewport = True
+                    self.convert_to_osgb(model_path)
+                    # Add vehicle to vehicle catalog
+                    # TODO store in and read parameters from object
+                    bounding_box = xosc.BoundingBox(2,5,1.8,2.0,0,0.9)
+                    axle_front = xosc.Axle(0.523599,0.8,1.554,2.98,0.4)
+                    axle_rear = xosc.Axle(0,0.8,1.525,0,0.4)
+                    car = xosc.Vehicle(obj.name,xosc.VehicleCategory.car,
+                        bounding_box,axle_front,axle_rear,69,10,10)
+                    car.add_property_file('../models/' + obj.name + '.osgb')
+                    car.add_property('control','internal')
+                    car.add_property('model_id','0')
+                    # Dump vehicle to catalog
+                    car.dump_to_catalog(catalog_path,'VehicleCatalog',
+                        'DSC vehicle catalog','Blender Driving Scenario Creator')
+                    break
+
+    def convert_to_osgb(self, input_file_path):
         try:
-            subprocess.run(['osgconv', str(scenegraph_path), str(scenegraph_path.with_suffix('.osgb'))])
+            subprocess.run(['osgconv', str(input_file_path), str(input_file_path.with_suffix('.osgb'))])
         except FileNotFoundError:
             self.report({'ERROR'}, 'Executable \"osgconv\" required to produce .osgb scenegraph file. '
                 'Try installing openscenegraph.')
@@ -204,10 +252,13 @@ class Scenario(ScenarioGenerator):
         entities = xosc.Entities()
         if 'OpenSCENARIO' in bpy.data.collections:
             for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
+                # Filter out Model templates
+                if 'Models' == obj.users_collection[0].name:
+                    break
                 if 'car' in obj.name:
                     car_name = obj.name
                     print('Add car with ID', obj['id_xosc'])
-                    entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog','car_white'))
+                    entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog','car'))
                     init.add_init_action(car_name, xosc.TeleportAction(
                         xosc.WorldPosition(x=obj['x'], y=obj['y'], z=obj['z'], h=obj['hdg'])))
                     init.add_init_action(car_name, xosc.AbsoluteSpeedAction(
@@ -217,7 +268,7 @@ class Scenario(ScenarioGenerator):
 
         road = xosc.RoadNetwork(self.road_file,'./scenegraph/export.osgb')
         catalog = xosc.Catalog()
-        catalog.add_catalog('VehicleCatalog','../xosc/Catalogs/Vehicles')
+        catalog.add_catalog('VehicleCatalog','../catalogs/vehicles')
         storyboard = xosc.StoryBoard(init,stoptrigger=xosc.ValueTrigger('start_trigger ', 3, xosc.ConditionEdge.none,xosc.SimulationTimeCondition(13,xosc.Rule.greaterThan),'stop'))
         scenario = xosc.Scenario('dsc_scenario','blender_dsc',xosc.ParameterDeclarations(),entities,storyboard,road,catalog)
 
