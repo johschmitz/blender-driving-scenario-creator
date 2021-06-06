@@ -12,6 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import bmesh
 from mathutils import Vector, Matrix
 
 from math import pi
@@ -36,22 +37,26 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
         '''
             Create a straight road object
         '''
-        valid, mesh, params = self.get_mesh_and_params(for_stencil=False)
+        valid, mesh_road, params = self.get_mesh_and_params(for_stencil=False)
         if not valid:
             return None
         else:
+            # Create road object
             obj_id = helpers.get_new_id_opendrive(context)
-            mesh.name = self.object_type + '_' + str(obj_id)
-            obj = bpy.data.objects.new(mesh.name, mesh)
+            mesh_road.name = self.object_type + '_' + str(obj_id)
+            obj = bpy.data.objects.new(mesh_road.name, mesh_road)
             obj.location = self.point_start
             helpers.link_object_opendrive(context, obj)
 
-            # Paint some road markings
+            # Color markings
             helpers.assign_road_materials(obj)
             obj.data.polygons[0].material_index = helpers.get_material_index(obj, 'road_asphalt')
             obj.data.polygons[1].material_index = helpers.get_material_index(obj, 'road_surface_marking')
-
-            helpers.select_activate_object(context, obj)
+            obj.data.polygons[2].material_index = helpers.get_material_index(obj, 'road_asphalt')
+            obj.data.polygons[3].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[4].material_index = helpers.get_material_index(obj, 'road_asphalt')
+            obj.data.polygons[5].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[6].material_index = helpers.get_material_index(obj, 'road_asphalt')
 
             # Remember connecting points for road snapping
             obj['cp_start'] = self.point_start
@@ -66,6 +71,8 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
             obj['geometry_hdg_start'] = params['heading_start']
             obj['geometry_hdg_end'] = params['heading_start']
             obj['geometry_length'] = params['length']
+
+            helpers.select_activate_object(context, obj)
 
             return obj
 
@@ -90,22 +97,27 @@ class DSC_OT_road_straight(DSC_OT_snap_draw, bpy.types.Operator):
                   'heading_start': heading,
                   'point_end': point_end,
                   'length': length }
-        vertices = [(0.0, 4.0, 0.0),
-                    (length, 4.0, 0.0),
-                    (0.0, 0.0, 0.0),
-                    (length, 0.0, 0.0),
-                    (0.0, -4.0, 0.0),
-                    (length, -4.0, 0.0),
+        vertices = [(0.0, 4.0, 0.0),       (length, 4.0, 0.0),
+                    (0.0, 4.0-0.12, 0.0),  (length, 4.0-0.12, 0.0),
+                    (0.0, 4.0-0.24, 0.0),  (length, 4.0-0.24, 0.0),
+                    (0.0, 0.06, 0.0),      (length, 0.06, 0.0),
+                    (0.0, -0.06, 0.0),     (length, -0.06, 0.0),
+                    (0.0, -4.0+0.24, 0.0), (length, -4.0+0.24, 0.0),
+                    (0.0, -4.0+0.12, 0.0), (length, -4.0+0.12, 0.0),
+                    (0.0, -4.0, 0.0),      (length, -4.0, 0.0),
                     ]
-        edges = [[0, 2],[2, 3],[3, 1],[1, 0],
-                 [2, 4],[4, 5],[5, 3], [3, 2]]
+        num_edges_vert = int((len(vertices))/2)
+        num_edges_hori = int((len(vertices)-1)/2)
+        edges = [ [ v + o for v in [0, 1] ] for o in range(0, 2*num_edges_vert, 2) ] + \
+                [ [ v + o for v in [0, 2] ] for o in range(0, 2*num_edges_hori, 1) ]
         if for_stencil:
             faces = []
         else:
             # Make sure we define faces counterclockwise for correct normals
-            faces = [[0, 2, 3, 1],[2, 4, 5, 3]]
+            num_faces = int((len(vertices)-1)/2)
+            faces = [ [ v + o for v in [2, 3, 1, 0] ] for o in range(0, 2*num_faces, 2) ]
         # Create blender mesh
-        mesh = bpy.data.meshes.new('temp')
+        mesh = bpy.data.meshes.new('temp_road')
         mesh.from_pydata(vertices, edges, faces)
         # Rotate and translate mesh according to selected start point
         self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)

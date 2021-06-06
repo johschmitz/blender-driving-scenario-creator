@@ -42,18 +42,18 @@ class DSC_OT_snap_draw(bpy.types.Operator):
             Create a stencil object with fake user or find older one in bpy data and
             relink to scene currently only support OBJECT mode.
         '''
-        stencil = bpy.data.objects.get('dsc_stencil_object')
+        stencil = bpy.data.objects.get('dsc_stencil')
         if stencil is not None:
-            if context.scene.objects.get('dsc_stencil_object') is None:
+            if context.scene.objects.get('dsc_stencil') is None:
                 context.scene.collection.objects.link(stencil)
         else:
             # Create object from mesh
-            mesh = bpy.data.meshes.new("dsc_stencil_object")
+            mesh = bpy.data.meshes.new("dsc_stencil")
             vertices, edges, faces = self.get_initial_vertices_edges_faces()
             mesh.from_pydata(vertices, edges, faces)
             # Rotate in start heading direction
             self.transform_mesh_wrt_start(mesh, point_start, heading_start, snapped_start)
-            self.stencil = bpy.data.objects.new("dsc_stencil_object", mesh)
+            self.stencil = bpy.data.objects.new("dsc_stencil", mesh)
             self.stencil.location = self.point_start
             # Link
             context.scene.collection.objects.link(self.stencil)
@@ -66,7 +66,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         '''
             Unlink stencil, needs to be in OBJECT mode.
         '''
-        stencil = bpy.data.objects.get('dsc_stencil_object')
+        stencil = bpy.data.objects.get('dsc_stencil')
         if stencil is not None:
             bpy.data.objects.remove(stencil, do_unlink=True)
 

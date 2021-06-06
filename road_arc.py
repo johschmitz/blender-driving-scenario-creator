@@ -51,8 +51,11 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
             helpers.assign_road_materials(obj)
             obj.data.polygons[0].material_index = helpers.get_material_index(obj, 'road_asphalt')
             obj.data.polygons[1].material_index = helpers.get_material_index(obj, 'road_surface_marking')
-
-            helpers.select_activate_object(context, obj)
+            obj.data.polygons[2].material_index = helpers.get_material_index(obj, 'road_asphalt')
+            obj.data.polygons[3].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[4].material_index = helpers.get_material_index(obj, 'road_asphalt')
+            obj.data.polygons[5].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[6].material_index = helpers.get_material_index(obj, 'road_asphalt')
 
             # Remember connecting points for road snapping
             obj['cp_start'] = self.point_start
@@ -68,6 +71,8 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
             obj['geometry_hdg_end'] = params['heading_end']
             obj['geometry_angle'] = params['angle']
             obj['geometry_curvature'] = params['curvature']
+
+            helpers.select_activate_object(context, obj)
 
             return obj
 
@@ -114,10 +119,18 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
             # Calculate adaptive polyline steps based on
             # https://stackoverflow.com/questions/11774038/how-to-render-a-circle-with-as-few-vertices-as-possible
             width_lane = 4.0
+            width_marking = 0.12
             error_max = 0.25
             steps = ceil(2 * pi / acos(2 * (1 - error_max / max(2 * width_lane, r_center))**2 - 1))
             angle_step = (endangle - startangle) / steps
-            radii = [r_center - width_lane, r_center, r_center + width_lane]
+            radii = [r_center + width_lane,
+                     r_center + width_lane - width_marking,
+                     r_center + width_lane - 2 * width_marking,
+                     r_center + width_marking / 2,
+                     r_center - width_marking / 2,
+                     r_center - width_lane + 2 * width_marking,
+                     r_center - width_lane + width_marking,
+                     r_center - width_lane]
             # Vertices
             vertices = []
             for r in radii:
@@ -136,25 +149,30 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
                 vertices.append([x, y, 0])
             # Edges
             edges = []
-            num_single = int(len(vertices)/3)
-            for i in range(3):
+            # How many vertices in single arc
+            num_single = int(len(vertices) / len(radii))
+            for i in range(len(radii)):
                 for j in range(num_single-1) :
                     edges.append([num_single * i + j, num_single * i + j + 1])
-            edges.append([0, num_single])
-            edges.append([num_single,2*num_single])
-            edges.append([num_single-1,2*num_single-1])
-            edges.append([2*num_single-1,3*num_single-1])
+            edges_start = [ [ v + o for v in [0, num_single] ] for o in range(0, 7*num_single, num_single) ]
+            edges_end = [ [ v + o for v in [num_single-1, 2*num_single-1] ] for o in range(0, 7*num_single, num_single) ]
+            edges = edges + edges_start
+            edges = edges + edges_end
             # Faces
             if for_stencil:
                 faces = []
             else:
                 # Make sure we define faces counterclockwise for correct normals
                 if determinant > 0:
-                    faces = [[v for v in range(steps+1, 2*steps+2)]+[v for v in range(steps, -1, -1)],
-                            [v for v in range(2*steps+2, 3*steps+3)]+[v for v in range(2*steps+1, steps, -1)]]
+                    faces = [  [v + o for v in range(steps + 1)] + \
+                               [v + o for v in range(2 * steps + 1, steps, -1)] \
+                             for o in range(0, 7 * num_single, num_single)
+                            ]
                 else:
-                    faces = [[v for v in range(steps+1)]+[v for v in range(2*steps+1, steps, -1)],
-                            [v for v in range(steps+1, 2*steps+2)]+[v for v in range(3*steps+2, 2*steps+1, -1)]]
+                    faces = [  [v + o for v in range(steps + 1, 2 * steps + 2)] + \
+                               [v + o for v in range(steps, -1, -1)] \
+                             for o in range(0, 7*num_single, num_single)
+                            ]
             # Create blender mesh
             mesh = bpy.data.meshes.new('temp')
             mesh.from_pydata(vertices, edges, faces)
