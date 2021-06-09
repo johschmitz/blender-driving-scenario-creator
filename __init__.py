@@ -32,72 +32,76 @@ from . trajectory_waypoints import DSC_OT_trajectory_waypoints
 
 
 bl_info = {
-    "name" : "Driving Scenario Creator",
-    "author" : "Johannes Schmitz",
-    "description" : "Addon for creating OpenDRIVE and OpenSCENARIO based driving scenarios.",
-    "blender" : (2, 80, 0),
-    "version" : (0, 0, 1),
-    "location" : "",
-    "warning" : "",
-    "category" : "Add Mesh"
+    'name' : 'Driving Scenario Creator',
+    'author' : 'Johannes Schmitz',
+    'description' : 'Create OpenDRIVE and OpenSCENARIO based driving scenarios.',
+    'blender' : (2, 93, 0),
+    'version' : (0, 1, 0),
+    'location' : 'View3D > Sidebar > Driving Scenario Creator',
+    'warning' : '',
+    'doc_url': '',
+    'tracker_url': 'https://github.com/johschmitz/blender-driving-scenario-creator/issues',
+    'link': 'https://github.com/johschmitz/blender-driving-scenario-creator',
+    'support': 'COMMUNITY',
+    'category' : 'Add Mesh'
 }
 
 # Global variables
 custom_icons = None
 
 class DSC_PT_panel_create(bpy.types.Panel):
-    bl_idname = "DSC_PT_panel_create"
-    bl_label = "Driving Scenario Creator"
-    bl_category = "Driving Scenario Creator"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_context = "objectmode"
+    bl_idname = 'DSC_PT_panel_create'
+    bl_label = 'Driving Scenario Creator'
+    bl_category = 'Driving Scenario Creator'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_context = 'objectmode'
 
     def draw(self, context):
         global custom_icons
 
         layout = self.layout
         box = layout.box()
-        box.label(text="Road primitives (OpenDRIVE)")
+        box.label(text='Road primitives (OpenDRIVE)')
         row = box.row(align=True)
-        row.operator("dsc.road_straight", icon_value=custom_icons["road_straight"].icon_id)
+        row.operator('dsc.road_straight', icon_value=custom_icons['road_straight'].icon_id)
         row = box.row(align=True)
-        row.operator("dsc.road_arc", icon_value=custom_icons["road_arc"].icon_id)
+        row.operator('dsc.road_arc', icon_value=custom_icons['road_arc'].icon_id)
         row = box.row(align=True)
-        row.operator("dsc.road_spiral", icon_value=custom_icons["road_spiral"].icon_id)
+        row.operator('dsc.road_spiral', icon_value=custom_icons['road_spiral'].icon_id)
         row = box.row(align=True)
-        row.operator("dsc.road_parametric_polynomial", icon_value=custom_icons["road_parametric_polynomial"].icon_id)
+        row.operator('dsc.road_parametric_polynomial', icon_value=custom_icons['road_parametric_polynomial'].icon_id)
         row = box.row(align=True)
-        row.operator("dsc.junction", icon_value=custom_icons["junction"].icon_id)
+        row.operator('dsc.junction', icon_value=custom_icons['junction'].icon_id)
 
         box = layout.box()
-        box.label(text="Objects (OpenSCENARIO)")
+        box.label(text='Objects (OpenSCENARIO)')
         row = box.row(align=True)
-        row.operator("dsc.object_car")
+        row.operator('dsc.object_car')
         row = box.row(align=True)
-        row.operator("dsc.object_truck")
+        row.operator('dsc.object_truck')
         row = box.row(align=True)
-        row.operator("dsc.object_motorbike")
+        row.operator('dsc.object_motorbike')
         row = box.row(align=True)
-        row.operator("dsc.object_bicycle")
+        row.operator('dsc.object_bicycle')
         row = box.row(align=True)
-        row.operator("dsc.object_pedestrian")
+        row.operator('dsc.object_pedestrian')
 
         box = layout.box()
-        box.label(text="Trajectories (OpenSCENARIO)")
+        box.label(text='Trajectories (OpenSCENARIO)')
         row = box.row(align=True)
-        row.operator("dsc.trajectory_curve", icon_value=custom_icons["trajectory_curve"].icon_id)
+        row.operator('dsc.trajectory_curve', icon_value=custom_icons['trajectory_curve'].icon_id)
         row = box.row(align=True)
-        row.operator("dsc.trajectory_waypoints", icon_value=custom_icons["trajectory_waypoints"].icon_id)
+        row.operator('dsc.trajectory_waypoints', icon_value=custom_icons['trajectory_waypoints'].icon_id)
 
 
         box = layout.box()
-        box.label(text="Export (Track, Scenario, Mesh)")
+        box.label(text='Export (Track, Scenario, Mesh)')
         row = box.row(align=True)
-        row.operator("dsc.export_driving_scenario", icon="EXPORT")
+        row.operator('dsc.export_driving_scenario', icon='EXPORT')
 
 def menu_func_export(self, context):
-    self.layout.operator("dsc.export_driving_scenario", text="Driving Scenario (.xodr, .xodr, .fbx/.gltf)")
+    self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xodr, .xodr, .fbx/.gltf)')
 
 classes = (
     DSC_PT_panel_create,
@@ -120,14 +124,14 @@ def register():
     global custom_icons
     # Load custom icons
     custom_icons = bpy.utils.previews.new()
-    icons_dir = os.path.join(os.path.dirname(__file__), "icons")
-    custom_icons.load("road_straight", os.path.join(icons_dir, "road_straight.png"), 'IMAGE')
-    custom_icons.load("road_arc", os.path.join(icons_dir, "road_arc.png"), 'IMAGE')
-    custom_icons.load("road_spiral", os.path.join(icons_dir, "road_spiral.png"), 'IMAGE')
-    custom_icons.load("road_parametric_polynomial", os.path.join(icons_dir, "road_parametric_polynomial.png"), 'IMAGE')
-    custom_icons.load("junction", os.path.join(icons_dir, "junction.png"), 'IMAGE')
-    custom_icons.load("trajectory_curve", os.path.join(icons_dir, "trajectory_curve.png"), 'IMAGE')
-    custom_icons.load("trajectory_waypoints", os.path.join(icons_dir, "trajectory_waypoints.png"), 'IMAGE')
+    icons_dir = os.path.join(os.path.dirname(__file__), 'icons')
+    custom_icons.load('road_straight', os.path.join(icons_dir, 'road_straight.png'), 'IMAGE')
+    custom_icons.load('road_arc', os.path.join(icons_dir, 'road_arc.png'), 'IMAGE')
+    custom_icons.load('road_spiral', os.path.join(icons_dir, 'road_spiral.png'), 'IMAGE')
+    custom_icons.load('road_parametric_polynomial', os.path.join(icons_dir, 'road_parametric_polynomial.png'), 'IMAGE')
+    custom_icons.load('junction', os.path.join(icons_dir, 'junction.png'), 'IMAGE')
+    custom_icons.load('trajectory_curve', os.path.join(icons_dir, 'trajectory_curve.png'), 'IMAGE')
+    custom_icons.load('trajectory_waypoints', os.path.join(icons_dir, 'trajectory_waypoints.png'), 'IMAGE')
 
     # Register all addon classes
     for c in classes:
@@ -145,5 +149,5 @@ def unregister():
     # Get rid of custom icons
     bpy.utils.previews.remove(custom_icons)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     register()

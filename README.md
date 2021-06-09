@@ -1,11 +1,13 @@
-# Blender driving scenario creator add-on
+# Blender Driving Scenario Creator add-on
 
-This Blender add-on lets you create OpenDRIVE/OpenSCENARIO based scenarios for
-testing of assistant and autonomous driving functions.
+This [Blender](https://www.blender.org/) add-on lets you create OpenDRIVE and
+OpenSCENARIO based scenarios for testing of advanced driver assistance systems
+and autonomous driving functions.
 
 ## How to install
 
-Let us assume that Blender has been downloaded and installed to
+Let us assume that Blender has been
+[downloaded](https://www.blender.org/download/) and installed to
 
     /opt/blender/
 
@@ -70,9 +72,10 @@ using it in the same way as you would use Blender itself, Linux or GCC since you
 will probably not be modifying the source code and/or linking against it without
 contributing back your changes.
 
-Furthermore, if your enterprise company has already reached a state where open
-source contribution is possible, your contributions and pull requests are
-welcomed if they are maintainable.
+Furthermore, if your enterprise has already reached a state where open source
+software contribution is possible or your business has embraced open source
+software long ago, your contributions and pull requests are welcome if they are
+maintainable.
 
 ## Credits
 
@@ -80,7 +83,7 @@ Credits go to
 - [pyoscx/scenarigeneration](https://github.com/pyoscx/scenariogeneration)
   developers for the .xodr/.xosc generating/writing lib used as backend
 - [Archipack](https://github.com/s-leger/archipack) add-on developer(s) for
-  Blender add-on tool inspiration
+  general Blender add-on tool inspiration
 - Blender Add Curve: Extra Objects extension authors for inspiration on ring
   segments
 
