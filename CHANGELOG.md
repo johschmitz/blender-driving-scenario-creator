@@ -5,7 +5,7 @@
 - Operator for creating arc roads
 - Solid lane lines for arc and straight roads
 - Operator for creating cars
-- Snapping to grid with CTRL
+- Snapping to grid with <kbd>Ctrl</kbd> modifier key
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
