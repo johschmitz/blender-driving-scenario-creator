@@ -30,6 +30,8 @@ class DSC_OT_export(bpy.types.Operator):
     directory: bpy.props.StringProperty(
         name='Export directory', description='Target directory for export.')
 
+    dsc_export_filename = 'export'
+
     @classmethod
     def poll(cls, context):
         if 'OpenDRIVE' in bpy.data.collections:
@@ -40,8 +42,7 @@ class DSC_OT_export(bpy.types.Operator):
     def execute(self, context):
         self.export_vehicle_models()
         self.export_scenegraph_file()
-        s = Scenario(context, self.directory)
-        s.generate_single(self.directory)
+        self.export_openscenario(context, self.directory)
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -118,13 +119,10 @@ class DSC_OT_export(bpy.types.Operator):
             self.report({'ERROR'}, 'Executable \"osgconv\" required to produce .osgb scenegraph file. '
                 'Try installing openscenegraph.')
 
-class Scenario(ScenarioGenerator):
-    def __init__(self, context, directory):
-        ScenarioGenerator.__init__(self)
-        self.context = context
-        self.directory = directory
-
-    def road(self):
+    def export_openscenario(self, context, directory):
+        # OpenDRIVE (referenced by OpenSCENARIO)
+        xodr_path = pathlib.Path(self.directory) / 'xodr' / (self.dsc_export_filename + '.xodr')
+        xodr_path.parent.mkdir(parents=True, exist_ok=True)
         odr = xodr.OpenDrive('blender_dsc')
         roads = []
         # Create OpenDRIVE roads from object collection
@@ -194,6 +192,9 @@ class Scenario(ScenarioGenerator):
         num_junctions = 0
         for obj in bpy.data.collections['OpenDRIVE'].all_objects:
             if 'junction' in obj.name:
+                if not len(obj['incoming_roads']) == 4:
+                    self.report({'ERROR'}, 'Junction must have 4 connected roads.')
+                    break
                 incoming_roads = []
                 angles = []
                 junction_id = obj['id_xodr']
@@ -243,11 +244,12 @@ class Scenario(ScenarioGenerator):
                 odr.add_junction(junction)
                 for road in junction_roads:
                     odr.add_road(road)
-
         odr.adjust_startpoints()
-        return odr
+        odr.write_xml(str(xodr_path))
 
-    def scenario(self):
+        # OpenSCENARIO
+        xosc_path = pathlib.Path(self.directory) / 'xosc' / (self.dsc_export_filename + '.xosc')
+        xosc_path.parent.mkdir(parents=True, exist_ok=True)
         init = xosc.Init()
         entities = xosc.Entities()
         if 'OpenSCENARIO' in bpy.data.collections:
@@ -266,13 +268,12 @@ class Scenario(ScenarioGenerator):
                     init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
                         xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.rate, 1)))
 
-        road = xosc.RoadNetwork(self.road_file,'./scenegraph/export.osgb')
+        road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.osgb')
         catalog = xosc.Catalog()
         catalog.add_catalog('VehicleCatalog','../catalogs/vehicles')
         storyboard = xosc.StoryBoard(init,stoptrigger=xosc.ValueTrigger('start_trigger ', 3, xosc.ConditionEdge.none,xosc.SimulationTimeCondition(13,xosc.Rule.greaterThan),'stop'))
         scenario = xosc.Scenario('dsc_scenario','blender_dsc',xosc.ParameterDeclarations(),entities,storyboard,road,catalog)
-
-        return scenario
+        scenario.write_xml(str(xosc_path))
 
     def get_element_type_by_id(self, id):
         '''

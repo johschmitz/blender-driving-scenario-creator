@@ -61,7 +61,7 @@ variable with an `export PATH=$PATH:/opt/esmini/bin` at the end of the
 With esmini available the exported scenario can be run with
 
     cd <export_directory>
-    esmini --osc xosc/export0.xosc --window 50 50 800 400
+    esmini --osc xosc/export.xosc --window 50 50 800 400
 
 ## License
 

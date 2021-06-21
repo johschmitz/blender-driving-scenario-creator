@@ -67,7 +67,7 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
             obj['hdg_right'] = params['hdg_right']
             obj['hdg_up'] = params['hdg_up']
 
-            obj['incoming_roads'] = {'cp_down': None, 'cp_left': None, 'cp_up': None, 'cp_right': None}
+            obj['incoming_roads'] = {}
 
             return obj
 
