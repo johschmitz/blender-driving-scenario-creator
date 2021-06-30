@@ -36,7 +36,7 @@ bl_info = {
     'author' : 'Johannes Schmitz',
     'description' : 'Create OpenDRIVE and OpenSCENARIO based driving scenarios.',
     'blender' : (2, 93, 0),
-    'version' : (0, 1, 1),
+    'version' : (0, 2, 0),
     'location' : 'View3D > Sidebar > Driving Scenario Creator',
     'warning' : '',
     'doc_url': '',
@@ -101,7 +101,7 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.export_driving_scenario', icon='EXPORT')
 
 def menu_func_export(self, context):
-    self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xodr, .xodr, .fbx/.gltf)')
+    self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xosc, .xodr, .fbx/.gltf/.osgb)')
 
 classes = (
     DSC_PT_panel_create,

@@ -22,13 +22,22 @@ from math import pi
 import pathlib
 import subprocess
 
+
 class DSC_OT_export(bpy.types.Operator):
     bl_idname = 'dsc.export_driving_scenario'
     bl_label = 'Export driving scenario'
-    bl_description = 'Export driving scenario as OpenDRIVE, OpenSCENARIO and Mesh (e.g. OBJ, FBX, glTF 2.0)'
+    bl_description = 'Export driving scenario as OpenDRIVE, OpenSCENARIO and Mesh (e.g. OSGB, FBX, glTF 2.0)'
 
     directory: bpy.props.StringProperty(
         name='Export directory', description='Target directory for export.')
+
+    mesh_file_type : bpy.props.EnumProperty(
+        items=(('fbx', '.fbx', '', 0),
+               ('gltf', '.gltf', '', 1),
+               ('osgb', '.osgb', '', 2),
+              ),
+        default='osgb',
+    )
 
     dsc_export_filename = 'export'
 
@@ -38,6 +47,12 @@ class DSC_OT_export(bpy.types.Operator):
             return True
         else:
             return False
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.label(text="Mesh file:")
+        row.prop(self, "mesh_file_type", expand=True)
 
     def execute(self, context):
         self.export_vehicle_models()
@@ -53,22 +68,14 @@ class DSC_OT_export(bpy.types.Operator):
         '''
             Export the scene mesh to file
         '''
-        file_path = pathlib.Path(self.directory) / 'scenegraph' / 'export.obj'
+        file_path = pathlib.Path(self.directory) / 'scenegraph' / 'export.suffix'
         file_path.parent.mkdir(parents=True, exist_ok=True)
         bpy.ops.object.select_all(action='SELECT')
         if 'OpenSCENARIO' in bpy.data.collections:
             for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
                 obj.select_set(False)
-        bpy.ops.export_scene.obj(filepath=str(file_path), check_existing=True,
-                                 filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
-                                 use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
-                                 use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
-                                 use_materials=True, use_triangles=False, use_nurbs=False,
-                                 use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
-                                 group_by_material=False, keep_vertex_order=False, global_scale=1.0,
-                                     path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
+        self.export_mesh(file_path)
         bpy.ops.object.select_all(action='DESELECT')
-        self.convert_to_osgb(file_path)
 
     def export_vehicle_models(self):
         '''
@@ -86,14 +93,7 @@ class DSC_OT_export(bpy.types.Operator):
                     model_path = pathlib.Path(self.directory) / 'models' / str(obj.name + '.obj')
                     obj.hide_viewport = False
                     obj.select_set(True)
-                    bpy.ops.export_scene.obj(filepath=str(model_path), check_existing=True,
-                                            filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
-                                            use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
-                                            use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
-                                            use_materials=True, use_triangles=False, use_nurbs=False,
-                                            use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
-                                            group_by_material=False, keep_vertex_order=False, global_scale=1.0,
-                                            path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
+                    self.export_mesh(model_path)
                     bpy.ops.object.select_all(action='DESELECT')
                     obj.hide_viewport = True
                     self.convert_to_osgb(model_path)
@@ -104,13 +104,76 @@ class DSC_OT_export(bpy.types.Operator):
                     axle_rear = xosc.Axle(0,0.8,1.525,0,0.4)
                     car = xosc.Vehicle(obj.name,xosc.VehicleCategory.car,
                         bounding_box,axle_front,axle_rear,69,10,10)
-                    car.add_property_file('../models/' + obj.name + '.osgb')
+                    car.add_property_file('../models/' + obj.name + '.' + self.mesh_file_type)
                     car.add_property('control','internal')
                     car.add_property('model_id','0')
                     # Dump vehicle to catalog
                     car.dump_to_catalog(catalog_path,'VehicleCatalog',
                         'DSC vehicle catalog','Blender Driving Scenario Creator')
                     break
+
+    def export_mesh(self, file_path):
+        '''
+            Export a mesh to file
+        '''
+        if self.mesh_file_type == 'osgb':
+            # Since Blender has no native .osgb support export .obj and then convert
+            file_path = file_path.with_suffix('.obj')
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            bpy.ops.export_scene.obj(filepath=str(file_path), check_existing=True,
+                                     filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
+                                     use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
+                                     use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
+                                     use_materials=True, use_triangles=False, use_nurbs=False,
+                                     use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
+                                     group_by_material=False, keep_vertex_order=False, global_scale=1.0,
+                                     path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
+            self.convert_to_osgb(file_path)
+        elif self.mesh_file_type == 'fbx':
+            file_path = file_path.with_suffix('.fbx')
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            bpy.ops.export_scene.fbx(filepath=str(file_path), check_existing=True, filter_glob='*.fbx',
+                                     use_selection=True, use_active_collection=False, global_scale=1.0,
+                                     apply_unit_scale=True, apply_scale_options='FBX_SCALE_NONE',
+                                     use_space_transform=True, bake_space_transform=False,
+                                     object_types={'ARMATURE', 'CAMERA', 'EMPTY', 'LIGHT', 'MESH', 'OTHER'},
+                                     use_mesh_modifiers=True, use_mesh_modifiers_render=True,
+                                     mesh_smooth_type='OFF', use_subsurf=False, use_mesh_edges=False,
+                                     use_tspace=False, use_custom_props=False, add_leaf_bones=True,
+                                     primary_bone_axis='Y', secondary_bone_axis='X',
+                                     use_armature_deform_only=False, armature_nodetype='NULL',
+                                     bake_anim=True, bake_anim_use_all_bones=True,
+                                     bake_anim_use_nla_strips=True, bake_anim_use_all_actions=True,
+                                     bake_anim_force_startend_keying=True, bake_anim_step=1.0,
+                                     bake_anim_simplify_factor=1.0, path_mode='AUTO',
+                                     embed_textures=False, batch_mode='OFF', use_batch_own_dir=True,
+                                     use_metadata=True, axis_forward='-Z', axis_up='Y')
+        elif self.mesh_file_type == 'gltf':
+            file_path = file_path.with_suffix('.gltf')
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            bpy.ops.export_scene.gltf(filepath=str(file_path), check_existing=True,
+                                      export_format='GLTF_EMBEDDED', ui_tab='GENERAL', export_copyright='',
+                                      export_image_format='AUTO', export_texture_dir='',
+                                      export_texcoords=True, export_normals=True,
+                                      export_draco_mesh_compression_enable=False,
+                                      export_draco_mesh_compression_level=6,
+                                      export_draco_position_quantization=14,
+                                      export_draco_normal_quantization=10,
+                                      export_draco_texcoord_quantization=12,
+                                      export_draco_color_quantization=10,
+                                      export_draco_generic_quantization=12, export_tangents=False,
+                                      export_materials='EXPORT', export_colors=True, use_mesh_edges=False,
+                                      use_mesh_vertices=False, export_cameras=False, export_selected=False,
+                                      use_selection=True, use_visible=False, use_renderable=False,
+                                      use_active_collection=False, export_extras=False, export_yup=True,
+                                      export_apply=False, export_animations=True, export_frame_range=True,
+                                      export_frame_step=1, export_force_sampling=True,
+                                      export_nla_strips=True, export_def_bones=False,
+                                      export_current_frame=False, export_skins=True,
+                                      export_all_influences=False, export_morph=True,
+                                      export_morph_normal=True, export_morph_tangent=False,
+                                      export_lights=False, export_displacement=False,
+                                      will_save_settings=False, filter_glob='*.glb;*.gltf')
 
     def convert_to_osgb(self, input_file_path):
         try:
@@ -268,7 +331,7 @@ class DSC_OT_export(bpy.types.Operator):
                     init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
                         xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.rate, 1)))
 
-        road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.osgb')
+        road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.' + self.mesh_file_type)
         catalog = xosc.Catalog()
         catalog.add_catalog('VehicleCatalog','../catalogs/vehicles')
         storyboard = xosc.StoryBoard(init,stoptrigger=xosc.ValueTrigger('start_trigger ', 3, xosc.ConditionEdge.none,xosc.SimulationTimeCondition(13,xosc.Rule.greaterThan),'stop'))
