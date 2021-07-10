@@ -20,7 +20,7 @@ from .operator_snap_draw import DSC_OT_snap_draw
 from . import helpers
 
 
-class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
+class DSC_OT_object_car(DSC_OT_snap_draw):
     bl_idname = "dsc.object_car"
     bl_label = "Car"
     bl_description = "Place a car object"
@@ -31,15 +31,11 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
     def __init__(self):
         self.object_snapping = False
 
-    @classmethod
-    def poll(cls, context):
-        return True
-
     def create_object(self, context):
         '''
             Create a car object
         '''
-        valid, mesh, params = self.get_mesh_and_params(context, for_stencil=False)
+        valid, mesh, materials, params = self.get_mesh_and_params(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -93,7 +89,8 @@ class DSC_OT_object_car(DSC_OT_snap_draw, bpy.types.Operator):
         # Rotate and translate mesh according to selected start point
         self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
         valid = True
-        return valid, mesh, params
+        materials = {}
+        return valid, mesh, materials, params
 
     def get_object_template(self, context):
         '''

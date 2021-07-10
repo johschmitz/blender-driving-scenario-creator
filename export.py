@@ -11,6 +11,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from scenariogeneration.xodr.enumerations import RoadMarkType
+from scenariogeneration.xodr.lane import RoadMark
 import bpy
 
 from scenariogeneration import xosc
@@ -22,6 +24,36 @@ from math import pi
 import pathlib
 import subprocess
 
+mapping_lane_type = {
+    'driving': xodr.LaneType.driving,
+    #'bidirectional': xodr.LaneType.bidirectional,
+    #'bus': xodr.LaneType.bus,
+    'stop': xodr.LaneType.stop,
+    #'parking': xodr.LaneType.parking,
+    #'biking': xodr.LaneType.biking,
+    #'restricted': xodr.LaneType.restricted,
+    #'roadWorks': xodr.LaneType.roadWorks,
+    'border': xodr.LaneType.border,
+    # TODO (missing) 'curb': xodr.LaneType.curb,
+    #'sidewalk': xodr.LaneType.sidewalk,
+    'shoulder': xodr.LaneType.shoulder,
+    'median': xodr.LaneType.median,
+    #'entry': xodr.LaneType.entry,
+    #'exit': xodr.LaneType.exit,
+    #'onRamp': xodr.LaneType.onRamp,
+    #'offRamp': xodr.LaneType.offRamp,
+    #'connectingRamp': xodr.LaneType.connectingRamp,
+    'none': xodr.LaneType.none,
+}
+
+mapping_roadmark = {
+    'none': xodr.RoadMarkType.none,
+    'solid': xodr.RoadMarkType.solid,
+    'broken': xodr.RoadMarkType.broken,
+    #'solid_solid': xodr.RoadMarkType.solid_solid,
+    #'solid_broken': xodr.RoadMarkType.solid_broken,
+    #'broken_solid': xodr.RoadMarkType.broken_solid,
+}
 
 class DSC_OT_export(bpy.types.Operator):
     bl_idname = 'dsc.export_driving_scenario'
@@ -197,12 +229,7 @@ class DSC_OT_export(bpy.types.Operator):
                         obj['geometry_y'],obj['geometry_hdg_start'])
                     line = xodr.Line(obj['geometry_length'])
                     planview.add_geometry(line)
-                    # Create simple lanes
-                    lanes = xodr.Lanes()
-                    lanesection = xodr.LaneSection(0,xodr.standard_lane())
-                    lanesection.add_left_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
-                    lanesection.add_right_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
-                    lanes.add_lanesection(lanesection)
+                    lanes = self.create_lanes(obj)
                     road = xodr.Road(obj['id_xodr'],planview,lanes)
                 if obj['geometry'] == 'arc':
                     planview = xodr.PlanView()
@@ -211,12 +238,7 @@ class DSC_OT_export(bpy.types.Operator):
                     arc = xodr.Arc(obj['geometry_curvature'],
                         angle=obj['geometry_angle'])
                     planview.add_geometry(arc)
-                    # Create simple lanes
-                    lanes = xodr.Lanes()
-                    lanesection = xodr.LaneSection(0,xodr.standard_lane())
-                    lanesection.add_left_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
-                    lanesection.add_right_lane(xodr.standard_lane(rm=xodr.STD_ROADMARK_SOLID))
-                    lanes.add_lanesection(lanesection)
+                    lanes = self.create_lanes(obj)
                     road = xodr.Road(obj['id_xodr'],planview,lanes)
                 # Add road level linking
                 if 'link_predecessor' in obj:
@@ -270,8 +292,8 @@ class DSC_OT_export(bpy.types.Operator):
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_left']))
                 incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_down']))
                 # Create connecting roads and link them to incoming roads
-                junction_roads = xodr.create_junction_roads_standalone(angles, 3.4, junction_id,
-                    spiral_part=0.1, arc_part=0.8, startnum=1000+6*num_junctions)
+                junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
+                    spiral_part=0.01, arc_part=0.99, startnum=1000+6*num_junctions, lane_width=3.75)
                 i = 0
                 for j in range(len(incoming_roads) - 1):
                     for k in range(j + 1, len(incoming_roads)):
@@ -329,7 +351,7 @@ class DSC_OT_export(bpy.types.Operator):
                     init.add_init_action(car_name, xosc.AbsoluteSpeedAction(
                         30, xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.time, 1)))
                     init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
-                        xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.rate, 1)))
+                        xosc.TransitionDynamics(xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, 2.0)))
 
         road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.' + self.mesh_file_type)
         catalog = xosc.Catalog()
@@ -359,3 +381,26 @@ class DSC_OT_export(bpy.types.Operator):
                 return road
         print('WARNING: No road with ID {} found. Maybe a junction?'.format(id))
         return None
+
+    def create_lanes(self, obj):
+        lanes = xodr.Lanes()
+        road_mark = xodr.RoadMark(mapping_roadmark[obj['lane_center_road_mark_type']])
+        lane_center = xodr.standard_lane(rm=road_mark)
+        lane_center.add_roadmark
+        lanesection = xodr.LaneSection(0,lane_center)
+        for idx in range(obj['lanes_left_num']):
+            lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_left_types'][idx]],
+                a=obj['lanes_left_widths'][idx])
+            road_mark = xodr.RoadMark(mapping_roadmark[obj['lanes_left_road_mark_types'][idx]])
+            lane.add_roadmark(road_mark)
+            lanesection.add_left_lane(lane)
+        for idx in range(obj['lanes_right_num']):
+            lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_right_types'][idx]],
+                a=obj['lanes_right_widths'][idx])
+            print(obj['lanes_right_road_mark_types'][idx])
+            road_mark = xodr.RoadMark(mapping_roadmark[obj['lanes_right_road_mark_types'][idx]])
+            lane.add_roadmark(road_mark)
+            lanesection.add_right_lane(lane)
+        lanes.add_lanesection(lanesection)
+
+        return lanes

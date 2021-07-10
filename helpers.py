@@ -140,6 +140,17 @@ def select_activate_object(context, obj):
     obj.select_set(state=True)
     context.view_layer.objects.active = obj
 
+def remove_duplicate_vertices(context, obj):
+    '''
+        Remove duplicate vertices from a object's mesh
+    '''
+    context.view_layer.objects.active = obj
+    bpy.ops.object.editmode_toggle()
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.remove_doubles(threshold=0.001,
+                use_unselected=True, use_sharp_edge_from_normals=False)
+    bpy.ops.object.editmode_toggle()
+
 def mouse_to_xy_plane(context, event):
     '''
         Convert mouse pointer position to 3D point in xy-plane.
@@ -244,15 +255,23 @@ def assign_road_materials(obj):
     if material is None:
         # Create material
         material = bpy.data.materials.new(name="road_asphalt")
-        material.diffuse_color = [.3,.3,.3,1]
+        material.diffuse_color = (.3,.3,.3,1)
     obj.data.materials.append(material)
     # Get lane line material
-    material = bpy.data.materials.get("road_surface_marking")
+    material = bpy.data.materials.get("road_mark")
     if material is None:
         # Create material
-        material = bpy.data.materials.new(name="road_surface_marking")
-        material.diffuse_color = [.9,.9,.9,1]
-    # Assign to object's 2nd material slot
+        material = bpy.data.materials.new(name="road_mark")
+        material.diffuse_color = (.9,.9,.9,1)
+    # Assign to object's next material slot
+    obj.data.materials.append(material)
+    # Get grass material
+    material = bpy.data.materials.get("grass")
+    if material is None:
+        # Create material
+        material = bpy.data.materials.new(name="grass")
+        material.diffuse_color = (.05,.6,.01,1)
+    # Assign to object's next material slot
     obj.data.materials.append(material)
 
 def get_material_index(obj, material_name):
@@ -265,6 +284,9 @@ def get_material_index(obj, material_name):
     return None
 
 def replace_mesh(obj, mesh):
+    '''
+        Replace existing mesh
+    '''
     # Delete old mesh data
     bm = bmesh.new()
     bm.from_mesh(obj.data)

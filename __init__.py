@@ -16,17 +16,19 @@ import bpy.utils.previews
 
 import os
 
-from . road_straight import DSC_OT_road_straight
-from . road_arc import DSC_OT_road_arc
-from . road_spiral import DSC_OT_road_spiral
-from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
-from . junction import DSC_OT_junction
 from . export import DSC_OT_export
+from . junction import DSC_OT_junction
 from . object_bicycle import DSC_OT_object_bicycle
 from . object_car import DSC_OT_object_car
 from . object_motorbike import DSC_OT_object_motorbike
 from . object_pedestrian import DSC_OT_object_pedestrian
 from . object_truck import DSC_OT_object_truck
+from . road_arc import DSC_OT_road_arc
+from . road_properties_popup import DSC_OT_road_properties_popup
+from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
+from . road_properties import DSC_road_properties, DSC_enum_strip
+from . road_spiral import DSC_OT_road_spiral
+from . road_straight import DSC_OT_road_straight
 from . trajectory_curve import DSC_OT_trajectory_curve
 from . trajectory_waypoints import DSC_OT_trajectory_waypoints
 
@@ -64,15 +66,21 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box = layout.box()
         box.label(text='Road primitives (OpenDRIVE)')
         row = box.row(align=True)
-        row.operator('dsc.road_straight', icon_value=custom_icons['road_straight'].icon_id)
+        row.operator('dsc.road_properties_popup', text='Straight',
+            icon_value=custom_icons['road_straight'].icon_id).operator = 'road_straight'
         row = box.row(align=True)
-        row.operator('dsc.road_arc', icon_value=custom_icons['road_arc'].icon_id)
+        row.operator('dsc.road_properties_popup', text='Arc',
+            icon_value=custom_icons['road_arc'].icon_id).operator = 'road_arc'
         row = box.row(align=True)
-        row.operator('dsc.road_spiral', icon_value=custom_icons['road_spiral'].icon_id)
+        row.operator('dsc.road_spiral', text='Spiral',
+            icon_value=custom_icons['road_spiral'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.road_parametric_polynomial', icon_value=custom_icons['road_parametric_polynomial'].icon_id)
+        row.operator('dsc.road_parametric_polynomial', text='Parametric polynomial',
+            icon_value=custom_icons['road_parametric_polynomial'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.junction', icon_value=custom_icons['junction'].icon_id)
+        row.operator('dsc.road_properties_popup', text='Junction',
+            icon_value=custom_icons['junction'].icon_id).operator = 'junction'
+        row = box.row(align=True)
 
         box = layout.box()
         box.label(text='Objects (OpenSCENARIO)')
@@ -94,7 +102,6 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.operator('dsc.trajectory_waypoints', icon_value=custom_icons['trajectory_waypoints'].icon_id)
 
-
         box = layout.box()
         box.label(text='Export (Track, Scenario, Mesh)')
         row = box.row(align=True)
@@ -104,20 +111,23 @@ def menu_func_export(self, context):
     self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xosc, .xodr, .fbx/.gltf/.osgb)')
 
 classes = (
-    DSC_PT_panel_create,
-    DSC_OT_road_straight,
-    DSC_OT_road_arc,
-    DSC_OT_road_spiral,
-    DSC_OT_road_parametric_polynomial,
-    DSC_OT_junction,
+    DSC_enum_strip,
     DSC_OT_export,
+    DSC_OT_junction,
     DSC_OT_object_bicycle,
     DSC_OT_object_car,
     DSC_OT_object_motorbike,
     DSC_OT_object_pedestrian,
     DSC_OT_object_truck,
+    DSC_OT_road_arc,
+    DSC_OT_road_properties_popup,
+    DSC_OT_road_parametric_polynomial,
+    DSC_OT_road_spiral,
+    DSC_OT_road_straight,
     DSC_OT_trajectory_curve,
-    DSC_OT_trajectory_waypoints
+    DSC_OT_trajectory_waypoints,
+    DSC_PT_panel_create,
+    DSC_road_properties,
 )
 
 def register():
@@ -138,6 +148,8 @@ def register():
         bpy.utils.register_class(c)
     # Register export menu
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    # Register property groups
+    bpy.types.Scene.road_properties = bpy.props.PointerProperty(type=DSC_road_properties)
 
 def unregister():
     global custom_icons
@@ -148,6 +160,8 @@ def unregister():
         bpy.utils.unregister_class(c)
     # Get rid of custom icons
     bpy.utils.previews.remove(custom_icons)
+    # Get rid of property groups
+    del bpy.types.Scene.road_properties
 
 if __name__ == '__main__':
     register()

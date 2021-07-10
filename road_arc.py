@@ -20,7 +20,7 @@ from . import helpers
 from math import pi, sin, cos, acos, ceil
 
 
-class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
+class DSC_OT_road_arc(DSC_OT_snap_draw):
     bl_idname = "dsc.road_arc"
     bl_label = "Arc"
     bl_description = "Create an arc road"
@@ -28,16 +28,12 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
 
     object_type = 'road_arc'
 
-    @classmethod
-    def poll(cls, context):
-        return True
-
     def create_object(self, context):
         '''
             Create an arc road object
         '''
         # Try getting data for a new mesh
-        valid, mesh, params = self.get_mesh_and_params(context, for_stencil=False)
+        valid, mesh, materials, params = self.get_mesh_and_params(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -50,12 +46,14 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
             # Paint some road markings
             helpers.assign_road_materials(obj)
             obj.data.polygons[0].material_index = helpers.get_material_index(obj, 'road_asphalt')
-            obj.data.polygons[1].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[1].material_index = helpers.get_material_index(obj, 'road_mark')
             obj.data.polygons[2].material_index = helpers.get_material_index(obj, 'road_asphalt')
-            obj.data.polygons[3].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[3].material_index = helpers.get_material_index(obj, 'road_mark')
             obj.data.polygons[4].material_index = helpers.get_material_index(obj, 'road_asphalt')
-            obj.data.polygons[5].material_index = helpers.get_material_index(obj, 'road_surface_marking')
+            obj.data.polygons[5].material_index = helpers.get_material_index(obj, 'road_mark')
             obj.data.polygons[6].material_index = helpers.get_material_index(obj, 'road_asphalt')
+
+            helpers.select_activate_object(context, obj)
 
             # Remember connecting points for road snapping
             obj['cp_start'] = self.point_start
@@ -72,7 +70,15 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
             obj['geometry_angle'] = params['angle']
             obj['geometry_curvature'] = params['curvature']
 
-            helpers.select_activate_object(context, obj)
+            obj['lanes_left_num'] = 2
+            obj['lanes_right_num'] = 2
+            obj['lanes_left_types'] = [ 'driving', 'border' ]
+            obj['lanes_right_types'] = [ 'driving', 'border' ]
+            obj['lanes_left_widths'] = [3.75, 0.20]
+            obj['lanes_right_widths'] = [3.75, 0.20]
+            obj['lanes_left_road_mark_types'] = ['solid', 'none']
+            obj['lanes_right_road_mark_types'] = ['solid', 'none']
+            obj['lane_center_road_mark_type'] = 'solid'
 
             return obj
 
@@ -118,19 +124,20 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
             point_end = point_end + self.point_start
             # Calculate adaptive polyline steps based on
             # https://stackoverflow.com/questions/11774038/how-to-render-a-circle-with-as-few-vertices-as-possible
-            width_lane = 4.0
+            width_lane = 3.75
             width_marking = 0.12
+            width_border = 0.2
             error_max = 0.25
             steps = ceil(2 * pi / acos(2 * (1 - error_max / max(2 * width_lane, r_center))**2 - 1))
             angle_step = (endangle - startangle) / steps
-            radii = [r_center + width_lane,
-                     r_center + width_lane - width_marking,
-                     r_center + width_lane - 2 * width_marking,
+            radii = [r_center + width_lane + width_border,
+                     r_center + width_lane + width_marking/2,
+                     r_center + width_lane - width_marking/2,
                      r_center + width_marking / 2,
                      r_center - width_marking / 2,
-                     r_center - width_lane + 2 * width_marking,
-                     r_center - width_lane + width_marking,
-                     r_center - width_lane]
+                     r_center - width_lane + width_marking/2,
+                     r_center - width_lane - width_marking/2,
+                     r_center - width_lane - width_border]
             # Vertices
             vertices = []
             for r in radii:
@@ -184,9 +191,11 @@ class DSC_OT_road_arc(DSC_OT_snap_draw, bpy.types.Operator):
                                'heading_end': heading_end,
                                'angle': angle,
                                'curvature': curvature}
-            return True, mesh, road_parameters
+            # TODO implement material dictionary for the faces
+            materials = {}
+            return True, mesh, materials, road_parameters
         else:
-            return False, None, {}
+            return False, None, {}, {}
 
     def get_arc_radius_angle_det(self, point_start, heading_start, point_end):
         '''

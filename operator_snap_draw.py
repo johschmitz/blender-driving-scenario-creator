@@ -19,17 +19,18 @@ from math import pi
 
 from . import helpers
 
+
 class DSC_OT_snap_draw(bpy.types.Operator):
     bl_idname = 'dsc.snap_draw'
     bl_label = 'DSC snap draw operator'
-    bl_options = {'INTERNAL'}
+    bl_options = {'REGISTER', 'UNDO'}
 
     def __init__(self):
         self.object_snapping = True
 
     @classmethod
     def poll(cls, context):
-        return True
+        return context.area.type == 'VIEW_3D'
 
     def create_object(self, context):
         '''
@@ -78,7 +79,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
             # This can happen due to start point snapping -> ignore
             return self.point_selected_end
         # Try getting data for a new mesh
-        valid, mesh, params = self.get_mesh_and_params(context, for_stencil=True)
+        valid, mesh, materials, params = self.get_mesh_and_params(context, for_stencil=True)
         # If cursor is not in line with connection we get a solution and update the mesh
         if valid:
             helpers.replace_mesh(self.stencil, mesh)
@@ -200,12 +201,9 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
-        self.init_loc_x = context.region.x
-        self.value = event.mouse_x
         # For operator state machine
         # possible states: {'INIT','SELECT_START', 'SELECT_END'}
         self.state = 'INIT'
-
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}

@@ -1,0 +1,122 @@
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+import bpy
+
+
+class DSC_OT_road_properties_popup(bpy.types.Operator):
+    bl_idname = 'dsc.road_properties_popup'
+    bl_label = ''
+
+    operators = {'road_straight': bpy.ops.dsc.road_straight,
+                 'road_arc': bpy.ops.dsc.road_arc,
+                 'junction': bpy.ops.dsc.junction,
+                 'object_car': bpy.ops.dsc.object_car}
+
+    operator: bpy.props.StringProperty(
+        name='Road operator', description='Type of the road operator to call.', options={'HIDDEN'})
+    expand_parameters: bpy.props.BoolProperty(default=False)
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def cancel(self, context):
+        # Popup closed, call operator for the specified road operator
+        op = self.operators[self.operator]
+        op('INVOKE_DEFAULT')
+        return None
+
+    def invoke(self, context, event):
+        if len(context.scene.road_properties.strips) == 0:
+            context.scene.road_properties.init()
+        # TODO: for now only straight road parameterization implemented
+        if self.operator == 'road_straight':
+            return context.window_manager.invoke_popup(self)
+        else:
+            op = self.operators[self.operator]
+            op('INVOKE_DEFAULT')
+            return {'FINISHED'}
+
+    def draw(self, context):
+        box = self.layout.box()
+        row = box.row(align=True)
+        box_info = row.box()
+        box_info.label(text='Note: Lines are centered between lanes and do not ')
+        box_info.label(text='contribute to overall road width or number of lanes.')
+
+        row = box.row(align=True)
+
+        box_params = row.box()
+        if self.expand_parameters == False:
+            box_params.prop(self, 'expand_parameters', icon="TRIA_RIGHT", text="Parameters", emboss=False)
+        else:
+            # Expand
+            box_params.prop(self, 'expand_parameters', icon="TRIA_DOWN", text="Parameters", emboss=False)
+            row = box_params.row(align=True)
+            row.label(text='Width line thin:')
+            row.prop(context.scene.road_properties, 'width_line_thin', text='')
+            # row = box_params.row(align=True)
+            # row.label(text='Width line bold:')
+            # row.prop(context.scene.road_properties, 'width_line_bold', text='')
+            # row = box_params.row(align=True)
+            # row.label(text='Length line broken:')
+            # row.prop(context.scene.road_properties, 'length_line_broken', text='')
+            # row = box_params.row(align=True)
+            # row.label(text='Ratio line gap:')
+            # row.prop(context.scene.road_properties, 'ratio_line_gap', text='')
+            row = box_params.row(align=True)
+
+            row = box_params.row(align=True)
+            row.label(text='Width driving:')
+            row.prop(context.scene.road_properties, 'width_driving', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width border:')
+            row.prop(context.scene.road_properties, 'width_border', text='')
+            # row = box_params.row(align=True)
+            # row.label(text='Width curb:')
+            # row.prop(context.scene.road_properties, 'width_curb', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width median:')
+            row.prop(context.scene.road_properties, 'width_median', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width stop:')
+            row.prop(context.scene.road_properties, 'width_stop', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width shoulder:')
+            row.prop(context.scene.road_properties, 'width_shoulder', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width none (offroad lane):')
+            row.prop(context.scene.road_properties, 'width_none', text='')
+
+        row = box.row(align=True)
+        row.label(text='Number of lanes:')
+        row = box.row(align=True)
+        row.label(text='Left:')
+        row.prop(context.scene.road_properties, 'lanes_left_num', text='')
+        row.separator()
+        row.label(text='Right:')
+        row.prop(context.scene.road_properties, 'lanes_right_num', text='')
+
+        row = box.row(align=True)
+
+        for idx, strip in enumerate(context.scene.road_properties.strips):
+            row = box.row(align=True)
+            split = row.split(factor=0.2, align=True)
+            split.label(text='Strip ' + str(idx+1) + ':')
+            split = split.split(factor=0.5, align=True)
+            split.prop(strip, 'type', text='')
+            if context.scene.road_properties.strips[idx].type == 'line':
+                split.prop(strip, 'type_road_mark', text='')
+            else:
+                split.label(text='Width:')
+                split.prop(strip, 'width', text='')

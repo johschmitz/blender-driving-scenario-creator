@@ -21,7 +21,7 @@ from .operator_snap_draw import DSC_OT_snap_draw
 from . import helpers
 
 
-class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
+class DSC_OT_junction(DSC_OT_snap_draw):
     bl_idname = 'dsc.junction'
     bl_label = 'Junction'
     bl_description = 'Create a junction'
@@ -29,15 +29,11 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
 
     object_type = 'junction'
 
-    @classmethod
-    def poll(cls, context):
-        return True
-
     def create_object(self, context):
         '''
             Create a junction object
         '''
-        valid, mesh, params = self.get_mesh_and_params(context, for_stencil=False)
+        valid, mesh, materials, params = self.get_mesh_and_params(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -110,14 +106,14 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
                   'hdg_up': hdg_up,
                   }
         # Mesh
-        vertices = [(-4.0, 4.0, 0.0),
-                    (-4.0, 0.0, 0.0),
-                    (-4.0, -4.0, 0.0),
-                    (0.0, -4.0, 0.0),
-                    (4.0, -4.0, 0.0),
-                    (4.0, 0.0, 0.0),
-                    (4.0, 4.0, 0.0),
-                    (0.0, 4.0, 0.0),
+        vertices = [(-3.95, 3.95, 0.0),
+                    (-3.95, 0.0, 0.0),
+                    (-3.95, -3.95, 0.0),
+                    (0.0, -3.95, 0.0),
+                    (3.95, -3.95, 0.0),
+                    (3.95, 0.0, 0.0),
+                    (3.95, 3.95, 0.0),
+                    (0.0, 3.95, 0.0),
                     ]
         edges = [[0, 1],[1, 2],[2, 3],[3, 4],[4, 5],[5, 6],[6, 7],[7, 0]]
         if for_stencil:
@@ -127,7 +123,7 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
             faces = [[0, 1, 2, 3, 4, 5, 6, 7]]
         # Shift origin to connection point
         if self.snapped_start:
-            vertices[:] = [(v[0] + 4.0, v[1], v[2]) for v in vertices]
+            vertices[:] = [(v[0] + 3.95, v[1], v[2]) for v in vertices]
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)
@@ -135,6 +131,8 @@ class DSC_OT_junction(DSC_OT_snap_draw, bpy.types.Operator):
         self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
 
         valid = True
-        return valid, mesh, params
+        # TODO implement material dictionary for the faces
+        materials = {}
+        return valid, mesh, materials, params
 
 
