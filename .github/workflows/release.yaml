@@ -10,12 +10,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Create .zip add-on archive
         run: |
           git archive --prefix=blender-driving-scenario-creator/ --format zip \
-            --output blender-driving-scenario-creator.zip HEAD
-
+            --output blender-driving-scenario-creator-$RELEASE_VERSION.zip HEAD
       - name: Release
         uses: docker://antonyurchenko/git-release:latest
         env:
@@ -23,4 +23,4 @@ jobs:
           CHANGELOG_FILE: "CHANGELOG.md"
           ALLOW_EMPTY_CHANGELOG: "false"
         with:
-          args: blender-driving-scenario-creator.zip
+          args: blender-driving-scenario-creator-${{ env.RELEASE_VERSION }}.zip
