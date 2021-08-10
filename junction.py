@@ -40,7 +40,7 @@ class DSC_OT_junction(DSC_OT_snap_draw):
             obj_id = helpers.get_new_id_opendrive(context)
             mesh.name = self.object_type + '_' + str(obj_id)
             obj = bpy.data.objects.new(mesh.name, mesh)
-            obj.location = self.point_start
+            self.transform_object_wrt_start(obj, params['point_start'], params['heading_start'])
             helpers.link_object_opendrive(context, obj)
 
             helpers.assign_road_materials(obj)
@@ -48,10 +48,10 @@ class DSC_OT_junction(DSC_OT_snap_draw):
             helpers.select_activate_object(context, obj)
 
             # Remember connecting points for snapping
-            obj['cp_left'] = obj.location + obj.data.vertices[1].co
-            obj['cp_down'] = obj.location + obj.data.vertices[3].co
-            obj['cp_right'] = obj.location + obj.data.vertices[5].co
-            obj['cp_up'] = obj.location + obj.data.vertices[7].co
+            obj['cp_left'] = obj.matrix_world @ obj.data.vertices[1].co
+            obj['cp_down'] = obj.matrix_world @ obj.data.vertices[3].co
+            obj['cp_right'] = obj.matrix_world @ obj.data.vertices[5].co
+            obj['cp_up'] = obj.matrix_world @ obj.data.vertices[7].co
 
             # Set OpenDRIVE custom properties
             obj['id_xodr'] = obj_id
@@ -99,6 +99,7 @@ class DSC_OT_junction(DSC_OT_snap_draw):
         hdg_right = vector_hdg_right.angle_signed(vector_1_0)
         hdg_up = vector_hdg_up.angle_signed(vector_1_0)
         params = {'point_start': self.point_start,
+                  'heading_start': heading,
                   'point_end': point_end,
                   'hdg_left': hdg_left,
                   'hdg_down': hdg_down,
@@ -127,9 +128,6 @@ class DSC_OT_junction(DSC_OT_snap_draw):
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)
-        # Rotate and translate mesh according to selected start point
-        self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
-
         valid = True
         # TODO implement material dictionary for the faces
         materials = {}

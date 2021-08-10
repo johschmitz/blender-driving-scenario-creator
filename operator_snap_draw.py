@@ -53,9 +53,8 @@ class DSC_OT_snap_draw(bpy.types.Operator):
             vertices, edges, faces = self.get_initial_vertices_edges_faces()
             mesh.from_pydata(vertices, edges, faces)
             # Rotate in start heading direction
-            self.transform_mesh_wrt_start(mesh, point_start, heading_start, snapped_start)
             self.stencil = bpy.data.objects.new("dsc_stencil", mesh)
-            self.stencil.location = self.point_start
+            self.transform_object_wrt_start(self.stencil, point_start, heading_start)
             # Link
             context.scene.collection.objects.link(self.stencil)
             self.stencil.use_fake_user = True
@@ -83,6 +82,8 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         # If cursor is not in line with connection we get a solution and update the mesh
         if valid:
             helpers.replace_mesh(self.stencil, mesh)
+            # Rotate in heading direction
+            self.transform_object_wrt_start(self.stencil, params['point_start'], params['heading_start'])
             return params['point_end']
         else:
             return self.point_selected_end
@@ -102,13 +103,13 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         '''
         raise NotImplementedError()
 
-    def transform_mesh_wrt_start(self, mesh, point_start, heading_start, snapped_start):
+    def transform_object_wrt_start(self, obj, point_start, heading):
         '''
-            Rotate and translate origin to start point and rotate to start heading.
+            Translate and rotate object.
         '''
-        mat_rotation = Matrix.Rotation(heading_start, 4, 'Z')
-        mesh.transform(mat_rotation)
-        mesh.update()
+        mat_translation = Matrix.Translation(point_start)
+        mat_rotation = Matrix.Rotation(heading, 4, 'Z')
+        obj.matrix_world = mat_translation @ mat_rotation
 
     def modal(self, context, event):
         # Display help text

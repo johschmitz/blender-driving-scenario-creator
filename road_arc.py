@@ -40,7 +40,7 @@ class DSC_OT_road_arc(DSC_OT_snap_draw):
             obj_id = helpers.get_new_id_opendrive(context)
             mesh.name = self.object_type + '_' + str(obj_id)
             obj = bpy.data.objects.new(mesh.name, mesh)
-            obj.location = self.point_start
+            self.transform_object_wrt_start(obj, params['point_start'], params['heading_start'])
             helpers.link_object_opendrive(context, obj)
 
             # Paint some road markings
@@ -183,8 +183,6 @@ class DSC_OT_road_arc(DSC_OT_snap_draw):
             # Create blender mesh
             mesh = bpy.data.meshes.new('temp')
             mesh.from_pydata(vertices, edges, faces)
-            # Rotate and translate mesh according to selected start point
-            self.transform_mesh_wrt_start(mesh, self.point_start, self.heading_start, self.snapped_start)
             road_parameters = {'point_start': self.point_start,
                                'heading_start': self.heading_start,
                                'point_end': point_end,

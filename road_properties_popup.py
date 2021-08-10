@@ -20,6 +20,8 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
 
     operators = {'road_straight': bpy.ops.dsc.road_straight,
                  'road_arc': bpy.ops.dsc.road_arc,
+                 'road_spiral': bpy.ops.dsc.road_spiral,
+                 'road_parametric_polynomial': bpy.ops.dsc.road_parametric_polynomial,
                  'junction': bpy.ops.dsc.junction,
                  'object_car': bpy.ops.dsc.object_car}
 

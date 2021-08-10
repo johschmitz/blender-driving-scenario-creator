@@ -64,9 +64,6 @@ def ensure_collection_openscenario(context):
     if not 'OpenSCENARIO' in bpy.data.collections:
         collection = bpy.data.collections.new('OpenSCENARIO')
         context.scene.collection.children.link(collection)
-    if not 'Models' in bpy.data.collections['OpenSCENARIO'].children:
-        collection = bpy.data.collections.new('Models')
-        bpy.data.collections['OpenSCENARIO'].children.link(collection)
 
 def link_object_opendrive(context, obj):
     '''
@@ -251,28 +248,43 @@ def assign_road_materials(obj):
         Assign materials for asphalt and markings to object.
     '''
     # Get road material
-    material = bpy.data.materials.get("road_asphalt")
+    material = bpy.data.materials.get('road_asphalt')
     if material is None:
         # Create material
-        material = bpy.data.materials.new(name="road_asphalt")
+        material = bpy.data.materials.new(name='road_asphalt')
         material.diffuse_color = (.3,.3,.3,1)
     obj.data.materials.append(material)
     # Get lane line material
-    material = bpy.data.materials.get("road_mark")
+    material = bpy.data.materials.get('road_mark')
     if material is None:
         # Create material
-        material = bpy.data.materials.new(name="road_mark")
+        material = bpy.data.materials.new(name='road_mark')
         material.diffuse_color = (.9,.9,.9,1)
     # Assign to object's next material slot
     obj.data.materials.append(material)
     # Get grass material
-    material = bpy.data.materials.get("grass")
+    material = bpy.data.materials.get('grass')
     if material is None:
         # Create material
-        material = bpy.data.materials.new(name="grass")
+        material = bpy.data.materials.new(name='grass')
         material.diffuse_color = (.05,.6,.01,1)
     # Assign to object's next material slot
     obj.data.materials.append(material)
+
+def assign_object_materials(obj, color):
+    # Get road material
+    material = bpy.data.materials.get(get_paint_material_name(color))
+    if material is None:
+        # Create material
+        material = bpy.data.materials.new(name=get_paint_material_name(color))
+        material.diffuse_color = color
+    obj.data.materials.append(material)
+
+def get_paint_material_name(color):
+    '''
+        Calculate material name from name string and Blender color
+    '''
+    return 'vehicle_paint' + '_{:.2f}_{:.2f}_{:.2f}'.format(*color[0:4])
 
 def get_material_index(obj, material_name):
     '''
@@ -296,3 +308,6 @@ def replace_mesh(obj, mesh):
     bm.free()
     # Set new mesh data
     obj.data = mesh
+
+def kmh_to_ms(speed):
+    return speed / 3.6

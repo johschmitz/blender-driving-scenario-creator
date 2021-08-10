@@ -43,10 +43,10 @@ class DSC_OT_road_straight(DSC_OT_snap_draw):
             obj_id = helpers.get_new_id_opendrive(context)
             mesh_road.name = self.object_type + '_' + str(obj_id)
             obj = bpy.data.objects.new(mesh_road.name, mesh_road)
-            obj.location = self.point_start
+            self.transform_object_wrt_start(obj, params['point_start'], params['heading_start'])
             helpers.link_object_opendrive(context, obj)
 
-            # Color road marks
+            # Assign materials
             helpers.assign_road_materials(obj)
             for idx in range(len(obj.data.polygons)):
                 if idx in materials['road_mark']:
@@ -245,8 +245,6 @@ class DSC_OT_road_straight(DSC_OT_snap_draw):
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp_road')
         mesh.from_pydata(vertices, edges, faces)
-        # Rotate and translate mesh according to selected start point
-        self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
         valid = True
         heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
         return valid, mesh, materials, params

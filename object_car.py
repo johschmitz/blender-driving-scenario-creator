@@ -40,25 +40,35 @@ class DSC_OT_object_car(DSC_OT_snap_draw):
             return None
         else:
             obj_id = helpers.get_new_id_openscenario(context)
-            mesh.name = self.object_type + '_' + str(obj_id)
+            obj_name = str(obj_id) + '_' + context.scene.object_properties.name
+            mesh.name = obj_name
             obj = bpy.data.objects.new(mesh.name, mesh)
-            obj.location = self.point_start
+            self.transform_object_wrt_start(obj, params['point_start'], params['heading_start'])
             helpers.link_object_openscenario(context, obj)
 
             helpers.select_activate_object(context, obj)
 
-        # Remember connecting points for snapping
-        obj['cp_down'] = obj.location + obj.data.vertices[0].co
-        obj['cp_left'] = obj.location + obj.data.vertices[2].co
-        obj['cp_up'] = obj.location + obj.data.vertices[4].co
-        obj['cp_right'] = obj.location + obj.data.vertices[6].co
+            # Assign materials
+            color = context.scene.object_properties.color
+            helpers.assign_object_materials(obj, color)
+            for idx in range(len(obj.data.polygons)):
+                obj.data.polygons[idx].material_index = \
+                    helpers.get_material_index(obj, helpers.get_paint_material_name(color))
 
-        # Set OpenSCENARIO custom properties
-        obj['id_xosc'] = obj_id
-        obj['x'] = self.point_start.x
-        obj['y'] = self.point_start.y
-        obj['z'] = self.point_start.z
-        obj['hdg'] = params['heading_start']
+            # Remember connecting points for snapping
+            obj['cp_down'] = obj.location + obj.data.vertices[0].co
+            obj['cp_left'] = obj.location + obj.data.vertices[2].co
+            obj['cp_up'] = obj.location + obj.data.vertices[4].co
+            obj['cp_right'] = obj.location + obj.data.vertices[6].co
+
+            # Set OpenSCENARIO custom properties
+            obj['type'] = 'car'
+            obj['id_xosc'] = obj_id
+            obj['x'] = params['point_start'].x
+            obj['y'] = params['point_start'].y
+            obj['z'] = params['point_start'].z
+            obj['hdg'] = params['heading_start']
+            obj['speed_initial'] = context.scene.object_properties.speed_initial
 
         return obj
 
@@ -72,44 +82,18 @@ class DSC_OT_object_car(DSC_OT_snap_draw):
             return valid, None, {}
         vector_start_end = self.point_selected_end - self.point_start
         heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
-        params = {'point_start': self.point_selected_end,
+        params = {'point_start': self.point_start,
                   'heading_start': heading,
                   'point_end': self.point_selected_end}
         vertices, edges, faces = self.get_vertices_edges_faces()
         # Create blender mesh
         if for_stencil:
             faces = []
-            mesh = bpy.data.meshes.new('temp')
-            mesh.from_pydata(vertices, edges, faces)
-        else:
-            # Create object from template, use template for model export
-            obj_template = self.get_object_template(context)
-            mesh = obj_template.data.copy()
-            mesh.name = 'temp'
-        # Rotate and translate mesh according to selected start point
-        self.transform_mesh_wrt_start(mesh, self.point_start, heading, self.snapped_start)
+        mesh = bpy.data.meshes.new('temp')
+        mesh.from_pydata(vertices, edges, faces)
         valid = True
         materials = {}
         return valid, mesh, materials, params
-
-    def get_object_template(self, context):
-        '''
-            Create a template object to copy other instances from.
-        '''
-        helpers.ensure_collection_openscenario(context)
-        # Look for model
-        for obj in bpy.data.collections['OpenSCENARIO'].children['Models'].all_objects:
-            if obj.name == 'car':
-                return obj
-        # Model not found so create new one
-        vertices, edges, faces = self.get_vertices_edges_faces()
-        mesh = bpy.data.meshes.new('car')
-        mesh.from_pydata(vertices, edges, faces)
-        obj = bpy.data.objects.new('car', mesh)
-        obj.hide_viewport = True
-        obj.hide_render = True
-        bpy.data.collections['OpenSCENARIO'].children['Models'].objects.link(obj)
-        return obj
 
     def get_vertices_edges_faces(self):
         vertices = [(-2.2, -1.0, 0.0),

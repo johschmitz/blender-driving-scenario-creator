@@ -31,6 +31,8 @@ from . road_spiral import DSC_OT_road_spiral
 from . road_straight import DSC_OT_road_straight
 from . trajectory_curve import DSC_OT_trajectory_curve
 from . trajectory_waypoints import DSC_OT_trajectory_waypoints
+from . object_properties import DSC_object_properties
+from . object_properties_popup import DSC_OT_object_properties_popup
 
 
 bl_info = {
@@ -85,7 +87,7 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box = layout.box()
         box.label(text='Objects (OpenSCENARIO)')
         row = box.row(align=True)
-        row.operator('dsc.object_car')
+        row.operator('dsc.object_properties_popup', text='Car').operator = 'object_car'
         row = box.row(align=True)
         row.operator('dsc.object_truck')
         row = box.row(align=True)
@@ -128,6 +130,8 @@ classes = (
     DSC_OT_trajectory_waypoints,
     DSC_PT_panel_create,
     DSC_road_properties,
+    DSC_object_properties,
+    DSC_OT_object_properties_popup,
 )
 
 def register():
@@ -150,6 +154,7 @@ def register():
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     # Register property groups
     bpy.types.Scene.road_properties = bpy.props.PointerProperty(type=DSC_road_properties)
+    bpy.types.Scene.object_properties = bpy.props.PointerProperty(type=DSC_object_properties)
 
 def unregister():
     global custom_icons

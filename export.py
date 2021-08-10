@@ -11,9 +11,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from scenariogeneration.xodr.enumerations import RoadMarkType
-from scenariogeneration.xodr.lane import RoadMark
 import bpy
+from . import helpers
 
 from scenariogeneration import xosc
 from scenariogeneration import xodr
@@ -55,6 +54,10 @@ mapping_roadmark = {
     #'broken_solid': xodr.RoadMarkType.broken_solid,
 }
 
+mapping_object_type = {
+    'car': xosc.VehicleCategory.car,
+}
+
 class DSC_OT_export(bpy.types.Operator):
     bl_idname = 'dsc.export_driving_scenario'
     bl_label = 'Export driving scenario'
@@ -87,7 +90,7 @@ class DSC_OT_export(bpy.types.Operator):
         row.prop(self, "mesh_file_type", expand=True)
 
     def execute(self, context):
-        self.export_vehicle_models()
+        self.export_vehicle_models(context)
         self.export_scenegraph_file()
         self.export_openscenario(context, self.directory)
         return {'FINISHED'}
@@ -104,12 +107,12 @@ class DSC_OT_export(bpy.types.Operator):
         file_path.parent.mkdir(parents=True, exist_ok=True)
         bpy.ops.object.select_all(action='SELECT')
         if 'OpenSCENARIO' in bpy.data.collections:
-            for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
+            for obj in bpy.data.collections['OpenSCENARIO'].objects:
                 obj.select_set(False)
         self.export_mesh(file_path)
         bpy.ops.object.select_all(action='DESELECT')
 
-    def export_vehicle_models(self):
+    def export_vehicle_models(self, context):
         '''
             Export vehicle models to files.
         '''
@@ -120,29 +123,39 @@ class DSC_OT_export(bpy.types.Operator):
         # Select a car
         bpy.ops.object.select_all(action='DESELECT')
         if 'OpenSCENARIO' in bpy.data.collections:
-            if 'Models' in bpy.data.collections['OpenSCENARIO'].children:
-                for obj in bpy.data.collections['OpenSCENARIO'].children['Models'].all_objects:
-                    model_path = pathlib.Path(self.directory) / 'models' / str(obj.name + '.obj')
-                    obj.hide_viewport = False
-                    obj.select_set(True)
-                    self.export_mesh(model_path)
-                    bpy.ops.object.select_all(action='DESELECT')
-                    obj.hide_viewport = True
-                    self.convert_to_osgb(model_path)
-                    # Add vehicle to vehicle catalog
-                    # TODO store in and read parameters from object
-                    bounding_box = xosc.BoundingBox(2,5,1.8,2.0,0,0.9)
-                    axle_front = xosc.Axle(0.523599,0.8,1.554,2.98,0.4)
-                    axle_rear = xosc.Axle(0,0.8,1.525,0,0.4)
-                    car = xosc.Vehicle(obj.name,xosc.VehicleCategory.car,
-                        bounding_box,axle_front,axle_rear,69,10,10)
-                    car.add_property_file('../models/' + obj.name + '.' + self.mesh_file_type)
-                    car.add_property('control','internal')
-                    car.add_property('model_id','0')
-                    # Dump vehicle to catalog
+            catalog_file_created = False
+            for obj in bpy.data.collections['OpenSCENARIO'].objects:
+                if obj.name == 'id_xosc_next':
+                    continue
+                print('Export object model for', obj.name)
+                model_path = pathlib.Path(self.directory) / 'models' / str(obj.name + '.obj')
+                # Create a temporary copy without transform
+                obj_export = obj.copy()
+                helpers.link_object_openscenario(context, obj_export)
+                obj_export.select_set(True)
+                bpy.ops.object.location_clear()
+                bpy.ops.object.rotation_clear()
+                # Export then delete copy
+                self.export_mesh(model_path)
+                bpy.ops.object.delete()
+                self.convert_to_osgb(model_path)
+                # Add vehicle to vehicle catalog
+                # TODO store in and read parameters from object
+                bounding_box = xosc.BoundingBox(2,5,1.8,2.0,0,0.9)
+                axle_front = xosc.Axle(0.523599,0.8,1.554,2.98,0.4)
+                axle_rear = xosc.Axle(0,0.8,1.525,0,0.4)
+                car = xosc.Vehicle(obj.name,mapping_object_type[obj['type']],
+                    bounding_box,axle_front,axle_rear,69,10,10)
+                car.add_property_file('../models/' + obj.name + '.' + self.mesh_file_type)
+                car.add_property('control','internal')
+                car.add_property('model_id','0')
+                if not catalog_file_created:
+                    # Create new catalog with first vehicle
                     car.dump_to_catalog(catalog_path,'VehicleCatalog',
                         'DSC vehicle catalog','Blender Driving Scenario Creator')
-                    break
+                    catalog_file_created = True
+                else:
+                    car.append_to_catalog(catalog_path)
 
     def export_mesh(self, file_path):
         '''
@@ -221,7 +234,7 @@ class DSC_OT_export(bpy.types.Operator):
         odr = xodr.OpenDrive('blender_dsc')
         roads = []
         # Create OpenDRIVE roads from object collection
-        for obj in bpy.data.collections['OpenDRIVE'].all_objects:
+        for obj in bpy.data.collections['OpenDRIVE'].objects:
             if 'road' in obj.name:
                 if obj['geometry'] == 'line':
                     planview = xodr.PlanView()
@@ -275,7 +288,7 @@ class DSC_OT_export(bpy.types.Operator):
                     xodr.create_lane_links(road, road_suc)
         # Create OpenDRIVE junctions from object collection
         num_junctions = 0
-        for obj in bpy.data.collections['OpenDRIVE'].all_objects:
+        for obj in bpy.data.collections['OpenDRIVE'].objects:
             if 'junction' in obj.name:
                 if not len(obj['incoming_roads']) == 4:
                     self.report({'ERROR'}, 'Junction must have 4 connected roads.')
@@ -338,33 +351,32 @@ class DSC_OT_export(bpy.types.Operator):
         init = xosc.Init()
         entities = xosc.Entities()
         if 'OpenSCENARIO' in bpy.data.collections:
-            for obj in bpy.data.collections['OpenSCENARIO'].all_objects:
-                # Filter out Model templates
-                if 'Models' == obj.users_collection[0].name:
-                    break
-                if 'car' in obj.name:
+            for obj in bpy.data.collections['OpenSCENARIO'].objects:
+                if 'type' in obj and obj['type'] == 'car':
                     car_name = obj.name
                     print('Add car with ID', obj['id_xosc'])
-                    entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog','car'))
+                    entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog', car_name))
                     init.add_init_action(car_name, xosc.TeleportAction(
                         xosc.WorldPosition(x=obj['x'], y=obj['y'], z=obj['z'], h=obj['hdg'])))
                     init.add_init_action(car_name, xosc.AbsoluteSpeedAction(
-                        30, xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.time, 1)))
+                        helpers.kmh_to_ms(obj['speed_initial']),
+                        xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.time, 1)))
                     init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
                         xosc.TransitionDynamics(xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, 2.0)))
 
         road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.' + self.mesh_file_type)
-        catalog = xosc.Catalog()
-        catalog.add_catalog('VehicleCatalog','../catalogs/vehicles')
-        storyboard = xosc.StoryBoard(init,stoptrigger=xosc.ValueTrigger('start_trigger ', 3, xosc.ConditionEdge.none,xosc.SimulationTimeCondition(13,xosc.Rule.greaterThan),'stop'))
-        scenario = xosc.Scenario('dsc_scenario','blender_dsc',xosc.ParameterDeclarations(),entities,storyboard,road,catalog)
+        storyboard = xosc.StoryBoard(init)
+        catalog_vehicles = xosc.Catalog()
+        catalog_vehicles.add_catalog('VehicleCatalog','../catalogs/vehicles')
+        scenario = xosc.Scenario('dsc_scenario','blender_dsc',xosc.ParameterDeclarations(),
+            entities,storyboard,road,catalog_vehicles)
         scenario.write_xml(str(xosc_path))
 
     def get_element_type_by_id(self, id):
         '''
             Return element type of an OpenDRIVE element with given ID
         '''
-        for obj in bpy.data.collections['OpenDRIVE'].all_objects:
+        for obj in bpy.data.collections['OpenDRIVE'].objects:
             if 'road' in obj.name:
                 if obj['id_xodr'] == id:
                     return xodr.ElementType.road
@@ -397,7 +409,6 @@ class DSC_OT_export(bpy.types.Operator):
         for idx in range(obj['lanes_right_num']):
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_right_types'][idx]],
                 a=obj['lanes_right_widths'][idx])
-            print(obj['lanes_right_road_mark_types'][idx])
             road_mark = xodr.RoadMark(mapping_roadmark[obj['lanes_right_road_mark_types'][idx]])
             lane.add_roadmark(road_mark)
             lanesection.add_right_lane(lane)
