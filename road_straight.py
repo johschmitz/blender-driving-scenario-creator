@@ -18,18 +18,19 @@ from mathutils import Vector, Matrix
 
 from math import pi, ceil
 
-from . operator_snap_draw import DSC_OT_snap_draw
+from . operator_road_base import DSC_OT_road_base
 from . road_properties import DSC_road_properties
 from . import helpers
 
 
-class DSC_OT_road_straight(DSC_OT_snap_draw):
+class DSC_OT_road_straight(DSC_OT_road_base):
     bl_idname = 'dsc.road_straight'
     bl_label = 'Straight'
     bl_description = 'Create a straight road'
     bl_options = {'REGISTER', 'UNDO'}
 
     object_type = 'road_straight'
+    snap_filter = 'OpenDRIVE'
 
     def create_object(self, context):
         '''
@@ -62,6 +63,10 @@ class DSC_OT_road_straight(DSC_OT_snap_draw):
             helpers.remove_duplicate_vertices(context, obj)
             # Make it active for the user to see what he created last
             helpers.select_activate_object(context, obj)
+
+            # Metadata
+            obj['dsc_category'] = 'OpenDRIVE'
+            obj['dsc_type'] = 'road'
 
             # Remember connecting points for road snapping
             obj['cp_start'] = self.point_start

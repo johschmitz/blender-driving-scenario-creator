@@ -20,13 +20,12 @@ from math import pi
 from . import helpers
 
 
-class DSC_OT_snap_draw(bpy.types.Operator):
-    bl_idname = 'dsc.snap_draw'
+class DSC_OT_road_base(bpy.types.Operator):
+    bl_idname = 'dsc.road_base'
     bl_label = 'DSC snap draw operator'
     bl_options = {'REGISTER', 'UNDO'}
 
-    def __init__(self):
-        self.object_snapping = True
+    snap_filter = None
 
     @classmethod
     def poll(cls, context):
@@ -127,7 +126,7 @@ class DSC_OT_snap_draw(bpy.types.Operator):
         if event.type == 'MOUSEMOVE':
             # Snap to existing objects if any, otherwise xy plane
             self.hit, self.id_xodr_hit, self.cp_type, point_selected, heading_selected = \
-                helpers.raycast_mouse_to_object_else_xy(context, event, self.object_snapping)
+                helpers.raycast_mouse_to_object_else_xy(context, event, filter=self.snap_filter)
             context.scene.cursor.location = point_selected
             # CTRL activates grid snapping if not snapped to object
             if event.ctrl and not self.hit:
@@ -197,6 +196,9 @@ class DSC_OT_snap_draw(bpy.types.Operator):
             bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
         elif event.type in {'WHEELDOWNMOUSE'}:
             bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
+        elif event.type in {'MIDDLEMOUSE'}:
+            if event.alt:
+                bpy.ops.view3d.view_center_cursor()
 
         # Catch everything else arriving here
         return {'RUNNING_MODAL'}

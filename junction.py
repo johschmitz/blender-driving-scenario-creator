@@ -17,17 +17,18 @@ from idprop.types import IDPropertyArray
 
 from math import pi
 
-from .operator_snap_draw import DSC_OT_snap_draw
+from .operator_road_base import DSC_OT_road_base
 from . import helpers
 
 
-class DSC_OT_junction(DSC_OT_snap_draw):
+class DSC_OT_junction(DSC_OT_road_base):
     bl_idname = 'dsc.junction'
     bl_label = 'Junction'
     bl_description = 'Create a junction'
     bl_options = {'REGISTER', 'UNDO'}
 
     object_type = 'junction'
+    snap_filter = 'OpenDRIVE'
 
     def create_object(self, context):
         '''
@@ -46,6 +47,10 @@ class DSC_OT_junction(DSC_OT_snap_draw):
             helpers.assign_road_materials(obj)
 
             helpers.select_activate_object(context, obj)
+
+            # Metadata
+            obj['dsc_category'] = 'OpenDRIVE'
+            obj['dsc_type'] = 'junction'
 
             # Remember connecting points for snapping
             obj['cp_left'] = obj.matrix_world @ obj.data.vertices[1].co

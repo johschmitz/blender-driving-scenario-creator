@@ -14,19 +14,20 @@
 import bpy
 from mathutils import Vector, Matrix
 
-from .operator_snap_draw import DSC_OT_snap_draw
+from . operator_road_base import DSC_OT_road_base
 from . import helpers
 
 from math import pi, sin, cos, acos, ceil
 
 
-class DSC_OT_road_arc(DSC_OT_snap_draw):
+class DSC_OT_road_arc(DSC_OT_road_base):
     bl_idname = "dsc.road_arc"
     bl_label = "Arc"
     bl_description = "Create an arc road"
     bl_options = {'REGISTER', 'UNDO'}
 
     object_type = 'road_arc'
+    snap_filter = 'OpenDRIVE'
 
     def create_object(self, context):
         '''
@@ -54,6 +55,10 @@ class DSC_OT_road_arc(DSC_OT_snap_draw):
             obj.data.polygons[6].material_index = helpers.get_material_index(obj, 'road_asphalt')
 
             helpers.select_activate_object(context, obj)
+
+            # Metadata
+            obj['dsc_category'] = 'OpenDRIVE'
+            obj['dsc_type'] = 'road'
 
             # Remember connecting points for road snapping
             obj['cp_start'] = self.point_start

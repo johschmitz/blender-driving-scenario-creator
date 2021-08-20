@@ -50,7 +50,7 @@ def get_new_id_openscenario(context):
         dummy_obj.hide_viewport = True
         dummy_obj.hide_render = True
         dummy_obj['id_xosc_next'] = 0
-        link_object_openscenario(context, dummy_obj)
+        link_object_openscenario(context, dummy_obj, subcategory=None)
     id_next = dummy_obj['id_xosc_next']
     dummy_obj['id_xosc_next'] += 1
     return id_next
@@ -65,6 +65,28 @@ def ensure_collection_openscenario(context):
         collection = bpy.data.collections.new('OpenSCENARIO')
         context.scene.collection.children.link(collection)
 
+def ensure_subcollection_openscenario(context, subcollection):
+    ensure_collection_openscenario(context)
+    collection_osc = bpy.data.collections['OpenSCENARIO']
+    if not subcollection in collection_osc.children:
+        collection = bpy.data.collections.new(subcollection)
+        collection_osc.children.link(collection)
+
+def collection_exists(collection_path):
+    '''
+        Check if a (sub)collection with path given as list exists.
+    '''
+    if not isinstance(collection_path, list):
+        collection_path = [collection_path]
+    root = collection_path.pop(0)
+    if not root in bpy.data.collections:
+        return False
+    else:
+        if len(collection_path) == 0:
+            return True
+        else:
+            return collection_exists(collection_path)
+
 def link_object_opendrive(context, obj):
     '''
         Link object to OpenDRIVE scene collection.
@@ -73,13 +95,18 @@ def link_object_opendrive(context, obj):
     collection = bpy.data.collections.get('OpenDRIVE')
     collection.objects.link(obj)
 
-def link_object_openscenario(context, obj):
+def link_object_openscenario(context, obj, subcategory=None):
     '''
         Link object to OpenSCENARIO scene collection.
     '''
-    ensure_collection_openscenario(context)
-    collection = bpy.data.collections.get('OpenSCENARIO')
-    collection.objects.link(obj)
+    if subcategory is None:
+        ensure_collection_openscenario(context)
+        collection = bpy.data.collections.get('OpenSCENARIO')
+        collection.objects.link(obj)
+    else:
+        ensure_subcollection_openscenario(context, subcategory)
+        collection = bpy.data.collections.get('OpenSCENARIO').children.get(subcategory)
+        collection.objects.link(obj)
 
 def get_object_xodr_by_id(context, id_xodr):
     '''
@@ -165,9 +192,9 @@ def mouse_to_xy_plane(context, event):
             (0, 0, 0), view_vector_mouse, False)
     return point
 
-def raycast_mouse_to_odr_object(context, event, obj_type):
+def raycast_mouse_to_dsc_object(context, event, obj_type):
     '''
-        Convert mouse pointer position to hit obj of OpenDRIVE type.
+        Convert mouse pointer position to hit obj of DSC type.
     '''
     region = context.region
     rv3d = context.region_data
@@ -180,8 +207,8 @@ def raycast_mouse_to_odr_object(context, event, obj_type):
         direction=view_vector_mouse)
     # Filter object type
     if hit:
-        if 'geometry' in obj or 'junction_type' in obj:
-            return hit, point, obj
+        if 'dsc_category' in obj:
+            return True, point, obj
         else:
             return False, point, None
     else:
@@ -213,6 +240,12 @@ def point_to_junction_connector(obj, point):
     arg_min_dist = distances.index(min(distances))
     return cps[arg_min_dist], cp_vectors[arg_min_dist], headings[arg_min_dist]
 
+def point_to_object_connector(obj, point):
+    '''
+        Get a snapping point and heading from a dynamic object.
+    '''
+    return 'cp_axle_rear', Vector(obj['position']), obj['hdg']
+
 def project_point_vector(point_selected, point_start, heading_start):
     '''
         Project selected point to vector.
@@ -225,23 +258,34 @@ def project_point_vector(point_selected, point_start, heading_start):
     else:
         return point_selected
 
-def raycast_mouse_to_object_else_xy(context, event, snap):
+def raycast_mouse_to_object_else_xy(context, event, filter):
     '''
-        Get a snapping point and heading or just an xy-plane intersection point.
+        Get a snapping point and heading or just an xy-plane intersection point,
+        filter for certain mesh category.
     '''
-    hit, point_raycast, obj = raycast_mouse_to_odr_object(context, event, obj_type='line')
-    if not hit or not snap:
+    dsc_hit, point_raycast, obj = raycast_mouse_to_dsc_object(context, event, obj_type='line')
+    if not dsc_hit:
         point_raycast = mouse_to_xy_plane(context, event)
-        return False, -1, 'cp_none', point_raycast, 0
+        return False, None, 'cp_none', point_raycast, 0
     else:
-        if 'geometry' in obj:
-            cp_type, cp, heading = point_to_road_connector(obj, point_raycast)
-            id_xodr = obj['id_xodr']
-            return True, id_xodr, cp_type, cp, heading
-        if 'junction_type' in obj:
-            cp_type, cp, heading = point_to_junction_connector(obj, point_raycast)
-            id_xodr = obj['id_xodr']
-            return True, id_xodr, cp_type, cp, heading
+        # DSC mesh hit
+        if filter == 'OpenDRIVE':
+            if obj['dsc_category'] == 'OpenDRIVE':
+                if obj['dsc_type'] == 'road':
+                    cp_type, cp, heading = point_to_road_connector(obj, point_raycast)
+                    id_xodr = obj['id_xodr']
+                    return True, id_xodr, cp_type, cp, heading
+                if obj['dsc_type'] == 'junction':
+                    cp_type, cp, heading = point_to_junction_connector(obj, point_raycast)
+                    id_xodr = obj['id_xodr']
+                    return True, id_xodr, cp_type, cp, heading
+        elif filter == 'OpenSCENARIO':
+            if obj['dsc_category'] == 'OpenSCENARIO':
+                cp_type, cp, heading = point_to_object_connector(obj, point_raycast)
+                obj_name = obj.name
+                return True, obj_name, cp_type, cp, heading
+        # Catch all filtered cases
+        return False, None, 'cp_none', point_raycast, 0
 
 def assign_road_materials(obj):
     '''
@@ -311,3 +355,14 @@ def replace_mesh(obj, mesh):
 
 def kmh_to_ms(speed):
     return speed / 3.6
+
+def get_obj_custom_property(dsc_category, subcategory, obj_name, property):
+    if collection_exists([dsc_category,subcategory]):
+        for obj in bpy.data.collections[dsc_category].children[subcategory].objects:
+            if obj.name == obj_name:
+                if property in obj:
+                    return obj[property]
+                else:
+                    return None
+    else:
+        return None

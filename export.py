@@ -78,10 +78,11 @@ class DSC_OT_export(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if 'OpenDRIVE' in bpy.data.collections:
-            return True
-        else:
-            return False
+        # if helpers.collection_exists(['OpenDRIVE']):
+        #     return True
+        # else:
+        #     return False
+        return True
 
     def draw(self, context):
         layout = self.layout
@@ -106,9 +107,12 @@ class DSC_OT_export(bpy.types.Operator):
         file_path = pathlib.Path(self.directory) / 'scenegraph' / 'export.suffix'
         file_path.parent.mkdir(parents=True, exist_ok=True)
         bpy.ops.object.select_all(action='SELECT')
-        if 'OpenSCENARIO' in bpy.data.collections:
+        if helpers.collection_exists(['OpenSCENARIO']):
             for obj in bpy.data.collections['OpenSCENARIO'].objects:
                 obj.select_set(False)
+            for child in bpy.data.collections['OpenSCENARIO'].children:
+                for obj in child.objects:
+                    obj.select_set(False)
         self.export_mesh(file_path)
         bpy.ops.object.select_all(action='DESELECT')
 
@@ -122,16 +126,14 @@ class DSC_OT_export(bpy.types.Operator):
         catalog_path.parent.mkdir(parents=True, exist_ok=True)
         # Select a car
         bpy.ops.object.select_all(action='DESELECT')
-        if 'OpenSCENARIO' in bpy.data.collections:
+        if helpers.collection_exists(['OpenSCENARIO','dynamic_objects']):
             catalog_file_created = False
-            for obj in bpy.data.collections['OpenSCENARIO'].objects:
-                if obj.name == 'id_xosc_next':
-                    continue
+            for obj in bpy.data.collections['OpenSCENARIO'].children['dynamic_objects'].objects:
                 print('Export object model for', obj.name)
                 model_path = pathlib.Path(self.directory) / 'models' / str(obj.name + '.obj')
                 # Create a temporary copy without transform
                 obj_export = obj.copy()
-                helpers.link_object_openscenario(context, obj_export)
+                helpers.link_object_openscenario(context, obj_export, subcategory=None)
                 obj_export.select_set(True)
                 bpy.ops.object.location_clear()
                 bpy.ops.object.rotation_clear()
@@ -144,7 +146,7 @@ class DSC_OT_export(bpy.types.Operator):
                 bounding_box = xosc.BoundingBox(2,5,1.8,2.0,0,0.9)
                 axle_front = xosc.Axle(0.523599,0.8,1.554,2.98,0.4)
                 axle_rear = xosc.Axle(0,0.8,1.525,0,0.4)
-                car = xosc.Vehicle(obj.name,mapping_object_type[obj['type']],
+                car = xosc.Vehicle(obj.name,mapping_object_type[obj['dsc_type']],
                     bounding_box,axle_front,axle_rear,69,10,10)
                 car.add_property_file('../models/' + obj.name + '.' + self.mesh_file_type)
                 car.add_property('control','internal')
@@ -234,47 +236,48 @@ class DSC_OT_export(bpy.types.Operator):
         odr = xodr.OpenDrive('blender_dsc')
         roads = []
         # Create OpenDRIVE roads from object collection
-        for obj in bpy.data.collections['OpenDRIVE'].objects:
-            if 'road' in obj.name:
-                if obj['geometry'] == 'line':
-                    planview = xodr.PlanView()
-                    planview.set_start_point(obj['geometry_x'],
-                        obj['geometry_y'],obj['geometry_hdg_start'])
-                    line = xodr.Line(obj['geometry_length'])
-                    planview.add_geometry(line)
-                    lanes = self.create_lanes(obj)
-                    road = xodr.Road(obj['id_xodr'],planview,lanes)
-                if obj['geometry'] == 'arc':
-                    planview = xodr.PlanView()
-                    planview.set_start_point(obj['geometry_x'],
-                        obj['geometry_y'],obj['geometry_hdg_start'])
-                    arc = xodr.Arc(obj['geometry_curvature'],
-                        angle=obj['geometry_angle'])
-                    planview.add_geometry(arc)
-                    lanes = self.create_lanes(obj)
-                    road = xodr.Road(obj['id_xodr'],planview,lanes)
-                # Add road level linking
-                if 'link_predecessor' in obj:
-                    element_type = self.get_element_type_by_id(obj['link_predecessor'])
-                    if obj['link_predecessor_cp'] == 'cp_start':
-                        cp_type = xodr.ContactPoint.start
-                    elif obj['link_predecessor_cp'] == 'cp_end':
-                        cp_type = xodr.ContactPoint.end
-                    else:
-                        cp_type = None
-                    road.add_predecessor(element_type, obj['link_predecessor'], cp_type)
-                if 'link_successor' in obj:
-                    element_type = self.get_element_type_by_id(obj['link_successor'])
-                    if obj['link_successor_cp'] == 'cp_start':
-                        cp_type = xodr.ContactPoint.start
-                    elif obj['link_successor_cp'] == 'cp_end':
-                        cp_type = xodr.ContactPoint.end
-                    else:
-                        cp_type = None
-                    road.add_successor(element_type, obj['link_successor'], cp_type)
-                print('Add road with ID', obj['id_xodr'])
-                odr.add_road(road)
-                roads.append(road)
+        if helpers.collection_exists(['OpenDRIVE']):
+            for obj in bpy.data.collections['OpenDRIVE'].objects:
+                if 'road' in obj.name:
+                    if obj['geometry'] == 'line':
+                        planview = xodr.PlanView()
+                        planview.set_start_point(obj['geometry_x'],
+                            obj['geometry_y'],obj['geometry_hdg_start'])
+                        line = xodr.Line(obj['geometry_length'])
+                        planview.add_geometry(line)
+                        lanes = self.create_lanes(obj)
+                        road = xodr.Road(obj['id_xodr'],planview,lanes)
+                    if obj['geometry'] == 'arc':
+                        planview = xodr.PlanView()
+                        planview.set_start_point(obj['geometry_x'],
+                            obj['geometry_y'],obj['geometry_hdg_start'])
+                        arc = xodr.Arc(obj['geometry_curvature'],
+                            angle=obj['geometry_angle'])
+                        planview.add_geometry(arc)
+                        lanes = self.create_lanes(obj)
+                        road = xodr.Road(obj['id_xodr'],planview,lanes)
+                    # Add road level linking
+                    if 'link_predecessor' in obj:
+                        element_type = self.get_element_type_by_id(obj['link_predecessor'])
+                        if obj['link_predecessor_cp'] == 'cp_start':
+                            cp_type = xodr.ContactPoint.start
+                        elif obj['link_predecessor_cp'] == 'cp_end':
+                            cp_type = xodr.ContactPoint.end
+                        else:
+                            cp_type = None
+                        road.add_predecessor(element_type, obj['link_predecessor'], cp_type)
+                    if 'link_successor' in obj:
+                        element_type = self.get_element_type_by_id(obj['link_successor'])
+                        if obj['link_successor_cp'] == 'cp_start':
+                            cp_type = xodr.ContactPoint.start
+                        elif obj['link_successor_cp'] == 'cp_end':
+                            cp_type = xodr.ContactPoint.end
+                        else:
+                            cp_type = None
+                        road.add_successor(element_type, obj['link_successor'], cp_type)
+                    print('Add road with ID', obj['id_xodr'])
+                    odr.add_road(road)
+                    roads.append(road)
         # Add lane level linking for all roads
         # TODO: Improve performance by exploiting symmetry
         for road in roads:
@@ -288,60 +291,61 @@ class DSC_OT_export(bpy.types.Operator):
                     xodr.create_lane_links(road, road_suc)
         # Create OpenDRIVE junctions from object collection
         num_junctions = 0
-        for obj in bpy.data.collections['OpenDRIVE'].objects:
-            if 'junction' in obj.name:
-                if not len(obj['incoming_roads']) == 4:
-                    self.report({'ERROR'}, 'Junction must have 4 connected roads.')
-                    break
-                incoming_roads = []
-                angles = []
-                junction_id = obj['id_xodr']
-                # Create junction roads based on incoming road angles (simple 4-way for now)
-                for idx in range(4):
-                    angles.append(idx * 2 * pi / len(obj['incoming_roads']))
-                # 0 angle road must point in 'right' direction
-                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_right']))
-                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_up']))
-                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_left']))
-                incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_down']))
-                # Create connecting roads and link them to incoming roads
-                junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
-                    spiral_part=0.01, arc_part=0.99, startnum=1000+6*num_junctions, lane_width=3.75)
-                i = 0
-                for j in range(len(incoming_roads) - 1):
-                    for k in range(j + 1, len(incoming_roads)):
-                        # FIXME this will create problems when a single road is
-                        # connected to a junction twice
-                        if incoming_roads[j].predecessor:
-                            if incoming_roads[j].predecessor.element_id == junction_id:
-                                cp_type_j = xodr.ContactPoint.start
-                        if incoming_roads[j].successor:
-                            if incoming_roads[j].successor.element_id == junction_id:
-                                cp_type_j = xodr.ContactPoint.end
-                        if incoming_roads[k].predecessor:
-                            if incoming_roads[k].predecessor.element_id == junction_id:
-                                cp_type_k = xodr.ContactPoint.start
-                        if incoming_roads[k].successor:
-                            if incoming_roads[k].successor.element_id == junction_id:
-                                cp_type_k = xodr.ContactPoint.end
-                        # Link incoming with connecting road
-                        junction_roads[i].add_predecessor(
-                            xodr.ElementType.road, incoming_roads[j].id, cp_type_j)
-                        # FIXME is redundant lane linking needed?
-                        xodr.create_lane_links(junction_roads[i], incoming_roads[j])
-                        junction_roads[i].add_successor(
-                            xodr.ElementType.road, incoming_roads[k].id, cp_type_k)
-                        # FIXME is redundant lane linking needed?
-                        xodr.create_lane_links(junction_roads[i], incoming_roads[k])
-                        i += 1
-                # Finally create the junction
-                junction = xodr.create_junction(
-                    junction_roads, junction_id, incoming_roads, 'junction_' + str(junction_id))
-                num_junctions += 1
-                print('Add junction with ID', junction_id)
-                odr.add_junction(junction)
-                for road in junction_roads:
-                    odr.add_road(road)
+        if helpers.collection_exists(['OpenDRIVE']):
+            for obj in bpy.data.collections['OpenDRIVE'].objects:
+                if 'junction' in obj.name:
+                    if not len(obj['incoming_roads']) == 4:
+                        self.report({'ERROR'}, 'Junction must have 4 connected roads.')
+                        break
+                    incoming_roads = []
+                    angles = []
+                    junction_id = obj['id_xodr']
+                    # Create junction roads based on incoming road angles (simple 4-way for now)
+                    for idx in range(4):
+                        angles.append(idx * 2 * pi / len(obj['incoming_roads']))
+                    # 0 angle road must point in 'right' direction
+                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_right']))
+                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_up']))
+                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_left']))
+                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_down']))
+                    # Create connecting roads and link them to incoming roads
+                    junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
+                        spiral_part=0.01, arc_part=0.99, startnum=1000+6*num_junctions, lane_width=3.75)
+                    i = 0
+                    for j in range(len(incoming_roads) - 1):
+                        for k in range(j + 1, len(incoming_roads)):
+                            # FIXME this will create problems when a single road is
+                            # connected to a junction twice
+                            if incoming_roads[j].predecessor:
+                                if incoming_roads[j].predecessor.element_id == junction_id:
+                                    cp_type_j = xodr.ContactPoint.start
+                            if incoming_roads[j].successor:
+                                if incoming_roads[j].successor.element_id == junction_id:
+                                    cp_type_j = xodr.ContactPoint.end
+                            if incoming_roads[k].predecessor:
+                                if incoming_roads[k].predecessor.element_id == junction_id:
+                                    cp_type_k = xodr.ContactPoint.start
+                            if incoming_roads[k].successor:
+                                if incoming_roads[k].successor.element_id == junction_id:
+                                    cp_type_k = xodr.ContactPoint.end
+                            # Link incoming with connecting road
+                            junction_roads[i].add_predecessor(
+                                xodr.ElementType.road, incoming_roads[j].id, cp_type_j)
+                            # FIXME is redundant lane linking needed?
+                            xodr.create_lane_links(junction_roads[i], incoming_roads[j])
+                            junction_roads[i].add_successor(
+                                xodr.ElementType.road, incoming_roads[k].id, cp_type_k)
+                            # FIXME is redundant lane linking needed?
+                            xodr.create_lane_links(junction_roads[i], incoming_roads[k])
+                            i += 1
+                    # Finally create the junction
+                    junction = xodr.create_junction(
+                        junction_roads, junction_id, incoming_roads, 'junction_' + str(junction_id))
+                    num_junctions += 1
+                    print('Add junction with ID', junction_id)
+                    odr.add_junction(junction)
+                    for road in junction_roads:
+                        odr.add_road(road)
         odr.adjust_startpoints()
         odr.write_xml(str(xodr_path))
 
@@ -350,21 +354,41 @@ class DSC_OT_export(bpy.types.Operator):
         xosc_path.parent.mkdir(parents=True, exist_ok=True)
         init = xosc.Init()
         entities = xosc.Entities()
-        if 'OpenSCENARIO' in bpy.data.collections:
-            for obj in bpy.data.collections['OpenSCENARIO'].objects:
-                if 'type' in obj and obj['type'] == 'car':
+        if helpers.collection_exists(['OpenSCENARIO','dynamic_objects']):
+            for obj in bpy.data.collections['OpenSCENARIO'].children['dynamic_objects'].objects:
+                if 'dsc_type' in obj and obj['dsc_type'] == 'car':
                     car_name = obj.name
-                    print('Add car with ID', obj['id_xosc'])
+                    print('Add car with name', obj.name)
                     entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog', car_name))
-                    init.add_init_action(car_name, xosc.TeleportAction(
-                        xosc.WorldPosition(x=obj['x'], y=obj['y'], z=obj['z'], h=obj['hdg'])))
+                    init.add_init_action(car_name,
+                        xosc.TeleportAction(
+                            xosc.WorldPosition(
+                                x=obj['position'][0], y=obj['position'][1], z=obj['position'][2], h=obj['hdg'])))
                     init.add_init_action(car_name, xosc.AbsoluteSpeedAction(
                         helpers.kmh_to_ms(obj['speed_initial']),
                         xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.time, 1)))
                     init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
                         xosc.TransitionDynamics(xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, 2.0)))
+            for obj in bpy.data.collections['OpenSCENARIO'].children['trajectories'].objects:
+                if 'dsc_type' in obj and obj['dsc_subtype'] == 'polyline':
+                    speed_kmh = helpers.get_obj_custom_property('OpenSCENARIO', 'dynamic_objects',
+                        obj['owner_name'], 'speed_initial')
+                    times = self.calculate_trajectory_times(obj.data.vertices, helpers.kmh_to_ms(speed_kmh))
+                    positions = []
+                    for vert in obj.data.vertices:
+                        vert_global = obj.matrix_world @ vert.co
+                        positions.append(xosc.WorldPosition(x=vert_global.x, y=vert_global.y, z=vert_global.z))
+                    polyline = xosc.Polyline(times, positions)
+                    trajectory = xosc.Trajectory(obj.name,False)
+                    trajectory.add_shape(polyline)
+                    action = xosc.FollowTrajectoryAction(trajectory,xosc.FollowMode.follow,
+                        xosc.ReferenceContext.relative,1,0)
+                    init.add_init_action(obj['owner_name'], action)
 
-        road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.' + self.mesh_file_type)
+        if helpers.collection_exists(['OpenDRIVE']):
+            road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.' + self.mesh_file_type)
+        else:
+            road = xosc.RoadNetwork(str(xodr_path))
         storyboard = xosc.StoryBoard(init)
         catalog_vehicles = xosc.Catalog()
         catalog_vehicles.add_catalog('VehicleCatalog','../catalogs/vehicles')
@@ -415,3 +439,10 @@ class DSC_OT_export(bpy.types.Operator):
         lanes.add_lanesection(lanesection)
 
         return lanes
+
+    def calculate_trajectory_times(self, positions, speed):
+        times = [0]
+        for idx in range(len(positions)-1):
+            distance = (positions[idx].co - positions[idx+1].co).length
+            times.append(times[idx] + distance/speed)
+        return times

@@ -16,11 +16,11 @@ from mathutils import Vector, Matrix
 
 from math import pi
 
-from .operator_snap_draw import DSC_OT_snap_draw
+from .operator_road_base import DSC_OT_road_base
 from . import helpers
 
 
-class DSC_OT_object_car(DSC_OT_snap_draw):
+class DSC_OT_object_car(DSC_OT_road_base):
     bl_idname = "dsc.object_car"
     bl_label = "Car"
     bl_description = "Place a car object"
@@ -28,8 +28,9 @@ class DSC_OT_object_car(DSC_OT_snap_draw):
 
     object_type = 'car'
 
-    def __init__(self):
-        self.object_snapping = False
+    # Do not snap to other xodr or xosc objects in scene
+    # TODO snap to road contact points, requires a lot of work
+    snap_filter = None
 
     def create_object(self, context):
         '''
@@ -44,7 +45,7 @@ class DSC_OT_object_car(DSC_OT_snap_draw):
             mesh.name = obj_name
             obj = bpy.data.objects.new(mesh.name, mesh)
             self.transform_object_wrt_start(obj, params['point_start'], params['heading_start'])
-            helpers.link_object_openscenario(context, obj)
+            helpers.link_object_openscenario(context, obj, subcategory='dynamic_objects')
 
             helpers.select_activate_object(context, obj)
 
@@ -55,18 +56,12 @@ class DSC_OT_object_car(DSC_OT_snap_draw):
                 obj.data.polygons[idx].material_index = \
                     helpers.get_material_index(obj, helpers.get_paint_material_name(color))
 
-            # Remember connecting points for snapping
-            obj['cp_down'] = obj.location + obj.data.vertices[0].co
-            obj['cp_left'] = obj.location + obj.data.vertices[2].co
-            obj['cp_up'] = obj.location + obj.data.vertices[4].co
-            obj['cp_right'] = obj.location + obj.data.vertices[6].co
+            # Metadata
+            obj['dsc_category'] = 'OpenSCENARIO'
+            obj['dsc_type'] = 'car'
 
             # Set OpenSCENARIO custom properties
-            obj['type'] = 'car'
-            obj['id_xosc'] = obj_id
-            obj['x'] = params['point_start'].x
-            obj['y'] = params['point_start'].y
-            obj['z'] = params['point_start'].z
+            obj['position'] = params['point_start']
             obj['hdg'] = params['heading_start']
             obj['speed_initial'] = context.scene.object_properties.speed_initial
 
