@@ -6,14 +6,27 @@ and autonomous driving functions.
 
 ## How to install
 
-Let us assume that Blender has been
-[downloaded](https://www.blender.org/download/) and installed to
+Let's assume that we work with a Debian based Linux distribution and Blender has
+been [downloaded](https://www.blender.org/download/) and installed to
 
     /opt/blender/
 
-Then we first need to install the scenariogeneration library into the Blender
-Python environment since the add-on uses the library as a backend to write
-OpenDRIVE and OpenSCENARIO files.
+Then we first need to install the
+[scenarigeneration](https://github.com/pyoscx/scenariogeneration) library into
+the Blender Python environment since the add-on uses the library as a backend to
+write OpenDRIVE and OpenSCENARIO files. The scenariogeneration lib uses
+pyclothoids which is written in C++ under the hood. Therefore make sure the
+Python headers are installed to be able to compile pyclothoids during the
+installation of scenariogeneration with pip
+
+    sudo apt install python3.9-dev
+
+then to make the pip installation coming with Blender find the headers
+
+    export CPPFLAGS=-I/usr/include/python3.9/
+
+The above two lines might be slightly different when using a non Debian based
+Linux distribution. Next, navigate to your Blender included Python installation
 
     cd /opt/blender/2.93/python/bin
 
@@ -21,9 +34,12 @@ if pip is not there already then run
 
     sudo ./python3.9 -m ensurepip
 
-Now install the lib
+now install the lib
 
-    sudo ./pip3 install scenariogeneration
+    sudo -E ./pip3 install scenariogeneration
+
+where the `-E` makes sudo preserve the exported environment variable. Note that
+`sudo` is not required in case Blender is installed to the user home directory.
 
 For the esmini export functionality we also need to install
 [OpenSceneGraph](http://www.openscenegraph.org/) to have the `osgconv` tool
