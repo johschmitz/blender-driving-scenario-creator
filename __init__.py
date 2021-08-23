@@ -29,7 +29,7 @@ from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
 from . road_properties import DSC_road_properties, DSC_enum_strip
 from . road_spiral import DSC_OT_road_spiral
 from . road_straight import DSC_OT_road_straight
-from . trajectory_curve import DSC_OT_trajectory_curve
+from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_waypoints import DSC_OT_trajectory_waypoints
 from . object_properties import DSC_object_properties
 from . object_properties_popup import DSC_OT_object_properties_popup
@@ -100,9 +100,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box = layout.box()
         box.label(text='Trajectories (OpenSCENARIO)')
         row = box.row(align=True)
-        row.operator('dsc.trajectory_curve', icon_value=custom_icons['trajectory_curve'].icon_id)
-        row = box.row(align=True)
         row.operator('dsc.trajectory_waypoints', icon_value=custom_icons['trajectory_waypoints'].icon_id)
+        row = box.row(align=True)
+        row.operator('dsc.trajectory_nurbs', icon_value=custom_icons['trajectory_nurbs'].icon_id)
 
         box = layout.box()
         box.label(text='Export (Track, Scenario, Mesh)')
@@ -126,7 +126,7 @@ classes = (
     DSC_OT_road_parametric_polynomial,
     DSC_OT_road_spiral,
     DSC_OT_road_straight,
-    DSC_OT_trajectory_curve,
+    DSC_OT_trajectory_nurbs,
     DSC_OT_trajectory_waypoints,
     DSC_PT_panel_create,
     DSC_road_properties,
@@ -144,7 +144,7 @@ def register():
     custom_icons.load('road_spiral', os.path.join(icons_dir, 'road_spiral.png'), 'IMAGE')
     custom_icons.load('road_parametric_polynomial', os.path.join(icons_dir, 'road_parametric_polynomial.png'), 'IMAGE')
     custom_icons.load('junction', os.path.join(icons_dir, 'junction.png'), 'IMAGE')
-    custom_icons.load('trajectory_curve', os.path.join(icons_dir, 'trajectory_curve.png'), 'IMAGE')
+    custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
     custom_icons.load('trajectory_waypoints', os.path.join(icons_dir, 'trajectory_waypoints.png'), 'IMAGE')
 
     # Register all addon classes

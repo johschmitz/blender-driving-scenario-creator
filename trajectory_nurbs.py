@@ -14,10 +14,10 @@
 import bpy
 import bmesh
 
-class DSC_OT_trajectory_curve(bpy.types.Operator):
-    bl_idname = "dsc.trajectory_curve"
-    bl_label = "Curve"
-    bl_description = "Place a Bezier curve trajectory"
+class DSC_OT_trajectory_nurbs(bpy.types.Operator):
+    bl_idname = "dsc.trajectory_nurbs"
+    bl_label = "NURBS"
+    bl_description = "Place a NURBS based trajectory"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
