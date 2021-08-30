@@ -370,19 +370,36 @@ class DSC_OT_export(bpy.types.Operator):
                     init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
                         xosc.TransitionDynamics(xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, 2.0)))
             for obj in bpy.data.collections['OpenSCENARIO'].children['trajectories'].objects:
-                if 'dsc_type' in obj and obj['dsc_subtype'] == 'polyline':
-                    speed_kmh = helpers.get_obj_custom_property('OpenSCENARIO', 'dynamic_objects',
-                        obj['owner_name'], 'speed_initial')
-                    times = self.calculate_trajectory_times(obj.data.vertices, helpers.kmh_to_ms(speed_kmh))
-                    positions = []
-                    for vert in obj.data.vertices:
-                        vert_global = obj.matrix_world @ vert.co
-                        positions.append(xosc.WorldPosition(x=vert_global.x, y=vert_global.y, z=vert_global.z))
-                    polyline = xosc.Polyline(times, positions)
+                if 'dsc_type' in obj and obj['dsc_type'] == 'trajectory':
+                    if obj['dsc_subtype'] == 'polyline':
+                        speed_kmh = helpers.get_obj_custom_property('OpenSCENARIO', 'dynamic_objects',
+                            obj['owner_name'], 'speed_initial')
+                        times = self.calculate_trajectory_times(obj.data.vertices, helpers.kmh_to_ms(speed_kmh))
+                        positions = []
+                        for vert in obj.data.vertices:
+                            vert_global = obj.matrix_world @ vert.co
+                            positions.append(xosc.WorldPosition(vert_global.x, vert_global.y, vert_global.z))
+                        shape = xosc.Polyline(times, positions)
+                    if obj['dsc_subtype'] == 'nurbs':
+                        order = obj.data.splines[0].order_u
+                        num_control_points = len(obj.data.splines[0].points)
+                        shape = xosc.Nurbs(order)
+                        for point in obj.data.splines[0].points:
+                            point_global = obj.matrix_world @ point.co
+                            control_point = xosc.ControlPoint(
+                                xosc.WorldPosition(point_global.x, point_global.y, point_global.z))
+                            shape.add_control_point(control_point)
+                        knots = []
+                        u = 0
+                        for idx in range(order + num_control_points):
+                            if idx >= order and idx <= num_control_points:
+                                u += 1
+                            knots.append(u)
+                        shape.add_knots(knots)
                     trajectory = xosc.Trajectory(obj.name,False)
-                    trajectory.add_shape(polyline)
+                    trajectory.add_shape(shape)
                     action = xosc.FollowTrajectoryAction(trajectory,xosc.FollowMode.follow,
-                        xosc.ReferenceContext.relative,1,0)
+                        None,None,None,None)
                     init.add_init_action(obj['owner_name'], action)
 
         if helpers.collection_exists(['OpenDRIVE']):

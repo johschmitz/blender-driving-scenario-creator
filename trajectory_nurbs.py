@@ -13,18 +13,50 @@
 
 import bpy
 import bmesh
+from mathutils import Vector
 
-class DSC_OT_trajectory_nurbs(bpy.types.Operator):
+from . operator_trajectory_base import DSC_OT_trajectory_base
+from . import helpers
+
+class DSC_OT_trajectory_nurbs(DSC_OT_trajectory_base):
     bl_idname = "dsc.trajectory_nurbs"
     bl_label = "NURBS"
     bl_description = "Place a NURBS based trajectory"
     bl_options = {'REGISTER', 'UNDO'}
 
-    @classmethod
-    def poll(cls, context):
-        return False
+    def create_trajectory_temp(self, context):
+        self.trajectory = bpy.data.objects.get('trajectory_temp')
+        if self.trajectory is not None:
+            if context.scene.objects.get('trajectory_temp') is None:
+                context.scene.collection.objects.link(self.trajectory)
+        else:
+            curve = self.get_curve()
+            self.trajectory = bpy.data.objects.new('trajectory_temp', curve)
+            helpers.link_object_openscenario(context, self.trajectory, subcategory='trajectories')
+        # Shift origin to start point below vehicle
+        self.trajectory.location = self.point_start
 
-    def execute(self, context):
-        self.report({'INFO'}, "Not implemented.")
+    def set_xosc_properties(self):
+        self.trajectory['dsc_category'] = 'OpenSCENARIO'
+        self.trajectory['dsc_type'] = 'trajectory'
+        self.trajectory['dsc_subtype'] = 'nurbs'
 
-        return {'FINISHED'}
+        self.trajectory['owner_name'] = self.trajectory_owner_name
+
+    def update_trajectory(self, context):
+        curve = self.get_curve()
+        self.trajectory.data = curve
+
+    def get_curve(self):
+        curve = bpy.data.curves.new('curve_nurbs', 'CURVE')
+        curve.dimensions = '2D'
+
+        nurbs = curve.splines.new('NURBS')
+        nurbs.use_endpoint_u = True
+        nurbs.points.add(len(self.trajectory_points)-1)
+        for idx, point in enumerate(self.trajectory_points):
+            x, y, z = point - self.point_start
+            nurbs.points[idx].co = (x, y, z, 1)
+        nurbs.order_u = 3
+        nurbs.resolution_u = 16
+        return curve
