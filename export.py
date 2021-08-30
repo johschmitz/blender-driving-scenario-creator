@@ -402,10 +402,14 @@ class DSC_OT_export(bpy.types.Operator):
                         None,None,None,None)
                     init.add_init_action(obj['owner_name'], action)
 
+        # Link .xodr to .xosc with relative path
+        dotdot = pathlib.Path('..')
+        xodr_path_relative = dotdot / xodr_path.relative_to(pathlib.Path(self.directory))
         if helpers.collection_exists(['OpenDRIVE']):
-            road = xosc.RoadNetwork(str(xodr_path),'./scenegraph/export.' + self.mesh_file_type)
+            road = xosc.RoadNetwork(str(xodr_path_relative),'./scenegraph/export.' + self.mesh_file_type)
         else:
-            road = xosc.RoadNetwork(str(xodr_path))
+            road = xosc.RoadNetwork(str(xodr_path_relative))
+
         storyboard = xosc.StoryBoard(init)
         catalog_vehicles = xosc.Catalog()
         catalog_vehicles.add_catalog('VehicleCatalog','../catalogs/vehicles')
