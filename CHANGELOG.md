@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.5.0] - 2021-08-30
+
+### Added
+- Operator for creating NURBS trajectories
+
+### Fixed
+- Path pointing from .xosc file to .xodr file (LogicFile path) not being written
+  as relative path
+
 ## [0.4.0] - 2021-08-25
 
 ### Added
@@ -42,7 +51,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.1.1...v0.2.0
