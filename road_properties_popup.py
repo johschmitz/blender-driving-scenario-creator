@@ -55,7 +55,10 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
         box_info = row.box()
         box_info.label(text='Note: Lines are centered between lanes and do not ')
         box_info.label(text='contribute to overall road width or number of lanes.')
+        row = box.row(align=True)
 
+        row.label(text='Cross section preset:')
+        row.prop(context.scene.road_properties, 'cross_section_preset', text='')
         row = box.row(align=True)
 
         box_params = row.box()
@@ -66,7 +69,7 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
             box_params.prop(self, 'expand_parameters', icon="TRIA_DOWN", text="Parameters", emboss=False)
             row = box_params.row(align=True)
             row.label(text='Width line thin:')
-            row.prop(context.scene.road_properties, 'width_line_thin', text='')
+            row.prop(context.scene.road_properties, 'width_line_standard', text='')
             # row = box_params.row(align=True)
             # row.label(text='Width line bold:')
             # row.prop(context.scene.road_properties, 'width_line_bold', text='')
@@ -104,10 +107,10 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
         row.label(text='Number of lanes:')
         row = box.row(align=True)
         row.label(text='Left:')
-        row.prop(context.scene.road_properties, 'lanes_left_num', text='')
+        row.prop(context.scene.road_properties, 'num_lanes_left', text='')
         row.separator()
         row.label(text='Right:')
-        row.prop(context.scene.road_properties, 'lanes_right_num', text='')
+        row.prop(context.scene.road_properties, 'num_lanes_right', text='')
 
         row = box.row(align=True)
 
