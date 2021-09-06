@@ -369,11 +369,15 @@ class DSC_OT_export(bpy.types.Operator):
                         xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.time, 1)))
                     init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
                         xosc.TransitionDynamics(xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, 2.0)))
+        if helpers.collection_exists(['OpenSCENARIO','trajectories']):
             for obj in bpy.data.collections['OpenSCENARIO'].children['trajectories'].objects:
                 if 'dsc_type' in obj and obj['dsc_type'] == 'trajectory':
                     if obj['dsc_subtype'] == 'polyline':
                         speed_kmh = helpers.get_obj_custom_property('OpenSCENARIO', 'dynamic_objects',
                             obj['owner_name'], 'speed_initial')
+                        if speed_kmh == None:
+                            self.report({'ERROR'}, 'Trajectory ' + obj.name + ' owner not found!')
+                            break
                         times = self.calculate_trajectory_times(obj.data.vertices, helpers.kmh_to_ms(speed_kmh))
                         positions = []
                         for vert in obj.data.vertices:
