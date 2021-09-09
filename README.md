@@ -6,8 +6,9 @@ and autonomous driving functions.
 
 ## How to install
 
-Let's assume that we work with a Debian based Linux distribution and Blender has
-been [downloaded](https://www.blender.org/download/) and installed to
+For the sake of simplifying the following instructions let's assume that we
+work with a Debian based Linux distribution (such as Ubuntu or Mint) and Blender
+has been [downloaded](https://www.blender.org/download/) and installed to
 
     /opt/blender/
 
@@ -21,7 +22,7 @@ installation of scenariogeneration with pip
 
     sudo apt install python3.9-dev
 
-then to make the pip installation coming with Blender find the headers
+then to make sure the pip installation coming with Blender finds the headers
 
     export CPPFLAGS=-I/usr/include/python3.9/
 
