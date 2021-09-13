@@ -27,7 +27,7 @@ from . road_arc import DSC_OT_road_arc
 from . road_properties_popup import DSC_OT_road_properties_popup
 from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
 from . road_properties import DSC_road_properties, DSC_enum_strip
-from . road_spiral import DSC_OT_road_spiral
+from . road_clothoid import DSC_OT_road_clothoid
 from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
@@ -74,14 +74,13 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.road_properties_popup', text='Arc',
             icon_value=custom_icons['road_arc'].icon_id).operator = 'road_arc'
         row = box.row(align=True)
-        row.operator('dsc.road_spiral', text='Spiral',
-            icon_value=custom_icons['road_spiral'].icon_id)
+        row.operator('dsc.road_properties_popup', text='Clothoid',
+            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid'
         row = box.row(align=True)
         row.operator('dsc.road_parametric_polynomial', text='Parametric polynomial',
             icon_value=custom_icons['road_parametric_polynomial'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.road_properties_popup', text='Junction',
-            icon_value=custom_icons['junction'].icon_id).operator = 'junction'
+        row.operator('dsc.junction', text='Junction', icon_value=custom_icons['junction'].icon_id)
         row = box.row(align=True)
 
         box = layout.box()
@@ -124,7 +123,7 @@ classes = (
     DSC_OT_road_arc,
     DSC_OT_road_properties_popup,
     DSC_OT_road_parametric_polynomial,
-    DSC_OT_road_spiral,
+    DSC_OT_road_clothoid,
     DSC_OT_road_straight,
     DSC_OT_trajectory_nurbs,
     DSC_OT_trajectory_polyline,
@@ -141,7 +140,7 @@ def register():
     icons_dir = os.path.join(os.path.dirname(__file__), 'icons')
     custom_icons.load('road_straight', os.path.join(icons_dir, 'road_straight.png'), 'IMAGE')
     custom_icons.load('road_arc', os.path.join(icons_dir, 'road_arc.png'), 'IMAGE')
-    custom_icons.load('road_spiral', os.path.join(icons_dir, 'road_spiral.png'), 'IMAGE')
+    custom_icons.load('road_clothoid', os.path.join(icons_dir, 'road_clothoid.png'), 'IMAGE')
     custom_icons.load('road_parametric_polynomial', os.path.join(icons_dir, 'road_parametric_polynomial.png'), 'IMAGE')
     custom_icons.load('junction', os.path.join(icons_dir, 'junction.png'), 'IMAGE')
     custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')

@@ -13,15 +13,14 @@
 
 import bpy
 from mathutils import Vector, Matrix
-from idprop.types import IDPropertyArray
 
 from math import pi
 
-from .operator_road_base import DSC_OT_road_base
+from . modal_two_point_base import DSC_OT_two_point_base
 from . import helpers
 
 
-class DSC_OT_junction(DSC_OT_road_base):
+class DSC_OT_junction(DSC_OT_two_point_base):
     bl_idname = 'dsc.junction'
     bl_label = 'Junction'
     bl_description = 'Create a junction'
@@ -34,14 +33,14 @@ class DSC_OT_junction(DSC_OT_road_base):
         '''
             Create a junction object
         '''
-        valid, mesh, materials, params = self.get_mesh_and_params(context, for_stencil=False)
+        valid, mesh, matrix_world, materials = self.get_mesh_update_params(context, for_stencil=False)
         if not valid:
             return None
         else:
             obj_id = helpers.get_new_id_opendrive(context)
             mesh.name = self.object_type + '_' + str(obj_id)
             obj = bpy.data.objects.new(mesh.name, mesh)
-            self.transform_object_wrt_start(obj, params['point_start'], params['heading_start'])
+            obj.matrix_world = matrix_world
             helpers.link_object_opendrive(context, obj)
 
             helpers.assign_road_materials(obj)
@@ -61,32 +60,33 @@ class DSC_OT_junction(DSC_OT_road_base):
             # Set OpenDRIVE custom properties
             obj['id_xodr'] = obj_id
             obj['junction_type'] = 'default'
-            obj['planView_geometry_x'] = self.point_start.x
-            obj['planView_geometry_y'] = self.point_start.y
-            obj['hdg_left'] = params['hdg_left']
-            obj['hdg_down'] = params['hdg_down']
-            obj['hdg_right'] = params['hdg_right']
-            obj['hdg_up'] = params['hdg_up']
+            obj['planView_geometry_x'] = self.params['point_start'].x
+            obj['planView_geometry_y'] = self.params['point_start'].y
+            obj['hdg_left'] = self.params['hdg_left']
+            obj['hdg_down'] = self.params['hdg_down']
+            obj['hdg_right'] = self.params['hdg_right']
+            obj['hdg_up'] = self.params['hdg_up']
 
             obj['incoming_roads'] = {}
 
             return obj
 
-    def get_mesh_and_params(self, context, for_stencil):
+    def get_mesh_update_params(self, context, for_stencil):
         '''
             Calculate and return the vertices, edges and faces to create a road
             mesh and road parameters.
         '''
         if self.snapped_start:
             # Constrain point end
-            point_end = helpers.project_point_vector(self.point_selected_end,
-                self.point_start, self.heading_start)
+            point_end = helpers.project_point_vector(self.point_start, self.heading_start,
+                self.point_selected_end)
         else:
             point_end = self.point_selected_end
         if self.point_start == point_end:
-            self.report({"WARNING"}, "Start and end point can not be the same!")
+            if not for_stencil:
+                self.report({'WARNING'}, 'Start and end point can not be the same!')
             valid = False
-            return valid, None, {}
+            return valid, None, None, None
         # Parameters
         vector_start_end = point_end - self.point_start
         vector_1_0 = Vector((1.0, 0.0))
@@ -103,14 +103,12 @@ class DSC_OT_junction(DSC_OT_road_base):
         hdg_down = vector_hdg_down.angle_signed(vector_1_0)
         hdg_right = vector_hdg_right.angle_signed(vector_1_0)
         hdg_up = vector_hdg_up.angle_signed(vector_1_0)
-        params = {'point_start': self.point_start,
-                  'heading_start': heading,
-                  'point_end': point_end,
-                  'hdg_left': hdg_left,
-                  'hdg_down': hdg_down,
-                  'hdg_right': hdg_right,
-                  'hdg_up': hdg_up,
-                  }
+        self.params = {'point_start': self.point_start,
+                       'hdg_left': hdg_left,
+                       'hdg_down': hdg_down,
+                       'hdg_right': hdg_right,
+                       'hdg_up': hdg_up,
+                      }
         # Mesh
         vertices = [(-3.95, 3.95, 0.0),
                     (-3.95, 0.0, 0.0),
@@ -130,12 +128,15 @@ class DSC_OT_junction(DSC_OT_road_base):
         # Shift origin to connection point
         if self.snapped_start:
             vertices[:] = [(v[0] + 3.95, v[1], v[2]) for v in vertices]
+        mat_translation = Matrix.Translation(self.point_start)
+        mat_rotation = Matrix.Rotation(heading, 4, 'Z')
+        matrix_world = mat_translation @ mat_rotation
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)
         valid = True
         # TODO implement material dictionary for the faces
         materials = {}
-        return valid, mesh, materials, params
+        return valid, mesh, matrix_world, materials
 
 

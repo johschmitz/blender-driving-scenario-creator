@@ -221,9 +221,9 @@ def point_to_road_connector(obj, point):
     dist_start = (Vector(obj['cp_start']) - point).length
     dist_end = (Vector(obj['cp_end']) - point).length
     if dist_start < dist_end:
-        return 'cp_start', Vector(obj['cp_start']), obj['geometry_hdg_start'] - pi
+        return 'cp_start', Vector(obj['cp_start']), obj['geometry']['heading_start'] - pi
     else:
-        return 'cp_end', Vector(obj['cp_end']), obj['geometry_hdg_end']
+        return 'cp_end', Vector(obj['cp_end']), obj['geometry']['heading_end']
 
 def point_to_junction_connector(obj, point):
     '''
@@ -246,7 +246,7 @@ def point_to_object_connector(obj, point):
     '''
     return 'cp_axle_rear', Vector(obj['position']), obj['hdg']
 
-def project_point_vector(point_selected, point_start, heading_start):
+def project_point_vector(point_start, heading_start, point_selected):
     '''
         Project selected point to vector.
     '''

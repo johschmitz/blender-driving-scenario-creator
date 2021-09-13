@@ -1,0 +1,6 @@
+bpy
+mathutils
+pathlib
+pyclothoid
+scenariogeneration
+pytest

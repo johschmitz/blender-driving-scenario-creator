@@ -15,20 +15,12 @@
    version="1.1"
    id="svg8"
    inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
-   sodipodi:docname="trajectory_nurbs.svg"
-   inkscape:export-filename="/home/schmitz/work/blender_driving_scenario_creator/icons/trajectory_nurbs.png"
+   sodipodi:docname="road_straight.svg"
+   inkscape:export-filename="road_straight.png"
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96">
   <defs
-     id="defs2">
-    <inkscape:perspective
-       sodipodi:type="inkscape:persp3d"
-       inkscape:vp_x="0 : 4.2333334 : 1"
-       inkscape:vp_y="0 : 1000 : 0"
-       inkscape:vp_z="8.4666665 : 4.2333334 : 1"
-       inkscape:persp3d-origin="4.2333333 : 2.8222223 : 1"
-       id="perspective868" />
-  </defs>
+     id="defs2" />
   <sodipodi:namedview
      id="base"
      pagecolor="#ffffff"
@@ -36,20 +28,20 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="12.9375"
-     inkscape:cx="8.8856531"
-     inkscape:cy="29.793795"
+     inkscape:zoom="18.296388"
+     inkscape:cx="9.8040006"
+     inkscape:cy="14.593413"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
      inkscape:snap-page="true"
      inkscape:snap-grids="false"
-     inkscape:snap-to-guides="true"
-     inkscape:snap-bbox="false"
+     inkscape:snap-to-guides="false"
+     inkscape:snap-bbox="true"
      inkscape:bbox-paths="true"
-     inkscape:snap-nodes="true"
-     inkscape:snap-others="true"
+     inkscape:snap-nodes="false"
+     inkscape:snap-others="false"
      inkscape:bbox-nodes="true"
      inkscape:window-width="1920"
      inkscape:window-height="1016"
@@ -57,14 +49,7 @@
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:pagecheckerboard="true"
-     showborder="true"
-     inkscape:snap-bbox-edge-midpoints="false"
-     inkscape:object-paths="true"
-     inkscape:snap-intersection-paths="true"
-     inkscape:snap-smooth-nodes="true"
-     inkscape:snap-midpoints="true"
-     inkscape:snap-object-midpoints="true"
-     inkscape:snap-center="true" />
+     showborder="true" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -73,7 +58,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -83,10 +68,19 @@
      id="layer1"
      transform="translate(0,-288.53332)">
     <path
-       style="fill:none;stroke:#ffffff;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 0.57133232,296.28541 c 2.76220328,0.10728 2.06041628,-6.78108 7.14887728,-6.76022"
-       id="path829"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="cc" />
+       style="fill:none;stroke:#ffffff;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 1.7280999,288.53332 v 8.46667"
+       id="path940"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#ffffff;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 6.7385668,288.53332 v 8.46667"
+       id="path942"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#ffffff;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:1.05999995, 1.05999994999999991;stroke-dashoffset:1.58999992"
+       d="m 4.2333332,288.53332 v 8.46667"
+       id="path944"
+       inkscape:connector-curvature="0" />
   </g>
 </svg>

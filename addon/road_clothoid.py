@@ -12,18 +12,28 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+from mathutils import Vector, Matrix
 
-class DSC_OT_road_spiral(bpy.types.Operator):
-    bl_idname = "dsc.road_spiral"
-    bl_label = "Spiral"
-    bl_description = "Create a spiral road"
+from . road_base import DSC_OT_road
+from . geometry_clothoid import DSC_geometry_clothoid
+from . import helpers
+
+from math import pi, sin, cos, acos, ceil
+
+
+class DSC_OT_road_clothoid(DSC_OT_road):
+    bl_idname = "dsc.road_clothoid"
+    bl_label = "Clothoid"
+    bl_description = "Create a clothoid (Euler spiral) road"
     bl_options = {'REGISTER', 'UNDO'}
 
-    @classmethod
-    def poll(cls, context):
-        return False
+    object_type = 'road_clothoid'
+    snap_filter = 'OpenDRIVE'
 
-    def execute(self, context):
-        self.report({'INFO'}, "Not implemented.")
+    geometry = DSC_geometry_clothoid()
 
-        return {'FINISHED'}
+    def constrain_point_end(self, point_start, heading_start, point_selected_end):
+        '''
+            Constrain the endpoint if necessary.
+        '''
+        return point_selected_end

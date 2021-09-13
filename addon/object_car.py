@@ -16,17 +16,19 @@ from mathutils import Vector, Matrix
 
 from math import pi
 
-from .operator_road_base import DSC_OT_road_base
+from .modal_two_point_base import DSC_OT_two_point_base
 from . import helpers
 
 
-class DSC_OT_object_car(DSC_OT_road_base):
-    bl_idname = "dsc.object_car"
-    bl_label = "Car"
-    bl_description = "Place a car object"
+class DSC_OT_object_car(DSC_OT_two_point_base):
+    bl_idname = 'dsc.object_car'
+    bl_label = 'Car'
+    bl_description = 'Place a car object'
     bl_options = {'REGISTER', 'UNDO'}
 
     object_type = 'car'
+
+    params = {}
 
     # Do not snap to other xodr or xosc objects in scene
     # TODO snap to road contact points, requires a lot of work
@@ -36,7 +38,7 @@ class DSC_OT_object_car(DSC_OT_road_base):
         '''
             Create a car object
         '''
-        valid, mesh, materials, params = self.get_mesh_and_params(context, for_stencil=False)
+        valid, mesh, matrix_world, materials = self.get_mesh_update_params(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -44,7 +46,7 @@ class DSC_OT_object_car(DSC_OT_road_base):
             obj_name = str(obj_id) + '_' + context.scene.object_properties.name
             mesh.name = obj_name
             obj = bpy.data.objects.new(mesh.name, mesh)
-            self.transform_object_wrt_start(obj, params['point_start'], params['heading_start'])
+            obj.matrix_world = matrix_world
             helpers.link_object_openscenario(context, obj, subcategory='dynamic_objects')
 
             helpers.select_activate_object(context, obj)
@@ -61,26 +63,30 @@ class DSC_OT_object_car(DSC_OT_road_base):
             obj['dsc_type'] = 'car'
 
             # Set OpenSCENARIO custom properties
-            obj['position'] = params['point_start']
-            obj['hdg'] = params['heading_start']
+            obj['position'] = self.params['point_start']
+            obj['hdg'] = self.params['heading_start']
             obj['speed_initial'] = context.scene.object_properties.speed_initial
 
         return obj
 
-    def get_mesh_and_params(self, context, for_stencil):
+    def get_mesh_update_params(self, context, for_stencil):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
         if self.point_start == self.point_selected_end:
-            self.report({"WARNING"}, "Start and end point can not be the same!")
+            if not for_stencil:
+                self.report({'WARNING'}, 'Start and end point can not be the same!')
             valid = False
             return valid, None, {}
         vector_start_end = self.point_selected_end - self.point_start
         heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
-        params = {'point_start': self.point_start,
+        self.params = {'point_start': self.point_start,
                   'heading_start': heading,
                   'point_end': self.point_selected_end}
         vertices, edges, faces = self.get_vertices_edges_faces()
+        mat_translation = Matrix.Translation(self.point_start)
+        mat_rotation = Matrix.Rotation(heading, 4, 'Z')
+        matrix_world = mat_translation @ mat_rotation
         # Create blender mesh
         if for_stencil:
             faces = []
@@ -88,7 +94,7 @@ class DSC_OT_object_car(DSC_OT_road_base):
         mesh.from_pydata(vertices, edges, faces)
         valid = True
         materials = {}
-        return valid, mesh, materials, params
+        return valid, mesh, matrix_world, materials
 
     def get_vertices_edges_faces(self):
         vertices = [(-2.2, -1.0, 0.0),

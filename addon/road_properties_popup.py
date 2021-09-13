@@ -20,10 +20,8 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
 
     operators = {'road_straight': bpy.ops.dsc.road_straight,
                  'road_arc': bpy.ops.dsc.road_arc,
-                 'road_spiral': bpy.ops.dsc.road_spiral,
-                 'road_parametric_polynomial': bpy.ops.dsc.road_parametric_polynomial,
-                 'junction': bpy.ops.dsc.junction,
-                 'object_car': bpy.ops.dsc.object_car}
+                 'road_clothoid': bpy.ops.dsc.road_clothoid,
+                 'road_parametric_polynomial': bpy.ops.dsc.road_parametric_polynomial,}
 
     operator: bpy.props.StringProperty(
         name='Road operator', description='Type of the road operator to call.', options={'HIDDEN'})
@@ -41,13 +39,7 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
     def invoke(self, context, event):
         if len(context.scene.road_properties.strips) == 0:
             context.scene.road_properties.init()
-        # TODO: for now only straight road parameterization implemented
-        if self.operator == 'road_straight':
-            return context.window_manager.invoke_popup(self)
-        else:
-            op = self.operators[self.operator]
-            op('INVOKE_DEFAULT')
-            return {'FINISHED'}
+        return context.window_manager.invoke_popup(self)
 
     def draw(self, context):
         box = self.layout.box()
@@ -75,10 +67,10 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
             # row.prop(context.scene.road_properties, 'width_line_bold', text='')
             # row = box_params.row(align=True)
             # row.label(text='Length line broken:')
-            # row.prop(context.scene.road_properties, 'length_line_broken', text='')
+            # row.prop(context.scene.road_properties, 'length_broken_line', text='')
             # row = box_params.row(align=True)
-            # row.label(text='Ratio line gap:')
-            # row.prop(context.scene.road_properties, 'ratio_line_gap', text='')
+            # row.label(text='Ratio broken line gap:')
+            # row.prop(context.scene.road_properties, 'ratio_broken_line_gap', text='')
             row = box_params.row(align=True)
 
             row = box_params.row(align=True)

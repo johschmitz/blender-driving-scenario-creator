@@ -12,15 +12,16 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import bmesh
+from mathutils import Vector
 
-from . operator_trajectory_base import DSC_OT_trajectory_base
+from . modal_trajectory_base import DSC_OT_trajectory_base
 from . import helpers
 
-
-class DSC_OT_trajectory_polyline(DSC_OT_trajectory_base):
-    bl_idname = 'dsc.trajectory_polyline'
-    bl_label = 'Polyline'
-    bl_description = 'Place a polyline based trajectory'
+class DSC_OT_trajectory_nurbs(DSC_OT_trajectory_base):
+    bl_idname = "dsc.trajectory_nurbs"
+    bl_label = "NURBS"
+    bl_description = "Place a NURBS based trajectory"
     bl_options = {'REGISTER', 'UNDO'}
 
     def create_trajectory_temp(self, context):
@@ -29,8 +30,8 @@ class DSC_OT_trajectory_polyline(DSC_OT_trajectory_base):
             if context.scene.objects.get('trajectory_temp') is None:
                 context.scene.collection.objects.link(self.trajectory)
         else:
-            mesh = self.get_mesh()
-            self.trajectory = bpy.data.objects.new('trajectory_temp', mesh)
+            curve = self.get_curve()
+            self.trajectory = bpy.data.objects.new('trajectory_temp', curve)
             helpers.link_object_openscenario(context, self.trajectory, subcategory='trajectories')
         # Shift origin to start point below vehicle
         self.trajectory.location = self.point_start
@@ -38,21 +39,24 @@ class DSC_OT_trajectory_polyline(DSC_OT_trajectory_base):
     def set_xosc_properties(self):
         self.trajectory['dsc_category'] = 'OpenSCENARIO'
         self.trajectory['dsc_type'] = 'trajectory'
-        self.trajectory['dsc_subtype'] = 'polyline'
+        self.trajectory['dsc_subtype'] = 'nurbs'
 
         self.trajectory['owner_name'] = self.trajectory_owner_name
 
     def update_trajectory(self, context):
-        mesh = self.get_mesh()
-        helpers.replace_mesh(self.trajectory, mesh)
+        curve = self.get_curve()
+        self.trajectory.data = curve
 
-    def get_mesh(self):
-        vertices = [point - self.point_start for point in self.trajectory_points]
-        edges = []
-        for idx in range(len(vertices)-1):
-            edges.append([idx, idx+1])
-        faces = []
+    def get_curve(self):
+        curve = bpy.data.curves.new('curve_nurbs', 'CURVE')
+        curve.dimensions = '2D'
 
-        mesh = bpy.data.meshes.new('trajectory')
-        mesh.from_pydata(vertices, edges, faces)
-        return mesh
+        nurbs = curve.splines.new('NURBS')
+        nurbs.use_endpoint_u = True
+        nurbs.points.add(len(self.trajectory_points)-1)
+        for idx, point in enumerate(self.trajectory_points):
+            x, y, z = point - self.point_start
+            nurbs.points[idx].co = (x, y, z, 1)
+        nurbs.order_u = 3
+        nurbs.resolution_u = 16
+        return curve

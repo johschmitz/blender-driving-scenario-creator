@@ -93,7 +93,7 @@ class DSC_OT_export(bpy.types.Operator):
     def execute(self, context):
         self.export_vehicle_models(context)
         self.export_scenegraph_file()
-        self.export_openscenario(context, self.directory)
+        self.export_openscenario()
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -229,7 +229,7 @@ class DSC_OT_export(bpy.types.Operator):
             self.report({'ERROR'}, 'Executable \"osgconv\" required to produce .osgb scenegraph file. '
                 'Try installing openscenegraph.')
 
-    def export_openscenario(self, context, directory):
+    def export_openscenario(self):
         # OpenDRIVE (referenced by OpenSCENARIO)
         xodr_path = pathlib.Path(self.directory) / 'xodr' / (self.dsc_export_filename + '.xodr')
         xodr_path.parent.mkdir(parents=True, exist_ok=True)
@@ -239,23 +239,20 @@ class DSC_OT_export(bpy.types.Operator):
         if helpers.collection_exists(['OpenDRIVE']):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
                 if 'road' in obj.name:
-                    if obj['geometry'] == 'line':
-                        planview = xodr.PlanView()
-                        planview.set_start_point(obj['geometry_x'],
-                            obj['geometry_y'],obj['geometry_hdg_start'])
-                        line = xodr.Line(obj['geometry_length'])
-                        planview.add_geometry(line)
-                        lanes = self.create_lanes(obj)
-                        road = xodr.Road(obj['id_xodr'],planview,lanes)
-                    if obj['geometry'] == 'arc':
-                        planview = xodr.PlanView()
-                        planview.set_start_point(obj['geometry_x'],
-                            obj['geometry_y'],obj['geometry_hdg_start'])
-                        arc = xodr.Arc(obj['geometry_curvature'],
-                            angle=obj['geometry_angle'])
-                        planview.add_geometry(arc)
-                        lanes = self.create_lanes(obj)
-                        road = xodr.Road(obj['id_xodr'],planview,lanes)
+                    planview = xodr.PlanView()
+                    planview.set_start_point(obj['geometry']['point_start'][0],
+                        obj['geometry']['point_start'][1],obj['geometry']['heading_start'])
+                    if obj['geometry']['curve'] == 'line':
+                        geometry = xodr.Line(obj['geometry']['length'])
+                    if obj['geometry']['curve'] == 'arc':
+                        geometry = xodr.Arc(obj['geometry']['curvature'],
+                            angle=obj['geometry']['angle'])
+                    if obj['geometry']['curve'] == 'spiral':
+                        geometry = xodr.Spiral(obj['geometry']['curvature_start'],
+                            obj['geometry']['curvature_end'], length=obj['geometry']['length'])
+                    planview.add_geometry(geometry)
+                    lanes = self.create_lanes(obj)
+                    road = xodr.Road(obj['id_xodr'],planview,lanes)
                     # Add road level linking
                     if 'link_predecessor' in obj:
                         element_type = self.get_element_type_by_id(obj['link_predecessor'])

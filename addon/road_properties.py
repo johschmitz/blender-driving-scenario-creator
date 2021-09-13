@@ -89,8 +89,8 @@ class DSC_enum_strip(bpy.types.PropertyGroup):
 class DSC_road_properties(bpy.types.PropertyGroup):
     width_line_standard: bpy.props.FloatProperty(default=0.12, min=0.01, max=1.0, step=1)
     width_line_bold: bpy.props.FloatProperty(default=0.25, min=0.01, max=1.0, step=1)
-    length_line_broken: bpy.props.FloatProperty(default=3.0, min=0.01, max=10.0, step=1)
-    ratio_line_gap: bpy.props.IntProperty(default=1, min=1, max=3)
+    length_broken_line: bpy.props.FloatProperty(default=3.0, min=0.01, max=10.0, step=1)
+    ratio_broken_line_gap: bpy.props.IntProperty(default=1, min=1, max=3)
     width_driving: bpy.props.FloatProperty(default=3.75, min=0.01, max=10.0, step=1)
     width_border: bpy.props.FloatProperty(default=0.5, min=0.01, max=1.0, step=1)
     # width_curb: bpy.props.FloatProperty(default=0.16, min=0.10, max=0.30, step=1)
@@ -166,7 +166,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
             else:
                 if idx == self.num_lanes_right - 1:
                     self.add_strip('right', 'border', self.width_border, 'none')
-                    self.add_strip('right', 'line', self.width_line_thin, 'none')
+                    self.add_strip('right', 'line', self.width_line_standard, 'none')
                 elif idx == self.num_lanes_right - 2:
                     self.add_strip('right', 'driving', self.width_driving, 'none')
                     self.add_strip('right', 'line', self.width_line_standard, 'solid')
@@ -205,7 +205,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.lock_strips = False
 
     def print_cross_section(self):
-        print('New cross section:',self.cross_section_preset)
+        print('New cross section:', self.cross_section_preset)
         directions = []
         widths = []
         types = []
@@ -215,8 +215,3 @@ class DSC_road_properties(bpy.types.PropertyGroup):
             widths.append(strip.width)
             types.append(strip.type)
             types_road_marks.append(strip.type_road_mark)
-        print('Directions:', directions)
-        print('Widths:', widths)
-        print('Types:', types)
-        print('Types of road mark:', types_road_marks)
-

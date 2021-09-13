@@ -20,8 +20,8 @@ from math import pi
 from . import helpers
 
 
-class DSC_OT_road_base(bpy.types.Operator):
-    bl_idname = 'dsc.road_base'
+class DSC_OT_two_point_base(bpy.types.Operator):
+    bl_idname = 'dsc.two_point_base'
     bl_label = 'DSC snap draw operator'
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -53,7 +53,7 @@ class DSC_OT_road_base(bpy.types.Operator):
             mesh.from_pydata(vertices, edges, faces)
             # Rotate in start heading direction
             self.stencil = bpy.data.objects.new("dsc_stencil", mesh)
-            self.transform_object_wrt_start(self.stencil, point_start, heading_start)
+            self.stencil.location = point_start
             # Link
             context.scene.collection.objects.link(self.stencil)
             self.stencil.use_fake_user = True
@@ -75,40 +75,29 @@ class DSC_OT_road_base(bpy.types.Operator):
         '''
         if self.point_selected_end == self.point_start:
             # This can happen due to start point snapping -> ignore
-            return self.point_selected_end
+            return
         # Try getting data for a new mesh
-        valid, mesh, materials, params = self.get_mesh_and_params(context, for_stencil=True)
-        # If cursor is not in line with connection we get a solution and update the mesh
+        valid, mesh, matrix_world, materials = self.get_mesh_update_params(context, for_stencil=True)
+        # If we get a valid solution we can update the mesh, otherwise just return
         if valid:
             helpers.replace_mesh(self.stencil, mesh)
-            # Rotate in heading direction
-            self.transform_object_wrt_start(self.stencil, params['point_start'], params['heading_start'])
-            return params['point_end']
-        else:
-            return self.point_selected_end
+            # Set stencil global transform
+            self.stencil.matrix_world = matrix_world
 
     def get_initial_vertices_edges_faces(self):
         '''
             Calculate and return the vertices, edges and faces to create the initial stencil mesh.
         '''
-        vertices = [(0.0,   0.0, 0.0)]
+        vertices = [(0.0, 0.0, 0.0)]
         edges = []
         faces = []
         return vertices, edges, faces
 
-    def get_mesh_and_params(self, context, for_stencil=True):
+    def get_mesh_update_params(self, context, for_stencil=True):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
         raise NotImplementedError()
-
-    def transform_object_wrt_start(self, obj, point_start, heading):
-        '''
-            Translate and rotate object.
-        '''
-        mat_translation = Matrix.Translation(point_start)
-        mat_rotation = Matrix.Rotation(heading, 4, 'Z')
-        obj.matrix_world = mat_translation @ mat_rotation
 
     def modal(self, context, event):
         # Display help text
@@ -142,11 +131,14 @@ class DSC_OT_road_base(bpy.types.Operator):
             if self.state == 'SELECT_END':
                 # For snapped case use projected end point
                 self.point_selected_end = point_selected
-                self.heading_end = heading_selected
                 self.snapped_end = self.hit
-                point_end = self.update_stencil(context)
-                context.scene.cursor.location = point_end
-                self.heading_end = heading_selected
+                if self.snapped_end:
+                    self.heading_end = heading_selected + pi
+                else:
+                    self.heading_end = self.calculate_heading_end(self.point_start,
+                        self.heading_start, self.point_selected_end)
+                self.update_stencil(context)
+                context.scene.cursor.location = point_selected
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
@@ -202,6 +194,19 @@ class DSC_OT_road_base(bpy.types.Operator):
 
         # Catch everything else arriving here
         return {'RUNNING_MODAL'}
+
+    def calculate_heading_end(self, point_start, heading_start, point_end):
+        vector_hdg = Vector((1.0, 0.0))
+        vector_hdg.rotate(Matrix.Rotation(heading_start, 2))
+        vector_start_end = (point_end - point_start).to_2d()
+        adjacent = vector_start_end.to_2d().project(vector_hdg)
+        # TODO make the heading ratio adjustable
+        heading_ratio = 0.75
+        vector_end = vector_start_end - heading_ratio * adjacent
+        if vector_end.length == 0:
+            return 0
+        else:
+            return vector_end.angle_signed(Vector((1.0, 0.0)))
 
     def invoke(self, context, event):
         # For operator state machine
