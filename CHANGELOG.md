@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.7.0] - 2021-10-24
+
+### Added
+- Operator for creating clothoid (Euler Spiral) roads
+
+### Changed
+- The road operators for all geometries are now unified and the mesh is sampled
+  along the road coordinate system. This also means that all road operators now
+  use the cross section configuration UI and support the selected cross
+  sections.
+
 ## [0.6.0] - 2021-09-06
 
 ### Added
@@ -61,7 +72,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.3.0...v0.4.0
