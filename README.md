@@ -1,8 +1,8 @@
 # Blender Driving Scenario Creator add-on
 
 This [Blender](https://www.blender.org/) add-on lets you create OpenDRIVE and
-OpenSCENARIO based scenarios for testing of advanced driver assistance systems
-and autonomous driving functions.
+OpenSCENARIO based scenarios for development and testing of advanced driver
+assistance systems and autonomous driving functions.
 
 ## How to install
 
@@ -80,6 +80,12 @@ With esmini available the exported scenario can be run with
     cd <export_directory>
     esmini --osc xosc/export.xosc --window 50 50 800 400
 
+# How to develop
+
+For development of the addon the [Blender VS Code
+extension](https://github.com/JacquesLucke/blender_vscode) is very
+recommendable. It allows hot reloading and rapid iterations.
+
 ## License
 
 The source code of this tool is distributed under the GPL version 3.0 license as
@@ -103,6 +109,7 @@ Credits go to
   general Blender add-on tool inspiration
 - Blender Add Curve: Extra Objects extension authors for inspiration on ring
   segments
+- [Blender VS Code extension](https://github.com/JacquesLucke/blender_vscode)
 
 ## Main author/maintainer contact
 
