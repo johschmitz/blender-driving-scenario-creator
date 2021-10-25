@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.7.1] - 2021-10-25
+
+### Fixed
+- Remove duplicate road vertices
+- Subdivide lane faces of long roads to avoid rendering issues
+
 ## [0.7.0] - 2021-10-24
 
 ### Added
@@ -72,7 +78,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.4.0...v0.5.0
