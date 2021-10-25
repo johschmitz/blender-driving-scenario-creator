@@ -206,6 +206,9 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
         # Calculate line parameters
         # TODO offset must be provided by predecessor road for each marking
+        length = self.geometry.params['length']
+        # TODO make hardcoded cut length configurable
+        cut_length_lane = 100
         offset = 0.5
         if offset < road_properties.length_broken_line:
             offset_first = offset
@@ -217,27 +220,37 @@ class DSC_OT_road(DSC_OT_two_point_base):
         for strip in road_properties.strips:
             # Calculate broken line parameters
             if strip.type_road_mark == 'broken':
-                num_faces_strip = ceil((self.geometry.params['length'] \
+                num_faces_strip = ceil((length \
                     - (road_properties.length_broken_line - offset_first)) \
                     / road_properties.length_broken_line)
                 # Add one extra step for the shorter first piece
                 if offset_first > 0:
                     num_faces_strip += 1
-                length_first = min(self.geometry.params['length'],
+                length_first = min(length,
                     road_properties.length_broken_line - offset_first)
                 if num_faces_strip > 1:
-                    length_last = self.geometry.params['length'] - length_first \
+                    length_last = length - length_first \
                         - (num_faces_strip-2) * road_properties.length_broken_line
                 else:
                     length_last = length_first
             else:
-                num_faces_strip = 1
+                if not (strip.type == 'line' and strip.type_road_mark == 'none'):
+                    # We need to subdivide long faces to avoid rendering issues
+                    num_faces_strip = int(length // cut_length_lane)
+                    if length % cut_length_lane > 0:
+                        num_faces_strip += 1
+                else:
+                    num_faces_strip = 1
+
             # Go in s direction along strip and calculate the start and stop values
             s_values_strip = [0]
             for idx_face_strip in range(num_faces_strip):
                 # Calculate end points of the faces
                 # s_start = 0
-                s_stop = self.geometry.params['length']
+                if idx_face_strip < num_faces_strip-1:
+                    s_stop = (idx_face_strip + 1) * cut_length_lane
+                else:
+                    s_stop = length
                 if strip.type_road_mark == 'broken':
                     if idx_face_strip == 0:
                         # First piece
@@ -251,7 +264,6 @@ class DSC_OT_road(DSC_OT_two_point_base):
                         # Middle piece
                         # s_start = idx_face_strip * road_properties.length_broken_line - offset_first
                         s_stop = length_first + idx_face_strip * road_properties.length_broken_line
-                # s_values_strip.append(s_start)
                 s_values_strip.append(s_stop)
             s_values.append((line_toggle_start, s_values_strip))
         return s_values
@@ -291,58 +303,58 @@ class DSC_OT_road(DSC_OT_two_point_base):
             xyz_samples, c = self.geometry.sample_local(s, strips_t_values)
 
             for idx_strip, strip in enumerate(strips):
-                # Do not add points for 'none' lines
-                if not (strip.type == 'line' and strip.type_road_mark == 'none'):
-                    # Get the boundaries of road marking faces for current strip plus left and right
-                    idx_boundaries = [0,0,0]
-                    s_boundaries_next = [length,length,length]
-                    # Check if there is a strip left and/or right to take into account
-                    if idx_strip > 0:
-                        idx_boundaries[0] = idx_boundaries_strips[idx_strip-1]
-                        s_boundaries_next[0] = strips_s_boundaries[idx_strip-1][1][idx_boundaries[0]+1]
-                    idx_boundaries[1] = idx_boundaries_strips[idx_strip]
-                    s_boundaries_next[1] = strips_s_boundaries[idx_strip][1][idx_boundaries[1]+1]
-                    if idx_strip < len(strips)-1:
-                        idx_boundaries[2] = idx_boundaries_strips[idx_strip+1]
-                        s_boundaries_next[2] = strips_s_boundaries[idx_strip+1][1][idx_boundaries[2]+1]
+                # Get the boundaries of road marking faces for current strip plus left and right
+                idx_boundaries = [0,0,0]
+                s_boundaries_next = [length,length,length]
+                # Check if there is a strip left and/or right to take into account
+                if idx_strip > 0:
+                    idx_boundaries[0] = idx_boundaries_strips[idx_strip-1]
+                    s_boundaries_next[0] = strips_s_boundaries[idx_strip-1][1][idx_boundaries[0]+1]
+                idx_boundaries[1] = idx_boundaries_strips[idx_strip]
+                s_boundaries_next[1] = strips_s_boundaries[idx_strip][1][idx_boundaries[1]+1]
+                if idx_strip < len(strips)-1:
+                    idx_boundaries[2] = idx_boundaries_strips[idx_strip+1]
+                    s_boundaries_next[2] = strips_s_boundaries[idx_strip+1][1][idx_boundaries[2]+1]
 
-                    # Check if any face boundary is smaller than sample point
-                    smaller, idx_smaller = self.compare_boundaries_with_s(s, s_boundaries_next)
-                    if smaller:
-                        # Find all boundaries in between
-                        while smaller:
-                            # Sample the geometry
-                            t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip+1]]
-                            xyz_boundary, c = self.geometry.sample_local(
-                                s_boundaries_next[idx_smaller], t_values)
-                            if idx_smaller == 0:
-                                # Append left extra point
-                                sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
-                            if idx_smaller == 1:
-                                # Append left and right points
-                                sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
-                                sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_boundary[1])
-                                # Start a new list for next face
-                                sample_points[2*idx_strip].append([xyz_boundary[0]])
-                                sample_points[2*idx_strip+1].append([xyz_boundary[1]])
-                            if idx_smaller == 2:
-                                # Append right extra point
-                                sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_boundary[1])
-                            # Get the next boundary (relative to this strip)
-                            idx_boundaries[idx_smaller] += 1
-                            idx_strip_relative = idx_strip + idx_smaller - 1
-                            s_boundaries_next[idx_smaller] = \
-                                strips_s_boundaries[idx_strip_relative][1][idx_boundaries[idx_smaller]+1]
-                            # Check again
-                            smaller, idx_smaller = self.compare_boundaries_with_s(s, s_boundaries_next)
-                        # Write back indices to global array (only left strip to avoid cross interference!)
-                        if idx_strip > 0:
-                            idx_boundaries_strips[idx_strip-1] = idx_boundaries[0]
-                    # Now there is no boundary in between anymore so append the samples
-                    sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_samples[idx_strip])
-                    sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_samples[idx_strip+1])
+                # Check if any face boundary is smaller than sample point
+                smaller, idx_smaller = self.compare_boundaries_with_s(s, s_boundaries_next)
+                if smaller:
+                    # Find all boundaries in between
+                    while smaller:
+                        # Sample the geometry
+                        t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip+1]]
+                        xyz_boundary, c = self.geometry.sample_local(
+                            s_boundaries_next[idx_smaller], t_values)
+                        if idx_smaller == 0:
+                            # Append left extra point
+                            sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
+                        if idx_smaller == 1:
+                            # Append left and right points
+                            sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
+                            sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_boundary[1])
+                            # Start a new list for next face
+                            sample_points[2*idx_strip].append([xyz_boundary[0]])
+                            sample_points[2*idx_strip+1].append([xyz_boundary[1]])
+                        if idx_smaller == 2:
+                            # Append right extra point
+                            sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_boundary[1])
+                        # Get the next boundary (relative to this strip)
+                        idx_boundaries[idx_smaller] += 1
+                        idx_strip_relative = idx_strip + idx_smaller - 1
+                        s_boundaries_next[idx_smaller] = \
+                            strips_s_boundaries[idx_strip_relative][1][idx_boundaries[idx_smaller]+1]
+                        # Check again
+                        smaller, idx_smaller = self.compare_boundaries_with_s(s, s_boundaries_next)
+                    # Write back indices to global array (only left strip to avoid cross interference!)
+                    if idx_strip > 0:
+                        idx_boundaries_strips[idx_strip-1] = idx_boundaries[0]
+
+                # Now there is no boundary in between anymore so append the samples
+                sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_samples[idx_strip])
+                sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_samples[idx_strip+1])
 
         return sample_points
+
 
     def compare_boundaries_with_s(self, s, s_boundaries_next):
         '''
