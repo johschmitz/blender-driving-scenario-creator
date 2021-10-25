@@ -59,7 +59,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                     obj.data.polygons[idx].material_index = \
                         helpers.get_material_index(obj, 'road_asphalt')
             # Remove double vertices from road lanes and lane lines to simplify mesh
-            # helpers.remove_duplicate_vertices(context, obj)
+            helpers.remove_duplicate_vertices(context, obj)
             # Make it active for the user to see what he created last
             helpers.select_activate_object(context, obj)
 
