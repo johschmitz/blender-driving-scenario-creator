@@ -74,7 +74,7 @@ class DSC_OT_export(bpy.types.Operator):
         default='osgb',
     )
 
-    dsc_export_filename = 'export'
+    dsc_export_filename = 'bdsc_export'
 
     @classmethod
     def poll(cls, context):
