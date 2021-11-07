@@ -85,7 +85,12 @@ class DSC_geometry_arc(DSC_geometry):
     def update(self, point_start, heading_start, point_end, heading_end):
         # Calculate transform between global and local coordinates
         self.update_local_to_global(point_start, heading_start)
+
+        # Transform end point to local coordinates, constrain and transform back
         point_end_local = self.matrix_world.inverted() @ point_end
+        if point_end_local.x < 0:
+            point_end_local.x = 0
+        point_end_global = self.matrix_world @ point_end_local
 
         # Calculate geometry
         self.geometry_base = Arc(point_end_local)
@@ -94,7 +99,7 @@ class DSC_geometry_arc(DSC_geometry):
         self.params = {'curve': 'arc',
                        'point_start': point_start,
                        'heading_start': heading_start,
-                       'point_end': point_end,
+                       'point_end': point_end_global,
                        'heading_end': heading_start + self.geometry_base.heading_end,
                        'angle': self.geometry_base.angle,
                        'curvature': self.geometry_base.curvature,
