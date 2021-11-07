@@ -82,47 +82,42 @@ class Arc():
 
 class DSC_geometry_arc(DSC_geometry):
 
-    def update(self, point_start, heading_start, point_end, heading_end):
+    def update_plan_view(self, params):
         # Calculate transform between global and local coordinates
-        self.update_local_to_global(point_start, heading_start)
+        self.update_local_to_global(params['point_start'], params['heading_start'],
+            params['point_end'], params['heading_end'])
 
         # Transform end point to local coordinates, constrain and transform back
-        point_end_local = self.matrix_world.inverted() @ point_end
-        if point_end_local.x < 0:
-            point_end_local.x = 0
-        point_end_global = self.matrix_world @ point_end_local
+        if self.point_end_local.x < 0:
+            self.point_end_local.x = 0
+        point_end_global = self.matrix_world @ self.point_end_local
 
         # Calculate geometry
-        self.geometry_base = Arc(point_end_local)
+        self.geometry_base = Arc(self.point_end_local)
 
         # Remember geometry parameters
-        self.params = {'curve': 'arc',
-                       'point_start': point_start,
-                       'heading_start': heading_start,
-                       'point_end': point_end_global,
-                       'heading_end': heading_start + self.geometry_base.heading_end,
-                       'angle': self.geometry_base.angle,
-                       'curvature': self.geometry_base.curvature,
-                       'length': self.geometry_base.length}
+        self.params['curve'] = 'arc'
+        self.params['point_start'] = params['point_start']
+        self.params['heading_start'] = params['heading_start']
+        self.params['point_end'] = point_end_global
+        self.params['heading_end'] = params['heading_start'] + self.geometry_base.heading_end
+        self.params['curvature_start'] = self.geometry_base.curvature
+        self.params['curvature_end'] = self.geometry_base.curvature
+        self.params['length'] = self.geometry_base.length
 
-    def sample_local(self, s, t_vec):
+    def sample_plan_view(self, s):
         angle_s = s / self.geometry_base.radius
         if self.geometry_base.determinant > 0:
-            x_s_0 = cos(angle_s + self.geometry_base.offset_angle - pi/2) \
+            x_s = cos(angle_s + self.geometry_base.offset_angle - pi/2) \
                     * self.geometry_base.radius
-            y_s_0 = sin(angle_s + self.geometry_base.offset_angle - pi/2) \
+            y_s = sin(angle_s + self.geometry_base.offset_angle - pi/2) \
                     * self.geometry_base.radius + self.geometry_base.offset_y
             hdg_t = angle_s + pi/2
         else:
-            x_s_0 = cos(-angle_s + self.geometry_base.offset_angle - pi/2) \
+            x_s = cos(-angle_s + self.geometry_base.offset_angle - pi/2) \
                     * self.geometry_base.radius
-            y_s_0 = sin(-angle_s + self.geometry_base.offset_angle - pi/2) \
+            y_s = sin(-angle_s + self.geometry_base.offset_angle - pi/2) \
                     * self.geometry_base.radius + self.geometry_base.offset_y
             hdg_t = -angle_s + pi/2
-        vector_hdg_t = Vector((1.0, 0.0))
-        vector_hdg_t.rotate(Matrix.Rotation(hdg_t, 2))
-        xyz = []
-        for t in t_vec:
-            xy_vec = Vector((x_s_0, y_s_0)) + t * vector_hdg_t
-            xyz += [(xy_vec.x, xy_vec.y, 0)]
-        return xyz, self.geometry_base.curvature
+        curvature = self.geometry_base.curvature
+        return x_s, y_s, curvature, hdg_t

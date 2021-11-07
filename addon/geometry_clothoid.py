@@ -20,36 +20,29 @@ from math import pi
 
 class DSC_geometry_clothoid(DSC_geometry):
 
-    def update(self, point_start, heading_start, point_end, heading_end):
+    def update_plan_view(self, params):
         # Calculate transform between global and local coordinates
-        self.update_local_to_global(point_start, heading_start)
-        point_end_local = self.matrix_world.inverted() @ point_end
-        heading_end_local = heading_end - heading_start
+        self.update_local_to_global(params['point_start'], params['heading_start'],
+            params['point_end'], params['heading_end'])
 
         # Calculate geometry
         self.geometry_base = Clothoid.G1Hermite(0, 0, 0,
-            point_end_local.x, point_end_local.y, heading_end_local)
+            self.point_end_local.x, self.point_end_local.y, self.heading_end_local)
 
         # Remember geometry parameters
-        self.params = {'curve': 'spiral',
-                       'point_start': point_start,
-                       'heading_start': heading_start,
-                       'point_end': point_end,
-                       'heading_end': heading_start + self.geometry_base.ThetaEnd,
-                       'length': self.geometry_base.length,
-                       'curvature_start': self.geometry_base.KappaStart,
-                       'curvature_end': self.geometry_base.KappaEnd,
-                       'angle_end': self.geometry_base.ThetaEnd,}
+        self.params['curve'] = 'spiral'
+        self.params['point_start'] = params['point_start']
+        self.params['heading_start'] = params['heading_start']
+        self.params['point_end'] = params['point_end']
+        self.params['heading_end'] = params['heading_start'] + self.geometry_base.ThetaEnd
+        self.params['length'] = self.geometry_base.length
+        self.params['curvature_start'] = self.geometry_base.KappaStart
+        self.params['curvature_end'] = self.geometry_base.KappaEnd
+        self.params['angle_end'] = self.geometry_base.ThetaEnd
 
-    def sample_local(self, s, t_vec):
+    def sample_plan_view(self, s):
+        x_s = self.geometry_base.X(s)
+        y_s = self.geometry_base.Y(s)
         curvature = self.geometry_base.KappaStart + self.geometry_base.dk * s
-        x_s_0 = self.geometry_base.X(s)
-        y_s_0 = self.geometry_base.Y(s)
         hdg_t = self.geometry_base.Theta(s) + pi/2
-        vector_hdg_t = Vector((1.0, 0.0))
-        vector_hdg_t.rotate(Matrix.Rotation(hdg_t, 2))
-        xyz = []
-        for t in t_vec:
-            xy_vec = Vector((x_s_0, y_s_0)) + t * vector_hdg_t
-            xyz += [(xy_vec.x, xy_vec.y, 0)]
-        return xyz, curvature
+        return x_s, y_s, curvature, hdg_t

@@ -75,29 +75,33 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
         # Update on move
         if event.type == 'MOUSEMOVE':
             # Snap to existing objects if any, otherwise xy plane
-            self.hit, self.hit_obj_name, cp_type, self.point_selected, self.heading_selected = \
-                helpers.raycast_mouse_to_object_else_xy(context, event, filter=self.snap_filter)
-            context.scene.cursor.location = self.point_selected
+            self.snapped, self.params_snap = helpers.mouse_to_object_params(
+                context, event, filter=self.snap_filter)
+            if self.snapped:
+                self.selected_point = self.params_snap['point']
+            else:
+                self.selected_point = helpers.mouse_to_xy_parallel_plane(context, event, 0)
+            context.scene.cursor.location = self.selected_point
             # CTRL activates grid snapping if not snapped to object
-            if event.ctrl and not self.hit:
+            if event.ctrl and not self.snapped:
                 bpy.ops.view3d.snap_cursor_to_grid()
-                self.point_selected = context.scene.cursor.location
+                self.selected_point = context.scene.cursor.location
         # Select object and trajectory points
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_OBJECT':
-                    if self.hit:
-                        self.point_start = self.point_selected.copy()
-                        self.trajectory_points.append(self.point_selected.copy())
+                    if self.snapped:
+                        self.point_start = self.selected_point
+                        self.trajectory_points.append(self.selected_point.copy())
                         self.create_trajectory_temp(context)
-                        self.trajectory_owner_name = self.hit_obj_name
+                        self.trajectory_owner_name = self.params_snap['obj_id']
                         helpers.select_activate_object(context, self.trajectory)
                         self.state = 'SELECT_POINT'
                         return {'RUNNING_MODAL'}
                     else:
                         self.report({'INFO'}, "Select dynamic OpenSCENARIO object.")
                 if self.state == 'SELECT_POINT':
-                    self.trajectory_points.append(self.point_selected.copy())
+                    self.trajectory_points.append(self.selected_point.copy())
                     self.update_trajectory(context)
                     return {'RUNNING_MODAL'}
         elif event.type in {'RET'}:
@@ -121,6 +125,31 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
             if self.state == 'SELECT_OBJECT':
                 self.clean_up(context)
                 return {'FINISHED'}
+        # Elevation adjustment from current point of view
+        elif event.type == 'E':
+            if event.value == 'PRESS':
+                if self.adjust_elevation == 'DISABLED':
+                    self.adjust_elevation = 'GENERIC'
+            elif event.value == 'RELEASE':
+                self.adjust_elevation = 'DISABLED'
+        # Toggle side view for elevation adjustment
+        elif event.type == 'S':
+            if event.value == 'PRESS':
+                if self.adjust_elevation == 'DISABLED':
+                    # Remember previous view
+                    self.view_memory.remember_view(context)
+                    if self.stencil is not None:
+                        # Look at current object from the side, perpendicular to z-axis
+                        view3d = context.space_data
+                        bpy.ops.view3d.view_axis(type='LEFT', align_active=False, relative=False)
+                        region_view3d = view3d.region_3d
+                        region_view3d.view_rotation.rotate(Euler((0, 0, self.stencil.rotation_euler.z + pi/2)))
+                    self.adjust_elevation = 'SIDEVIEW'
+            elif event.value == 'RELEASE':
+                if self.adjust_elevation == 'SIDEVIEW':
+                    # Restore previous view
+                    self.view_memory.restore_view(context)
+                self.adjust_elevation = 'DISABLED'
         # Exit immediately
         elif event.type in {'ESC'}:
             self.remove_trajectory_temp(context)

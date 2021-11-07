@@ -73,18 +73,18 @@ class DSC_OT_object_car(DSC_OT_two_point_base):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
-        if self.point_start == self.point_selected_end:
+        if self.params_input['point_start'] == self.params_input['point_end']:
             if not for_stencil:
                 self.report({'WARNING'}, 'Start and end point can not be the same!')
             valid = False
             return valid, None, {}
-        vector_start_end = self.point_selected_end - self.point_start
+        vector_start_end = self.params_input['point_end'] - self.params_input['point_start']
         heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
-        self.params = {'point_start': self.point_start,
+        self.params = {'point_start': self.params_input['point_start'],
                   'heading_start': heading,
-                  'point_end': self.point_selected_end}
+                  'point_end': self.params_input['point_end']}
         vertices, edges, faces = self.get_vertices_edges_faces()
-        mat_translation = Matrix.Translation(self.point_start)
+        mat_translation = Matrix.Translation(self.params_input['point_start'])
         mat_rotation = Matrix.Rotation(heading, 4, 'Z')
         matrix_world = mat_translation @ mat_rotation
         # Create blender mesh

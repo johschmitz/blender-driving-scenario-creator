@@ -99,6 +99,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     width_shoulder: bpy.props.FloatProperty(default=1.5, min=0.01, max=10.0, step=1)
     width_none: bpy.props.FloatProperty(default=2.5, min=0.01, max=10.0, step=1)
 
+    design_speed: bpy.props.FloatProperty(default=130.0, min=1.00, max=400.0, step=1)
+
     num_lanes_left: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_strips)
     num_lanes_right: bpy.props.IntProperty(default=2, min=1, max=20, update=callback_strips)
 

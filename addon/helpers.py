@@ -175,43 +175,65 @@ def remove_duplicate_vertices(context, obj):
                 use_unselected=True, use_sharp_edge_from_normals=False)
     bpy.ops.object.editmode_toggle()
 
-def mouse_to_xy_plane(context, event):
+def get_mouse_vectors(context, event):
     '''
-        Convert mouse pointer position to 3D point in xy-plane.
+        Return view vector and ray origin of mouse pointer position.
     '''
     region = context.region
     rv3d = context.region_data
     co2d = (event.mouse_region_x, event.mouse_region_y)
     view_vector_mouse = region_2d_to_vector_3d(region, rv3d, co2d)
     ray_origin_mouse = region_2d_to_origin_3d(region, rv3d, co2d)
+    return view_vector_mouse, ray_origin_mouse
+
+def mouse_to_xy_parallel_plane(context, event, z):
+    '''
+        Convert mouse pointer position to 3D point in plane parallel to xy-plane
+        at height z.
+    '''
+    view_vector_mouse, ray_origin_mouse = get_mouse_vectors(context, event)
     point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
-        (0, 0, 0), (0, 0, 1), False)
+        (0, 0, z), (0, 0, 1), False)
     # Fix parallel plane issue
     if point is None:
         point = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
             (0, 0, 0), view_vector_mouse, False)
     return point
 
-def raycast_mouse_to_dsc_object(context, event, obj_type):
+def mouse_to_elevation(context, event, point):
+    '''
+        Convert mouse pointer position to elevation above point projected to xy plane.
+    '''
+    view_vector_mouse, ray_origin_mouse = get_mouse_vectors(context, event)
+    point_elevation = intersect_line_plane(ray_origin_mouse, ray_origin_mouse + view_vector_mouse,
+        point.to_2d().to_3d(), view_vector_mouse.to_2d().to_3d(), False)
+    if point_elevation == None:
+        return 0
+    else:
+        return point_elevation.z
+
+def raycast_mouse_to_object(context, event, filter=None):
     '''
         Convert mouse pointer position to hit obj of DSC type.
     '''
-    region = context.region
-    rv3d = context.region_data
-    co2d = (event.mouse_region_x, event.mouse_region_y)
-    view_vector_mouse = region_2d_to_vector_3d(region, rv3d, co2d)
-    ray_origin_mouse = region_2d_to_origin_3d(region, rv3d, co2d)
+    view_vector_mouse, ray_origin_mouse = get_mouse_vectors(context, event)
     hit, point, normal, index_face, obj, matrix_world = context.scene.ray_cast(
         depsgraph=context.view_layer.depsgraph,
         origin=ray_origin_mouse,
         direction=view_vector_mouse)
     # Filter object type
     if hit:
-        if 'dsc_category' in obj:
-            return True, point, obj
+        if filter is not None:
+            # Return hit only if not filtered out
+            if filter in obj:
+                return True, point, obj
+            else:
+                return False, point, None
         else:
-            return False, point, None
+            # No filter, return any hit
+            return True, point, obj
     else:
+        # No hit
         return False, point, None
 
 def point_to_road_connector(obj, point):
@@ -221,9 +243,11 @@ def point_to_road_connector(obj, point):
     dist_start = (Vector(obj['cp_start']) - point).length
     dist_end = (Vector(obj['cp_end']) - point).length
     if dist_start < dist_end:
-        return 'cp_start', Vector(obj['cp_start']), obj['geometry']['heading_start'] - pi
+        return 'cp_start', Vector(obj['cp_start']), obj['geometry']['heading_start'] - pi, \
+            obj['geometry']['curvature_start'], obj['geometry']['slope_start']
     else:
-        return 'cp_end', Vector(obj['cp_end']), obj['geometry']['heading_end']
+        return 'cp_end', Vector(obj['cp_end']), obj['geometry']['heading_end'], \
+            obj['geometry']['curvature_end'], obj['geometry']['slope_end']
 
 def point_to_junction_connector(obj, point):
     '''
@@ -258,34 +282,54 @@ def project_point_vector(point_start, heading_start, point_selected):
     else:
         return point_selected
 
-def raycast_mouse_to_object_else_xy(context, event, filter):
+def mouse_to_object_params(context, event, filter):
     '''
-        Get a snapping point and heading or just an xy-plane intersection point,
-        filter for certain mesh category.
+        Check if an object is hit and return a connection (snapping) point. In
+        case of OpenDRIVE objects including heading, curvature and slope. Filter
+        may be used to distinguish between OpenDRIVE, OpenSCENARIO and any
+        object (set filter to None).
     '''
-    dsc_hit, point_raycast, obj = raycast_mouse_to_dsc_object(context, event, obj_type='line')
-    if not dsc_hit:
-        point_raycast = mouse_to_xy_plane(context, event)
-        return False, None, 'cp_none', point_raycast, 0
+    # Initialize with some defaults in case nothing is hit
+    hit = False
+    obj_id = None
+    point_type = None
+    snapped_point = Vector((0.0,0.0,0.0))
+    heading = 0
+    curvature = 0
+    slope = 0
+    # Do the raycasting
+    if filter is None:
+        dsc_hit, point_raycast, obj = raycast_mouse_to_object(context, event, filter=None)
     else:
+        dsc_hit, point_raycast, obj = raycast_mouse_to_object(context, event, filter='dsc_category')
+    if dsc_hit:
         # DSC mesh hit
         if filter == 'OpenDRIVE':
             if obj['dsc_category'] == 'OpenDRIVE':
                 if obj['dsc_type'] == 'road':
-                    cp_type, cp, heading = point_to_road_connector(obj, point_raycast)
-                    id_xodr = obj['id_xodr']
-                    return True, id_xodr, cp_type, cp, heading
+                    hit = True
+                    point_type, snapped_point, heading, curvature, slope = point_to_road_connector(obj, point_raycast)
+                    obj_id = obj['id_xodr']
                 if obj['dsc_type'] == 'junction':
-                    cp_type, cp, heading = point_to_junction_connector(obj, point_raycast)
-                    id_xodr = obj['id_xodr']
-                    return True, id_xodr, cp_type, cp, heading
+                    hit = True
+                    point_type, snapped_point, heading = point_to_junction_connector(obj, point_raycast)
+                    obj_id = obj['id_xodr']
         elif filter == 'OpenSCENARIO':
             if obj['dsc_category'] == 'OpenSCENARIO':
-                cp_type, cp, heading = point_to_object_connector(obj, point_raycast)
-                obj_name = obj.name
-                return True, obj_name, cp_type, cp, heading
-        # Catch all filtered cases
-        return False, None, 'cp_none', point_raycast, 0
+                hit = True
+                point_type, snapped_point, heading = point_to_object_connector(obj, point_raycast)
+                obj_id = obj.name
+        elif filter == None:
+            hit = True
+            point_type = 'ray_hit'
+            snapped_point = point_raycast
+            obj_id = obj.name
+    return hit ,{'obj_id': obj_id,
+                'point': snapped_point,
+                'type': point_type,
+                'heading': heading,
+                'curvature': curvature,
+                'slope': slope}
 
 def assign_road_materials(obj):
     '''
@@ -352,6 +396,21 @@ def replace_mesh(obj, mesh):
     bm.free()
     # Set new mesh data
     obj.data = mesh
+
+def triangulate_quad_mesh(obj):
+    '''
+        Triangulate then quadify the ngon mesh of an object.
+    '''
+    # Triangulate
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.to_mesh(obj.data)
+    bm.free()
+    # Tris to quads is missing in bmesh so use bpy.ops.mesh instead
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.tris_convert_to_quads(materials=True)
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 def kmh_to_ms(speed):
     return speed / 3.6

@@ -63,12 +63,15 @@ class DSC_OT_road(DSC_OT_two_point_base):
             # Make it active for the user to see what he created last
             helpers.select_activate_object(context, obj)
 
+            # Convert the ngons to tris and quads to get a defined surface for elevated roads
+            helpers.triangulate_quad_mesh(obj)
+
             # Metadata
             obj['dsc_category'] = 'OpenDRIVE'
             obj['dsc_type'] = 'road'
 
             # Remember connecting points for road snapping
-            obj['cp_start'] = self.point_start
+            obj['cp_start'] = self.geometry.params['point_start']
             obj['cp_end'] = self.geometry.params['point_end']
 
             # Set OpenDRIVE custom properties
@@ -92,21 +95,9 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
             Calculate and return the vertices, edges, faces and parameters to create a road mesh.
         '''
-        if self.snapped_start:
-            # Constrain point end
-            point_end = self.constrain_point_end(self.point_start, self.heading_start,
-                self.point_selected_end)
-        else:
-            point_end = self.point_selected_end
-        if self.point_start == point_end:
-            if not for_stencil:
-                self.report({'WARNING'}, 'Start and end point can not be the same!')
-            valid = False
-            return valid, None, None, None
-
         # Update based on selected points
         self.update_lane_params(context)
-        self.geometry.update(self.point_start, self.heading_start, point_end, self.heading_end)
+        self.geometry.update(self.params_input)
 
         # Get values in t and s direction where the faces of the road start and end
         strips = context.scene.road_properties.strips
@@ -124,12 +115,6 @@ class DSC_OT_road(DSC_OT_two_point_base):
             mesh.from_pydata(vertices, edges, [])
         valid = True
         return valid, mesh, self.geometry.matrix_world, materials
-
-    def constrain_point_end(self, point_start, heading_start, point_selected_end):
-        '''
-            Constrain the endpoint if necessary.
-        '''
-        raise NotImplementedError()
 
     def update_lane_params(self, context):
         road_properties = context.scene.road_properties
@@ -207,8 +192,6 @@ class DSC_OT_road(DSC_OT_two_point_base):
         # Calculate line parameters
         # TODO offset must be provided by predecessor road for each marking
         length = self.geometry.params['length']
-        # TODO make hardcoded cut length configurable
-        cut_length_lane = 100
         offset = 0.5
         if offset < road_properties.length_broken_line:
             offset_first = offset
@@ -234,35 +217,23 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 else:
                     length_last = length_first
             else:
-                if not (strip.type == 'line' and strip.type_road_mark == 'none'):
-                    # We need to subdivide long faces to avoid rendering issues
-                    num_faces_strip = int(length // cut_length_lane)
-                    if length % cut_length_lane > 0:
-                        num_faces_strip += 1
-                else:
-                    num_faces_strip = 1
+                num_faces_strip = 1
 
             # Go in s direction along strip and calculate the start and stop values
             s_values_strip = [0]
             for idx_face_strip in range(num_faces_strip):
                 # Calculate end points of the faces
-                # s_start = 0
-                if idx_face_strip < num_faces_strip-1:
-                    s_stop = (idx_face_strip + 1) * cut_length_lane
-                else:
-                    s_stop = length
+                s_stop = length
                 if strip.type_road_mark == 'broken':
                     if idx_face_strip == 0:
                         # First piece
                         s_stop = length_first
                     elif idx_face_strip > 0 and idx_face_strip + 1 == num_faces_strip:
                         # Last piece and more than one piece
-                        # s_start = idx_face_strip * road_properties.length_broken_line - offset_first
                         s_stop = length_first + (idx_face_strip - 1) * road_properties.length_broken_line \
                             + length_last
                     else:
                         # Middle piece
-                        # s_start = idx_face_strip * road_properties.length_broken_line - offset_first
                         s_stop = length_first + idx_face_strip * road_properties.length_broken_line
                 s_values_strip.append(s_stop)
             s_values.append((line_toggle_start, s_values_strip))
@@ -276,7 +247,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
         s = 0
         idx_boundaries_strips = [0]*len(strips_s_boundaries)
         # Obtain first curvature value
-        xyz_samples, c = self.geometry.sample_local(0, strips_t_values)
+        xyz_samples, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values)
         # We need 2 vectors for each strip to later construct the faces with one
         # list per face on each side of each strip
         sample_points = [[[]] for _ in range(2 * len(strips_s_boundaries))]
@@ -287,20 +258,17 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 sample_points[2*idx_strip+1][0].append((0, strips_t_values[idx_strip+1], 0))
         # Concatenate vertices until end of road
         while s < length:
-            if self.geometry.params['curve'] == 'line':
-                # Directly jump to the end of the road
-                s = length
             # TODO: Make hardcoded sampling parameters configurable
-            if c == 0:
+            if curvature_abs == 0:
                 step = 5
             else:
-                step = max(1, min(5, 0.1/abs(c)))
+                step = max(1, min(5, 0.1/abs(curvature_abs)))
             s += step
             if s >= length:
                 s = length
 
             # Sample next points along road geometry (all t values for current s value)
-            xyz_samples, c = self.geometry.sample_local(s, strips_t_values)
+            xyz_samples, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values)
 
             for idx_strip, strip in enumerate(strips):
                 # Get the boundaries of road marking faces for current strip plus left and right
@@ -323,7 +291,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                     while smaller:
                         # Sample the geometry
                         t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip+1]]
-                        xyz_boundary, c = self.geometry.sample_local(
+                        xyz_boundary, curvature_abs = self.geometry.sample_cross_section(
                             s_boundaries_next[idx_smaller], t_values)
                         if idx_smaller == 0:
                             # Append left extra point

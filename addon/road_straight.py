@@ -33,11 +33,3 @@ class DSC_OT_road_straight(DSC_OT_road):
 
     geometry = DSC_geometry_line()
     params = {}
-
-    def constrain_point_end(self, point_start, heading_start, point_selected_end):
-        '''
-            Constrain the endpoint if necessary.
-        '''
-        point_end = helpers.project_point_vector(self.point_start, self.heading_start,
-            self.point_selected_end)
-        return point_end

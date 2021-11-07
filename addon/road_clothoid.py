@@ -31,9 +31,3 @@ class DSC_OT_road_clothoid(DSC_OT_road):
     snap_filter = 'OpenDRIVE'
 
     geometry = DSC_geometry_clothoid()
-
-    def constrain_point_end(self, point_start, heading_start, point_selected_end):
-        '''
-            Constrain the endpoint if necessary.
-        '''
-        return point_selected_end

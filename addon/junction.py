@@ -66,6 +66,7 @@ class DSC_OT_junction(DSC_OT_two_point_base):
             obj['hdg_down'] = self.params['hdg_down']
             obj['hdg_right'] = self.params['hdg_right']
             obj['hdg_up'] = self.params['hdg_up']
+            obj['elevation_level'] = self.params['point_start'].z
 
             obj['incoming_roads'] = {}
 
@@ -76,19 +77,19 @@ class DSC_OT_junction(DSC_OT_two_point_base):
             Calculate and return the vertices, edges and faces to create a road
             mesh and road parameters.
         '''
-        if self.snapped_start:
+        if self.params_input['connected_start']:
             # Constrain point end
-            point_end = helpers.project_point_vector(self.point_start, self.heading_start,
-                self.point_selected_end)
+            point_end = helpers.project_point_vector(self.params_input['point_start'],
+                self.params_input['heading_start'], self.params_input['point_end'])
         else:
-            point_end = self.point_selected_end
-        if self.point_start == point_end:
+            point_end = self.params_input['point_end']
+        if self.params_input['point_start'] == point_end:
             if not for_stencil:
                 self.report({'WARNING'}, 'Start and end point can not be the same!')
             valid = False
             return valid, None, None, None
         # Parameters
-        vector_start_end = point_end - self.point_start
+        vector_start_end = point_end - self.params_input['point_start']
         vector_1_0 = Vector((1.0, 0.0))
         heading = vector_start_end.to_2d().angle_signed(vector_1_0)
         vector_hdg_left = Vector((-1.0, 0.0))
@@ -103,7 +104,7 @@ class DSC_OT_junction(DSC_OT_two_point_base):
         hdg_down = vector_hdg_down.angle_signed(vector_1_0)
         hdg_right = vector_hdg_right.angle_signed(vector_1_0)
         hdg_up = vector_hdg_up.angle_signed(vector_1_0)
-        self.params = {'point_start': self.point_start,
+        self.params = {'point_start': self.params_input['point_start'],
                        'hdg_left': hdg_left,
                        'hdg_down': hdg_down,
                        'hdg_right': hdg_right,
@@ -126,9 +127,9 @@ class DSC_OT_junction(DSC_OT_two_point_base):
             # Make sure we define faces counterclockwise for correct normals
             faces = [[0, 1, 2, 3, 4, 5, 6, 7]]
         # Shift origin to connection point
-        if self.snapped_start:
+        if self.params_input['connected_start']:
             vertices[:] = [(v[0] + 3.95, v[1], v[2]) for v in vertices]
-        mat_translation = Matrix.Translation(self.point_start)
+        mat_translation = Matrix.Translation(self.params_input['point_start'])
         mat_rotation = Matrix.Rotation(heading, 4, 'Z')
         matrix_world = mat_translation @ mat_rotation
         # Create blender mesh

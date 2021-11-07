@@ -94,6 +94,11 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
             row = box_params.row(align=True)
             row.label(text='Width none (offroad lane):')
             row.prop(context.scene.road_properties, 'width_none', text='')
+            row = box_params.row(align=True)
+
+            row = box_params.row(align=True)
+            row.label(text='Design speed:')
+            row.prop(context.scene.road_properties, 'design_speed', text='')
 
         row = box.row(align=True)
         row.label(text='Number of lanes:')

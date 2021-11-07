@@ -245,14 +245,15 @@ class DSC_OT_export(bpy.types.Operator):
                     if obj['geometry']['curve'] == 'line':
                         geometry = xodr.Line(obj['geometry']['length'])
                     if obj['geometry']['curve'] == 'arc':
-                        geometry = xodr.Arc(obj['geometry']['curvature'],
-                            angle=obj['geometry']['angle'])
+                        geometry = xodr.Arc(obj['geometry']['curvature_start'],
+                            length=obj['geometry']['length'])
                     if obj['geometry']['curve'] == 'spiral':
                         geometry = xodr.Spiral(obj['geometry']['curvature_start'],
                             obj['geometry']['curvature_end'], length=obj['geometry']['length'])
                     planview.add_geometry(geometry)
                     lanes = self.create_lanes(obj)
                     road = xodr.Road(obj['id_xodr'],planview,lanes)
+                    self.add_elevation_profiles(obj, road)
                     # Add road level linking
                     if 'link_predecessor' in obj:
                         element_type = self.get_element_type_by_id(obj['link_predecessor'])
@@ -308,6 +309,7 @@ class DSC_OT_export(bpy.types.Operator):
                     # Create connecting roads and link them to incoming roads
                     junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
                         spiral_part=0.01, arc_part=0.99, startnum=1000+6*num_junctions, lane_width=3.75)
+                    self.add_junction_roads_elevation(junction_roads, obj['elevation_level'])
                     i = 0
                     for j in range(len(incoming_roads) - 1):
                         for k in range(j + 1, len(incoming_roads)):
@@ -468,3 +470,30 @@ class DSC_OT_export(bpy.types.Operator):
             distance = (positions[idx].co - positions[idx+1].co).length
             times.append(times[idx] + distance/speed)
         return times
+
+    def add_elevation_profiles(self, obj, road):
+        '''
+            Add elevation profiles to road
+        '''
+        z_global = obj['geometry']['point_start'][2]
+        print("z_global:", z_global)
+        for profile in obj['geometry']['elevation']:
+            # Shift each elevation profile to start at s=0 (use substitution)
+            # SageMath code:
+            #   sage: s, a, b, c, d, h, shift = var('s, a, b, c, d, h, shift');
+            #   sage: eq = (a + b * s + c * s^2 + d * s^3 == h);
+            #   sage: eq.substitute(s=s+shift).expand()
+            shift = profile['s']
+            a = profile['a'] + z_global
+            b = profile['b']
+            c = profile['c']
+            d = profile['d']
+            a_shifted = a + b * shift + c * shift**2 + d * shift**3
+            b_shifted = b + 2 * c * shift + 3 * d * shift**2
+            c_shifted = c + 3 * d * shift
+            d_shifted = d
+            road.add_elevation(profile['s'], a_shifted, b_shifted, c_shifted, d_shifted)
+
+    def add_junction_roads_elevation(self, junction_roads, elevation_level):
+        for road in junction_roads:
+            road.add_elevation(s=0, a=elevation_level, b=0, c=0, d=0)
