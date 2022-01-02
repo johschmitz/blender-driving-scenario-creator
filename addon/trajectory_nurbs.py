@@ -49,7 +49,7 @@ class DSC_OT_trajectory_nurbs(DSC_OT_trajectory_base):
 
     def get_curve(self):
         curve = bpy.data.curves.new('curve_nurbs', 'CURVE')
-        curve.dimensions = '2D'
+        curve.dimensions = '3D'
 
         nurbs = curve.splines.new('NURBS')
         nurbs.use_endpoint_u = True

@@ -218,7 +218,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                 self.params_input['point_start'] = self.selected_point.copy()
                 self.params_input['heading_start'] = self.selected_heading
                 if self.params_snap['type'] is not None:
-                    if self.params_snap['type'] != 'ray_hit':
+                    if self.params_snap['type'] != 'surface':
                         self.params_input['connected_start'] = True
                 else:
                     self.params_input['connected_start'] = False
@@ -227,7 +227,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             if self.state == 'SELECT_END':
                 self.params_input['point_end'] = self.selected_point.copy()
                 if self.params_snap['type'] is not None:
-                    if self.params_snap['type'] != 'ray_hit':
+                    if self.params_snap['type'] != 'surface':
                         self.params_input['connected_end'] = True
                         self.params_input['heading_end'] = self.selected_heading + pi
                         self.params_input['curvature_end'] = self.selected_curvature

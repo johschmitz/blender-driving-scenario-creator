@@ -319,9 +319,9 @@ def mouse_to_object_params(context, event, filter):
                 hit = True
                 point_type, snapped_point, heading = point_to_object_connector(obj, point_raycast)
                 obj_id = obj.name
-        elif filter == None:
+        elif filter == 'surface':
             hit = True
-            point_type = 'ray_hit'
+            point_type = 'surface'
             snapped_point = point_raycast
             obj_id = obj.name
     return hit ,{'obj_id': obj_id,

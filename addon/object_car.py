@@ -32,7 +32,7 @@ class DSC_OT_object_car(DSC_OT_two_point_base):
 
     # Do not snap to other xodr or xosc objects in scene
     # TODO snap to road contact points, requires a lot of work
-    snap_filter = None
+    snap_filter = 'surface'
 
     def create_object(self, context):
         '''

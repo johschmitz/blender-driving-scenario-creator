@@ -75,12 +75,20 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
         # Update on move
         if event.type == 'MOUSEMOVE':
             # Snap to existing objects if any, otherwise xy plane
-            self.snapped, self.params_snap = helpers.mouse_to_object_params(
-                context, event, filter=self.snap_filter)
+            if self.state == 'SELECT_OBJECT':
+                # Start of trajectory should be an OpenSCENARIO object
+                self.snapped, self.params_snap = helpers.mouse_to_object_params(
+                    context, event, filter=self.snap_filter)
+            else:
+                # For remaining trajectory points use any surface point
+                self.snapped, self.params_snap = helpers.mouse_to_object_params(
+                    context, event, filter='surface')
             if self.snapped:
                 self.selected_point = self.params_snap['point']
             else:
                 self.selected_point = helpers.mouse_to_xy_parallel_plane(context, event, 0)
+            # Move point up about height of rear axle
+            self.selected_point.z += 0.3
             context.scene.cursor.location = self.selected_point
             # CTRL activates grid snapping if not snapped to object
             if event.ctrl and not self.snapped:
@@ -138,12 +146,9 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
                 if self.adjust_elevation == 'DISABLED':
                     # Remember previous view
                     self.view_memory.remember_view(context)
-                    if self.stencil is not None:
-                        # Look at current object from the side, perpendicular to z-axis
-                        view3d = context.space_data
-                        bpy.ops.view3d.view_axis(type='LEFT', align_active=False, relative=False)
-                        region_view3d = view3d.region_3d
-                        region_view3d.view_rotation.rotate(Euler((0, 0, self.stencil.rotation_euler.z + pi/2)))
+                    # Look at current object from the side, perpendicular to z-axis
+                    view3d = context.space_data
+                    bpy.ops.view3d.view_axis(type='LEFT', align_active=False, relative=False)
                     self.adjust_elevation = 'SIDEVIEW'
             elif event.value == 'RELEASE':
                 if self.adjust_elevation == 'SIDEVIEW':
