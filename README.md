@@ -58,10 +58,12 @@ When you are in the Blender "Layout" workspace press <kbd>N</kbd> or click the
 little arrow next to the navigation gizmo to toggle the sidebar. Click
 <kbd>Driving Scenario Creator</kbd> in the sidebar. From here you can create
 roads and vehicles using the mouse by clicking the buttons in the "Driving
-Scenario Creator" menu. Add additional Blender objects as desired. Then export
-everything together by clicking <kbd>Export driving scenario</kbd>. Choose a
-**directory** and a 3D file format (.fbx, .gltf, .osgb) for the export and
-confirm.
+Scenario Creator" menu. Roads, vehicles and trajectories can be placed with the
+mouse. Road elevation can be controlled with <kbd>E</kbd>(perspective) or
+<kbd>S</kbd>(sideview) keys. Add additional Blender objects as desired. When
+ready, export everything together by clicking <kbd>Export driving
+scenario</kbd>. Choose a **directory** and a 3D file format (.fbx, .gltf, .osgb)
+for the export and confirm.
 
 ## How to run exported scenarios
 
