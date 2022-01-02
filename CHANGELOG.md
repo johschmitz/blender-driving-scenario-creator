@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.8.0] - 2022-01-02
+
+### Added
+- Modifying elevation of roads using <kbd>E</kbd>(perspective) or
+  <kbd>S</kbd>(sideview) key
+- Trajectory operators can be used on elevated roads
+
+### Changed
+- Limit start and end endpoint to be not more than 10km apart
+
 ## [0.7.2] - 2021-11-07
 
 ### Fixed
@@ -83,7 +93,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.6.0...v0.7.0
