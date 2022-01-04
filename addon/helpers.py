@@ -241,12 +241,18 @@ def point_to_road_connector(obj, point):
         Get a snapping point and heading from an existing road.
     '''
     dist_start = (Vector(obj['cp_start']) - point).length
-    dist_end = (Vector(obj['cp_end']) - point).length
-    if dist_start < dist_end:
+    dist_end_l = (Vector(obj['cp_end_l']) - point).length
+    dist_end_r = (Vector(obj['cp_end_r']) - point).length
+    distances = [dist_start, dist_end_l, dist_end_r]
+    arg_min_dist = distances.index(min(distances))
+    if arg_min_dist == 0:
         return 'cp_start', Vector(obj['cp_start']), obj['geometry']['heading_start'] - pi, \
             obj['geometry']['curvature_start'], obj['geometry']['slope_start']
+    elif arg_min_dist == 1:
+        return 'cp_end', Vector(obj['cp_end_l']), obj['geometry']['heading_end'], \
+            obj['geometry']['curvature_end'], obj['geometry']['slope_end']
     else:
-        return 'cp_end', Vector(obj['cp_end']), obj['geometry']['heading_end'], \
+        return 'cp_end', Vector(obj['cp_end_r']), obj['geometry']['heading_end'], \
             obj['geometry']['curvature_end'], obj['geometry']['slope_end']
 
 def point_to_junction_connector(obj, point):

@@ -61,6 +61,14 @@ params_cross_section = {
         'road_mark_weights' : ['none', 'none', 'none', 'none', 'none', 'none', 'standard', 'none', 'standard', 'none', 'standard', 'none', 'bold', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'bold', 'none', 'standard', 'none', 'standard', 'none', 'standard', 'none', 'none', 'none', 'none', 'none', 'none'],
         'road_mark_colors' : ['none', 'none', 'none', 'none', 'none', 'none', 'white', 'none', 'white', 'none', 'white', 'none', 'white', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'white', 'none', 'white', 'none', 'white', 'none', 'white', 'none', 'none', 'none', 'none', 'none', 'none'],
     },
+    'eka1_rq36_exit_right' : {
+        'directions' : ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
+        'widths' : [0.0, 1.5, 0.0, 2.5, 0.0, 0.5, 0.0, 3.75, 0.0, 3.5, 0.0, 3.5, 0.0, 0.75, 0.0, 2.0, 0.0, 2.0, 0.0, 0.75, 0.0, 3.5, 0.0, 3.5, 0.0],
+        'types' : ['line', 'shoulder', 'line', 'stop', 'line', 'border', 'line', 'driving', 'line', 'driving', 'line', 'driving', 'line', 'border', 'line', 'median', 'line', 'median', 'line', 'border', 'line', 'driving', 'line', 'driving', 'line'],
+        'road_mark_types' : ['none', 'none', 'none', 'none', 'none', 'none', 'solid', 'none', 'broken', 'none', 'broken', 'none', 'solid', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'solid', 'none', 'broken', 'none', 'solid'],
+        'road_mark_weights' : ['none', 'none', 'none', 'none', 'none', 'none', 'standard', 'none', 'standard', 'none', 'standard', 'none', 'bold', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'bold', 'none', 'standard', 'none', 'standard'],
+        'road_mark_colors' : ['none', 'none', 'none', 'none', 'none', 'none', 'white', 'none', 'white', 'none', 'white', 'none', 'white', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'white', 'none', 'white', 'none', 'white'],
+    },
     'eka1_rq43_5' : {
         'directions' : ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
         'widths' : [0.0, 2.5, 0.0, 2.5, 0.0, 0.5, 0.0, 3.75, 0.0, 3.75, 0.0, 3.5, 0.0, 3.5, 0.0, 0.75, 0.0, 2.0, 0.0, 2.0, 0.0, 0.75, 0.0, 3.5, 0.0, 3.5, 0.0, 3.75, 0.0, 3.75, 0.0, 0.5, 0.0, 2.5, 0.0, 2.5, 0.0],

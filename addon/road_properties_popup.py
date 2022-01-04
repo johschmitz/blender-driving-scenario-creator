@@ -110,25 +110,36 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
         row = box.row(align=True)
         row.label(text='Number of lanes:')
         row = box.row(align=True)
-        row.label(text='Left:')
-        row.prop(context.scene.road_properties, 'num_lanes_left', text='')
+        split = row.split(factor=0.5, align=True)
+        split_sub = split.split(factor=0.3, align=True)
+        split_sub.label(text='Left:')
+        split_sub.prop(context.scene.road_properties, 'num_lanes_left', text='')
         row.separator()
-        row.label(text='Right:')
-        row.prop(context.scene.road_properties, 'num_lanes_right', text='')
+        split_sub = split.split(factor=0.3, align=True)
+        split_sub.label(text='Right:')
+        split_sub.prop(context.scene.road_properties, 'num_lanes_right', text='')
 
         row = box.row(align=True)
 
         for idx, strip in enumerate(context.scene.road_properties.strips):
             row = box.row(align=True)
-            split = row.split(factor=0.15, align=True)
+            split = row.split(factor=0.12, align=True)
             split.label(text='Strip ' + str(idx+1) + ':')
-            split = split.split(factor=0.3, align=True)
+            split = split.split(factor=0.25, align=True)
             split.prop(strip, 'type', text='')
             if context.scene.road_properties.strips[idx].type == 'line':
                 split.prop(strip, 'road_mark_type', text='')
                 split.prop(strip, 'road_mark_weight', text='')
                 split.prop(strip, 'road_mark_color', text='')
-            else:
-                split.label(text='Width')
-                split.prop(strip, 'width', text='')
                 split.separator()
+            else:
+                split = split.split(factor=0.2, align=True)
+                split.label(text='Width:')
+                # split = split.split(factor=0.4, align=True)
+                split.prop(strip, 'width', text='')
+                split = split.split(factor=0.35, align=True)
+                split.label(text='Split:')
+                if strip.split_right == False:
+                    split.prop(strip, 'split_right',icon="SORT_DESC", icon_only=True)
+                else:
+                    split.prop(strip, 'split_right',icon="SORT_ASC", icon_only=True)

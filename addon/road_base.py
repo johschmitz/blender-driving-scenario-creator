@@ -12,8 +12,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+from mathutils import Vector
 
-from .modal_two_point_base import DSC_OT_two_point_base
+from . modal_two_point_base import DSC_OT_two_point_base
+from . road_properties import get_num_split_lanes_left
 from . import helpers
 
 from math import ceil
@@ -80,9 +82,11 @@ class DSC_OT_road(DSC_OT_two_point_base):
             obj['dsc_category'] = 'OpenDRIVE'
             obj['dsc_type'] = 'road'
 
+            # Number lanes which split to the right at road end
+            obj['num_split_lanes_left'] = self.params['num_split_lanes_left']
             # Remember connecting points for road snapping
             obj['cp_start'] = self.geometry.params['point_start']
-            obj['cp_end'] = self.geometry.params['point_end']
+            obj['cp_end_l'], obj['cp_end_r']= self.get_cps_end()
 
             # Set OpenDRIVE custom properties
             obj['id_xodr'] = obj_id
@@ -140,8 +144,9 @@ class DSC_OT_road(DSC_OT_two_point_base):
 
     def update_lane_params(self, context):
         road_properties = context.scene.road_properties
-        self.params = {'lanes_right_num': road_properties.num_lanes_right,
-                       'lanes_left_num': road_properties.num_lanes_left,
+        num_split_lanes_left = get_num_split_lanes_left(road_properties)
+        self.params = {'lanes_left_num': road_properties.num_lanes_left,
+                       'lanes_right_num': road_properties.num_lanes_right,
                        'lanes_left_widths': [],
                        'lanes_right_widths': [],
                        'lanes_left_types': [],
@@ -154,7 +159,53 @@ class DSC_OT_road(DSC_OT_two_point_base):
                        'lanes_right_road_mark_colors': [],
                        'lane_center_road_mark_type': [],
                        'lane_center_road_mark_weight': [],
-                       'lane_center_road_mark_color': [],}
+                       'lane_center_road_mark_color': [],
+                       'num_split_lanes_left': num_split_lanes_left}
+
+    def get_cps_end(self):
+        '''
+            Return the two connection points for a split road. Return identical points
+            in case of no split.
+        '''
+        num_split_lanes_left = self.params['num_split_lanes_left']
+        t_cp_split = self.num_split_lanes_left_to_t(num_split_lanes_left)
+        # Calculate connection points
+        num_lanes = self.params['lanes_left_num'] + self.params['lanes_right_num']
+        if num_split_lanes_left == 0 or num_split_lanes_left == num_lanes:
+            # No split
+            return self.geometry.params['point_end'], self.geometry.params['point_end']
+        else:
+            # Split
+            cp_split = self.geometry.matrix_world @ Vector(self.geometry.sample_cross_section(
+                self.geometry.params['length'], [t_cp_split])[0][0])
+            # Check which part of the split contains the center lane, that part
+            # gets the contact point on the center lane
+            if t_cp_split < 0:
+                return self.geometry.params['point_end'], cp_split
+            else:
+                return cp_split, self.geometry.params['point_end']
+
+    def num_split_lanes_left_to_t(self, num_split_lanes_left):
+        '''
+            Convert number of lanes to the t coordinate of the left lane border.
+            Return 0 if there is no split.
+        '''
+        t_cp_split = 0
+        # Check if there really is a split
+        if num_split_lanes_left < (self.params['lanes_left_num'] + self.params['lanes_left_num']):
+            # Calculate lane idx from the number of lanes that split
+            if self.params['lanes_left_num'] > 0:
+                lane_id_split = num_split_lanes_left - self.params['lanes_left_num']
+            else:
+                lane_id_split = num_split_lanes_left - 1
+            # Calculate t coordinate of split connection point
+            if lane_id_split < 0:
+                for idx in range(abs(lane_id_split)):
+                    t_cp_split += self.params['lanes_left_widths'][idx]
+            else:
+                for idx in range(lane_id_split):
+                    t_cp_split -= self.params['lanes_right_widths'][idx]
+        return t_cp_split
 
     def map_road_mark_weight_to_width(self, road_mark_weight, width_line_standard, width_line_bold):
         '''
@@ -501,6 +552,10 @@ class DSC_OT_road(DSC_OT_two_point_base):
                     materials[material].append(idx_face + 2)
                     idx_face = idx_face + 2
                     offset += 2
+                elif strip.type == 'median':
+                    materials['grass'].append(idx_face)
+                elif strip.type == 'shoulder':
+                    materials['grass'].append(idx_face)
                 else:
                     # Do not add material for 'none' lines
                     if not (strip.type == 'line' and strip.road_mark_type == 'none'):

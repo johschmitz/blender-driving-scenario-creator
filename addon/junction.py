@@ -111,14 +111,14 @@ class DSC_OT_junction(DSC_OT_two_point_base):
                        'hdg_up': hdg_up,
                       }
         # Mesh
-        vertices = [(-3.95, 3.95, 0.0),
-                    (-3.95, 0.0, 0.0),
-                    (-3.95, -3.95, 0.0),
-                    (0.0, -3.95, 0.0),
-                    (3.95, -3.95, 0.0),
-                    (3.95, 0.0, 0.0),
-                    (3.95, 3.95, 0.0),
-                    (0.0, 3.95, 0.0),
+        vertices = [(-4.00, 4.00, 0.0),
+                    (-4.00, 0.0, 0.0),
+                    (-4.00, -4.00, 0.0),
+                    (0.0, -4.00, 0.0),
+                    (4.00, -4.00, 0.0),
+                    (4.00, 0.0, 0.0),
+                    (4.00, 4.00, 0.0),
+                    (0.0, 4.00, 0.0),
                     ]
         edges = [[0, 1],[1, 2],[2, 3],[3, 4],[4, 5],[5, 6],[6, 7],[7, 0]]
         if for_stencil:
@@ -128,7 +128,7 @@ class DSC_OT_junction(DSC_OT_two_point_base):
             faces = [[0, 1, 2, 3, 4, 5, 6, 7]]
         # Shift origin to connection point
         if self.params_input['connected_start']:
-            vertices[:] = [(v[0] + 3.95, v[1], v[2]) for v in vertices]
+            vertices[:] = [(v[0] + 4.00, v[1], v[2]) for v in vertices]
         mat_translation = Matrix.Translation(self.params_input['point_start'])
         mat_rotation = Matrix.Rotation(heading, 4, 'Z')
         matrix_world = mat_translation @ mat_rotation

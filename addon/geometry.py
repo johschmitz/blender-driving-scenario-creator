@@ -168,6 +168,7 @@ class DSC_geometry():
             curvature_elevation = (1 + de_ds**2)**(3/2) / d2e_d2s
         else:
             curvature_elevation = 0
+        # FIXME convert curvature for t unequal 0
         curvature_abs = max(abs(curvature_plan_view), abs(curvature_elevation))
         vector_hdg_t = Vector((1.0, 0.0))
         vector_hdg_t.rotate(Matrix.Rotation(hdg_t, 2))
