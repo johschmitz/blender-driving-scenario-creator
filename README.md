@@ -4,6 +4,8 @@ This [Blender](https://www.blender.org/) add-on lets you create OpenDRIVE and
 OpenSCENARIO based scenarios for development and testing of advanced driver
 assistance systems and autonomous driving functions.
 
+![Screenshot](screenshot.png)
+
 ## How to install
 
 For the sake of simplifying the following instructions let's assume that we
