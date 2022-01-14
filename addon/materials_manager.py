@@ -25,8 +25,6 @@ def assign_road_materials(obj):
                                       default_materials[key][2],
                                       default_materials[key][3])
         obj.data.materials.append(material)
-    obj.data.materials.append(bpy.data.materials.get(ASPHALT))
-    obj.data.materials.append(bpy.data.materials.get(DOUBLE_YELLOW_LINE))
 
 
 # get material by type
