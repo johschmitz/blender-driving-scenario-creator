@@ -13,10 +13,12 @@
 
 import bpy
 
-from . modal_two_point_base import DSC_OT_two_point_base
+from .modal_two_point_base import DSC_OT_two_point_base
 from . import helpers
+from . import materials_manager
 
 from math import ceil
+
 
 class DSC_OT_road(DSC_OT_two_point_base):
     bl_idname = 'dsc.road'
@@ -47,17 +49,20 @@ class DSC_OT_road(DSC_OT_two_point_base):
             helpers.link_object_opendrive(context, obj)
 
             # Assign materials
-            helpers.assign_road_materials(obj)
+            materials_manager.assign_road_materials(obj)
             for idx in range(len(obj.data.polygons)):
                 if idx in materials['road_mark']:
                     obj.data.polygons[idx].material_index = \
-                        helpers.get_material_index(obj, 'road_mark')
+                        materials_manager.get_material_index(obj, 'road_mark')
                 elif idx in materials['grass']:
                     obj.data.polygons[idx].material_index = \
-                        helpers.get_material_index(obj, 'grass')
+                        materials_manager.get_material_index(obj, 'grass')
+                elif idx in materials['double_yellow_line']:
+                    obj.data.polygons[idx].material_index = \
+                        materials_manager.get_material_index(obj, 'double_yellow_line')
                 else:
                     obj.data.polygons[idx].material_index = \
-                        helpers.get_material_index(obj, 'road_asphalt')
+                        materials_manager.get_material_index(obj, 'road_asphalt')
             # Remove double vertices from road lanes and lane lines to simplify mesh
             helpers.remove_duplicate_vertices(context, obj)
             # Make it active for the user to see what he created last
@@ -98,13 +103,12 @@ class DSC_OT_road(DSC_OT_two_point_base):
         # Update based on selected points
         self.update_lane_params(context)
         self.geometry.update(self.params_input)
-
         # Get values in t and s direction where the faces of the road start and end
         strips = context.scene.road_properties.strips
         strips_t_values = self.get_strips_t_values(strips)
         strips_s_boundaries = self.get_strips_s_boundaries(context.scene.road_properties)
         road_sample_points = self.get_road_sample_points(strips, strips_t_values, strips_s_boundaries)
-        vertices, edges, faces = self.get_road_vertices_edges_faces(strips, road_sample_points)
+        vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
         materials = self.get_face_materials(strips, strips_s_boundaries)
 
         # Create blender mesh
@@ -126,7 +130,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                        'lanes_right_types': [],
                        'lanes_left_road_mark_types': [],
                        'lanes_right_road_mark_types': [],
-                       'lane_center_road_mark_type': [],}
+                       'lane_center_road_mark_type': [], }
 
     def get_width_road_left(self, strips):
         '''
@@ -139,12 +143,12 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 if strip.type == 'line':
                     if strip.type_road_mark != 'none':
                         # If first strip is a line we need to add half its width
-                        width_road_left += strip.width/2
+                        width_road_left += strip.width / 2
             if not strip.type == 'line':
                 if strip.direction == 'left':
                     width_road_left += strip.width
-                    self.params['lanes_left_widths'].insert(0,strip.width)
-                    self.params['lanes_left_types'].insert(0,strip.type)
+                    self.params['lanes_left_widths'].insert(0, strip.width)
+                    self.params['lanes_left_types'].insert(0, strip.type)
                 else:
                     self.params['lanes_right_widths'].append(strip.width)
                     self.params['lanes_right_types'].append(strip.type)
@@ -152,7 +156,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 self.params['lane_center_road_mark_type'] = strip.type_road_mark
             else:
                 if strip.direction == 'left':
-                    self.params['lanes_left_road_mark_types'].insert(0,strip.type_road_mark)
+                    self.params['lanes_left_road_mark_types'].insert(0, strip.type_road_mark)
                 else:
                     self.params['lanes_right_road_mark_types'].append(strip.type_road_mark)
         return width_road_left
@@ -162,23 +166,26 @@ class DSC_OT_road(DSC_OT_two_point_base):
             Return list of t values of strip borders.
         '''
         t = self.get_width_road_left(strips)
-        t_values = [t,]
+        t_values = [t, ]
         for idx_strip, strip in enumerate(strips):
             if strip.type == 'line':
                 # Add nothing for 'none' road marks
                 if strip.type_road_mark != 'none':
                     t = t - strip.width
+                if strip.type_road_mark == 'solid_solid':
+                    t_values.append(t + strip.width * 2 / 3)
+                    t_values.append(t + strip.width / 3)
             else:
                 # Check if lines exist to left and/or right
                 width_both_lines_on_lane = 0
                 if idx_strip >= 0:
                     if strips[idx_strip - 1].type == 'line':
                         if strips[idx_strip - 1].type_road_mark != 'none':
-                            width_both_lines_on_lane += strips[idx_strip - 1].width/2
+                            width_both_lines_on_lane += strips[idx_strip - 1].width / 2
                 if idx_strip < len(strips) - 1:
                     if strips[idx_strip + 1].type == 'line':
                         if strips[idx_strip + 1].type_road_mark != 'none':
-                            width_both_lines_on_lane += strips[idx_strip + 1].width/2
+                            width_both_lines_on_lane += strips[idx_strip + 1].width / 2
                 # Adjust lane mesh width to not overlap with lines
                 t = t - strip.width + width_both_lines_on_lane
             t_values.append(t)
@@ -204,16 +211,14 @@ class DSC_OT_road(DSC_OT_two_point_base):
             # Calculate broken line parameters
             if strip.type_road_mark == 'broken':
                 num_faces_strip = ceil((length \
-                    - (road_properties.length_broken_line - offset_first)) \
-                    / road_properties.length_broken_line)
+                                        - (road_properties.length_broken_line - offset_first)) \
+                                       / road_properties.length_broken_line)
                 # Add one extra step for the shorter first piece
                 if offset_first > 0:
                     num_faces_strip += 1
-                length_first = min(length,
-                    road_properties.length_broken_line - offset_first)
+                length_first = min(length, road_properties.length_broken_line - offset_first)
                 if num_faces_strip > 1:
-                    length_last = length - length_first \
-                        - (num_faces_strip-2) * road_properties.length_broken_line
+                    length_last = length - length_first - (num_faces_strip - 2) * road_properties.length_broken_line
                 else:
                     length_last = length_first
             else:
@@ -231,11 +236,14 @@ class DSC_OT_road(DSC_OT_two_point_base):
                     elif idx_face_strip > 0 and idx_face_strip + 1 == num_faces_strip:
                         # Last piece and more than one piece
                         s_stop = length_first + (idx_face_strip - 1) * road_properties.length_broken_line \
-                            + length_last
+                                 + length_last
                     else:
                         # Middle piece
                         s_stop = length_first + idx_face_strip * road_properties.length_broken_line
                 s_values_strip.append(s_stop)
+            if strip.type_road_mark == 'solid_solid':
+                s_values.append((line_toggle_start, s_values_strip))
+                s_values.append((line_toggle_start, s_values_strip))
             s_values.append((line_toggle_start, s_values_strip))
         return s_values
 
@@ -245,44 +253,59 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
         length = self.geometry.params['length']
         s = 0
-        idx_boundaries_strips = [0]*len(strips_s_boundaries)
         # Obtain first curvature value
         xyz_samples, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values)
         # We need 2 vectors for each strip to later construct the faces with one
         # list per face on each side of each strip
-        sample_points = [[[]] for _ in range(2 * len(strips_s_boundaries))]
+        sample_points = [[[]] for _ in range(2 * (len(strips_t_values) - 1))]
+        t_offset = 0
         for idx_strip, strip in enumerate(strips):
-            if not (strip.type == 'line' and strip.type_road_mark == 'none'):
-                # Add points for s=0
-                sample_points[2*idx_strip][0].append((0, strips_t_values[idx_strip], 0))
-                sample_points[2*idx_strip+1][0].append((0, strips_t_values[idx_strip+1], 0))
+            index = idx_strip + t_offset
+            if strip.type == 'line' and strip.type_road_mark == 'none':
+                continue
+            if strip.type_road_mark == 'solid_solid':
+                lane_num = 3
+                for i in range(lane_num):
+                    step_index = index + i
+                    sample_points[2 * step_index][0].append((0, strips_t_values[step_index], 0))
+                    sample_points[2 * step_index + 1][0].append((0, strips_t_values[step_index + 1], 0))
+                t_offset = t_offset + lane_num - 1
+                continue
+            sample_points[2 * index][0].append((0, strips_t_values[index], 0))
+            sample_points[2 * index + 1][0].append((0, strips_t_values[index + 1], 0))
         # Concatenate vertices until end of road
+        idx_boundaries_strips = [0] * len(strips_s_boundaries)
         while s < length:
             # TODO: Make hardcoded sampling parameters configurable
             if curvature_abs == 0:
                 step = 5
             else:
-                step = max(1, min(5, 0.1/abs(curvature_abs)))
+                step = max(1, min(5, 0.1 / abs(curvature_abs)))
             s += step
             if s >= length:
                 s = length
 
             # Sample next points along road geometry (all t values for current s value)
             xyz_samples, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values)
-
-            for idx_strip, strip in enumerate(strips):
+            point_index = -2
+            while point_index < len(sample_points) - 2:
+                point_index = point_index + 2
+                print(point_index)
+                if not sample_points[point_index][0]:
+                    continue
+                idx_strip = point_index//2
                 # Get the boundaries of road marking faces for current strip plus left and right
-                idx_boundaries = [0,0,0]
-                s_boundaries_next = [length,length,length]
+                idx_boundaries = [0, 0, 0]
+                s_boundaries_next = [length, length, length]
                 # Check if there is a strip left and/or right to take into account
                 if idx_strip > 0:
-                    idx_boundaries[0] = idx_boundaries_strips[idx_strip-1]
-                    s_boundaries_next[0] = strips_s_boundaries[idx_strip-1][1][idx_boundaries[0]+1]
+                    idx_boundaries[0] = idx_boundaries_strips[idx_strip - 1]
+                    s_boundaries_next[0] = strips_s_boundaries[idx_strip - 1][1][idx_boundaries[0] + 1]
                 idx_boundaries[1] = idx_boundaries_strips[idx_strip]
-                s_boundaries_next[1] = strips_s_boundaries[idx_strip][1][idx_boundaries[1]+1]
-                if idx_strip < len(strips)-1:
-                    idx_boundaries[2] = idx_boundaries_strips[idx_strip+1]
-                    s_boundaries_next[2] = strips_s_boundaries[idx_strip+1][1][idx_boundaries[2]+1]
+                s_boundaries_next[1] = strips_s_boundaries[idx_strip][1][idx_boundaries[1] + 1]
+                if idx_strip < len(strips) - 1:
+                    idx_boundaries[2] = idx_boundaries_strips[idx_strip + 1]
+                    s_boundaries_next[2] = strips_s_boundaries[idx_strip + 1][1][idx_boundaries[2] + 1]
 
                 # Check if any face boundary is smaller than sample point
                 smaller, idx_smaller = self.compare_boundaries_with_s(s, s_boundaries_next)
@@ -290,39 +313,37 @@ class DSC_OT_road(DSC_OT_two_point_base):
                     # Find all boundaries in between
                     while smaller:
                         # Sample the geometry
-                        t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip+1]]
+                        t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip + 1]]
                         xyz_boundary, curvature_abs = self.geometry.sample_cross_section(
                             s_boundaries_next[idx_smaller], t_values)
                         if idx_smaller == 0:
                             # Append left extra point
-                            sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
+                            sample_points[2 * idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
                         if idx_smaller == 1:
                             # Append left and right points
-                            sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
-                            sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_boundary[1])
+                            sample_points[2 * idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
+                            sample_points[2 * idx_strip + 1][idx_boundaries[1]].append(xyz_boundary[1])
                             # Start a new list for next face
-                            sample_points[2*idx_strip].append([xyz_boundary[0]])
-                            sample_points[2*idx_strip+1].append([xyz_boundary[1]])
+                            sample_points[2 * idx_strip].append([xyz_boundary[0]])
+                            sample_points[2 * idx_strip + 1].append([xyz_boundary[1]])
                         if idx_smaller == 2:
                             # Append right extra point
-                            sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_boundary[1])
+                            sample_points[2 * idx_strip + 1][idx_boundaries[1]].append(xyz_boundary[1])
                         # Get the next boundary (relative to this strip)
                         idx_boundaries[idx_smaller] += 1
                         idx_strip_relative = idx_strip + idx_smaller - 1
                         s_boundaries_next[idx_smaller] = \
-                            strips_s_boundaries[idx_strip_relative][1][idx_boundaries[idx_smaller]+1]
+                            strips_s_boundaries[idx_strip_relative][1][idx_boundaries[idx_smaller] + 1]
                         # Check again
                         smaller, idx_smaller = self.compare_boundaries_with_s(s, s_boundaries_next)
                     # Write back indices to global array (only left strip to avoid cross interference!)
                     if idx_strip > 0:
-                        idx_boundaries_strips[idx_strip-1] = idx_boundaries[0]
+                        idx_boundaries_strips[idx_strip - 1] = idx_boundaries[0]
 
                 # Now there is no boundary in between anymore so append the samples
-                sample_points[2*idx_strip][idx_boundaries[1]].append(xyz_samples[idx_strip])
-                sample_points[2*idx_strip+1][idx_boundaries[1]].append(xyz_samples[idx_strip+1])
-
+                sample_points[2 * idx_strip][idx_boundaries[1]].append(xyz_samples[idx_strip])
+                sample_points[2 * idx_strip + 1][idx_boundaries[1]].append(xyz_samples[idx_strip + 1])
         return sample_points
-
 
     def compare_boundaries_with_s(self, s, s_boundaries_next):
         '''
@@ -336,39 +357,37 @@ class DSC_OT_road(DSC_OT_two_point_base):
 
         return smaller, idx_sorted[0]
 
-    def get_road_vertices_edges_faces(self, strips, road_sample_points):
-        '''
-            Return blender compatible vertices, edges and faces concatenated and
-            calculated from road sample points.
-        '''
+    # generate mesh from samplepoints
+    def get_road_vertices_edges_faces(self, road_sample_points):
         vertices = []
         edges = []
         faces = []
         idx_vertex = 0
-        for idx_strip, strip in enumerate(strips):
-            if not (strip.type == 'line' and strip.type_road_mark == 'none'):
-                for idx_face_strip in range(len(road_sample_points[2*idx_strip])):
-                    samples_right = road_sample_points[2*idx_strip+1][idx_face_strip]
-                    samples_left = road_sample_points[2*idx_strip][idx_face_strip]
-                    num_vertices = len(samples_left) + len(samples_right)
-                    vertices += samples_right + samples_left[::-1]
-                    edges += [[idx_vertex+n, idx_vertex+n+1] for n in range(num_vertices-1)] \
-                            + [[idx_vertex+num_vertices-1, idx_vertex]]
-                    faces += [[idx_vertex+n for n in range(num_vertices)]]
-
-                    idx_vertex += num_vertices
-
+        point_index = 0
+        while point_index < len(road_sample_points):
+            for idx_face_strip in range(len(road_sample_points[point_index])):
+                if not road_sample_points[point_index][0]:
+                    continue
+                samples_right = road_sample_points[point_index + 1][idx_face_strip]
+                samples_left = road_sample_points[point_index][idx_face_strip]
+                num_vertices = len(samples_left) + len(samples_right)
+                vertices += samples_right + samples_left[::-1]
+                edges += [[idx_vertex + n, idx_vertex + n + 1] for n in range(num_vertices - 1)] \
+                         + [[idx_vertex + num_vertices - 1, idx_vertex]]
+                faces += [[idx_vertex + n for n in range(num_vertices)]]
+                idx_vertex += num_vertices
+            point_index = point_index + 2
         return vertices, edges, faces
 
     def get_face_materials(self, strips, strips_s_boundaries):
         '''
             Return dictionary with index of faces for each material.
         '''
-        materials = {'asphalt': [], 'road_mark': [], 'grass': []}
+        materials = {'asphalt': [], 'road_mark': [], 'grass': [], 'double_yellow_line': []}
         idx_face = 0
         for idx_strip, strip in enumerate(strips):
             line_toggle = strips_s_boundaries[idx_strip][0]
-            num_faces = int(len(strips_s_boundaries[idx_strip][1])-1)
+            num_faces = int(len(strips_s_boundaries[idx_strip][1]) - 1)
             for idx in range(num_faces):
                 # Determine material
                 if strip.type_road_mark == 'broken':
@@ -380,6 +399,11 @@ class DSC_OT_road(DSC_OT_two_point_base):
                         line_toggle = True
                 elif strip.type_road_mark == 'solid':
                     materials['road_mark'].append(idx_face)
+                elif strip.type_road_mark == 'solid_solid':
+                    materials['double_yellow_line'].append(idx_face)
+                    materials['asphalt'].append(idx_face + 1)
+                    materials['double_yellow_line'].append(idx_face + 2)
+                    idx_face = idx_face + 2
                 elif strip.type == 'median':
                     materials['grass'].append(idx_face)
                 elif strip.type == 'shoulder':
