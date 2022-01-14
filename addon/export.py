@@ -49,7 +49,7 @@ mapping_roadmark = {
     'none': xodr.RoadMarkType.none,
     'solid': xodr.RoadMarkType.solid,
     'broken': xodr.RoadMarkType.broken,
-    #'solid_solid': xodr.RoadMarkType.solid_solid,
+    'solid_solid': xodr.RoadMarkType.solid_solid,
     #'solid_broken': xodr.RoadMarkType.solid_broken,
     #'broken_solid': xodr.RoadMarkType.broken_solid,
 }
