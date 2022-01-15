@@ -15,8 +15,10 @@
 import bpy
 import os
 
-# init road object's materials
 def assign_road_materials(obj):
+    '''
+       init road object's materials
+    '''
     default_materials = {
         'road_asphalt': [.3, .3, .3, 1],
         'road_mark': [.9, .9, .9, 1],
@@ -34,8 +36,10 @@ def assign_road_materials(obj):
         obj.data.materials.append(material)
 
 
-# get material by type
 def get_material_index(obj, material_name):
+    '''
+       get material by type
+    '''
     for idx, material in enumerate(obj.data.materials):
         if material.name == material_name:
             return idx
