@@ -63,7 +63,7 @@ class DSC_enum_strip(bpy.types.PropertyGroup):
         items=(('none', 'None', '', 0),
                ('solid', 'Solid', '', 1),
                ('broken', 'Broken', '', 2),
-               #('solid_solid', 'Double solid solid', '', 3),
+               ('solid_solid', 'Double solid solid', '', 3),
                #('solid_broken', 'Double solid broken', '', 4),
                #('broken_solid', 'Double broken solid', '', 5),
               ),
