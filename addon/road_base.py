@@ -357,8 +357,10 @@ class DSC_OT_road(DSC_OT_two_point_base):
 
         return smaller, idx_sorted[0]
 
-    # generate mesh from samplepoints
     def get_road_vertices_edges_faces(self, road_sample_points):
+        '''
+           generate mesh from samplepoints
+        '''
         vertices = []
         edges = []
         faces = []
