@@ -129,7 +129,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                        'lanes_right_types': [],
                        'lanes_left_road_mark_types': [],
                        'lanes_right_road_mark_types': [],
-                       'lane_center_road_mark_type': [], }
+                       'lane_center_road_mark_type': [],}
 
     def get_width_road_left(self, strips):
         '''
