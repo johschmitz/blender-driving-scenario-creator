@@ -335,38 +335,21 @@ def assign_road_materials(obj):
     '''
         Assign materials for asphalt and markings to object.
     '''
-    # Get road material
-    material = bpy.data.materials.get('road_asphalt')
-    if material is None:
-        # Create material
-        material = bpy.data.materials.new(name='road_asphalt')
-        material.diffuse_color = (.3,.3,.3,1)
-    obj.data.materials.append(material)
-    # Get lane line material
-    material = bpy.data.materials.get('road_mark')
-    if material is None:
-        # Create material
-        material = bpy.data.materials.new(name='road_mark')
-        material.diffuse_color = (.9,.9,.9,1)
-    # Assign to object's next material slot
-    obj.data.materials.append(material)
-    # Get grass material
-    material = bpy.data.materials.get('grass')
-    if material is None:
-        # Create material
-        material = bpy.data.materials.new(name='grass')
-        material.diffuse_color = (.05,.6,.01,1)
-    # Assign to object's next material slot
-    obj.data.materials.append(material)
-
-def assign_object_materials(obj, color):
-    # Get road material
-    material = bpy.data.materials.get(get_paint_material_name(color))
-    if material is None:
-        # Create material
-        material = bpy.data.materials.new(name=get_paint_material_name(color))
-        material.diffuse_color = color
-    obj.data.materials.append(material)
+    default_materials = {
+        'road_asphalt': [.3, .3, .3, 1],
+        'road_mark_white': [.9, .9, .9, 1],
+        'grass': [.05, .6, .01, 1],
+        'road_mark_yellow': [.6, .356, .022, 1]
+    }
+    for key in default_materials.keys():
+        material = bpy.data.materials.get(key)
+        if material is None:
+            material = bpy.data.materials.new(name=key)
+            material.diffuse_color = (default_materials[key][0],
+                                      default_materials[key][1],
+                                      default_materials[key][2],
+                                      default_materials[key][3])
+        obj.data.materials.append(material)
 
 def get_paint_material_name(color):
     '''
