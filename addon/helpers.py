@@ -351,6 +351,15 @@ def assign_road_materials(obj):
                                       default_materials[key][3])
         obj.data.materials.append(material)
 
+def assign_object_materials(obj, color):
+    # Get road material
+    material = bpy.data.materials.get(get_paint_material_name(color))
+    if material is None:
+        # Create material
+        material = bpy.data.materials.new(name=get_paint_material_name(color))
+        material.diffuse_color = color
+    obj.data.materials.append(material)
+
 def get_paint_material_name(color):
     '''
         Calculate material name from name string and Blender color
