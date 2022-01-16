@@ -15,7 +15,6 @@ import bpy
 
 from .modal_two_point_base import DSC_OT_two_point_base
 from . import helpers
-from . import materials_manager
 
 from math import ceil
 
@@ -49,20 +48,20 @@ class DSC_OT_road(DSC_OT_two_point_base):
             helpers.link_object_opendrive(context, obj)
 
             # Assign materials
-            materials_manager.assign_road_materials(obj)
+            helpers.assign_road_materials(obj)
             for idx in range(len(obj.data.polygons)):
-                if idx in materials['road_mark']:
+                if idx in materials['road_mark_white']:
                     obj.data.polygons[idx].material_index = \
-                        materials_manager.get_material_index(obj, 'road_mark')
+                        helpers.get_material_index(obj, 'road_mark_white')
                 elif idx in materials['grass']:
                     obj.data.polygons[idx].material_index = \
-                        materials_manager.get_material_index(obj, 'grass')
-                elif idx in materials['double_yellow_line']:
+                        helpers.get_material_index(obj, 'grass')
+                elif idx in materials['road_mark_yellow']:
                     obj.data.polygons[idx].material_index = \
-                        materials_manager.get_material_index(obj, 'double_yellow_line')
+                        helpers.get_material_index(obj, 'road_mark_yellow')
                 else:
                     obj.data.polygons[idx].material_index = \
-                        materials_manager.get_material_index(obj, 'road_asphalt')
+                        helpers.get_material_index(obj, 'road_asphalt')
             # Remove double vertices from road lanes and lane lines to simplify mesh
             helpers.remove_duplicate_vertices(context, obj)
             # Make it active for the user to see what he created last
@@ -385,7 +384,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
             Return dictionary with index of faces for each material.
         '''
-        materials = {'asphalt': [], 'road_mark': [], 'grass': [], 'double_yellow_line': []}
+        materials = {'asphalt': [], 'road_mark_white': [], 'grass': [], 'road_mark_yellow': []}
         idx_face = 0
         for idx_strip, strip in enumerate(strips):
             line_toggle = strips_s_boundaries[idx_strip][0]
@@ -394,17 +393,17 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 # Determine material
                 if strip.type_road_mark == 'broken':
                     if line_toggle:
-                        materials['road_mark'].append(idx_face)
+                        materials['road_mark_white'].append(idx_face)
                         line_toggle = False
                     else:
                         materials['asphalt'].append(idx_face)
                         line_toggle = True
                 elif strip.type_road_mark == 'solid':
-                    materials['road_mark'].append(idx_face)
+                    materials['road_mark_white'].append(idx_face)
                 elif strip.type_road_mark == 'solid_solid':
-                    materials['double_yellow_line'].append(idx_face)
+                    materials['road_mark_yellow'].append(idx_face)
                     materials['asphalt'].append(idx_face + 1)
-                    materials['double_yellow_line'].append(idx_face + 2)
+                    materials['road_mark_yellow'].append(idx_face + 2)
                     idx_face = idx_face + 2
                 elif strip.type == 'median':
                     materials['grass'].append(idx_face)
