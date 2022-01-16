@@ -417,3 +417,4 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 if not (strip.type == 'line' and strip.type_road_mark == 'none'):
                     idx_face += 1
         return materials
+
