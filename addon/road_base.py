@@ -289,7 +289,6 @@ class DSC_OT_road(DSC_OT_two_point_base):
             point_index = -2
             while point_index < len(sample_points) - 2:
                 point_index = point_index + 2
-                print(point_index)
                 if not sample_points[point_index][0]:
                     continue
                 idx_strip = point_index//2
@@ -367,6 +366,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
         point_index = 0
         while point_index < len(road_sample_points):
             for idx_face_strip in range(len(road_sample_points[point_index])):
+                # ignore empty samplepoints, it may be none type line or any thing that doesn't need to build a mesh
                 if not road_sample_points[point_index][0]:
                     continue
                 samples_right = road_sample_points[point_index + 1][idx_face_strip]
