@@ -386,9 +386,10 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
         materials = {'asphalt': [], 'road_mark_white': [], 'grass': [], 'road_mark_yellow': []}
         idx_face = 0
+        offset = 0
         for idx_strip, strip in enumerate(strips):
-            line_toggle = strips_s_boundaries[idx_strip][0]
-            num_faces = int(len(strips_s_boundaries[idx_strip][1]) - 1)
+            line_toggle = strips_s_boundaries[idx_strip + offset][0]
+            num_faces = int(len(strips_s_boundaries[idx_strip + offset][1]) - 1)
             for idx in range(num_faces):
                 # Determine material
                 if strip.type_road_mark == 'broken':
@@ -405,6 +406,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                     materials['asphalt'].append(idx_face + 1)
                     materials['road_mark_yellow'].append(idx_face + 2)
                     idx_face = idx_face + 2
+                    offset += 2
                 elif strip.type == 'median':
                     materials['grass'].append(idx_face)
                 elif strip.type == 'shoulder':
