@@ -90,8 +90,14 @@ class DSC_OT_road(DSC_OT_two_point_base):
             obj['lanes_left_widths'] = self.params['lanes_left_widths']
             obj['lanes_right_widths'] = self.params['lanes_right_widths']
             obj['lanes_left_road_mark_types'] = self.params['lanes_left_road_mark_types']
+            obj['lanes_left_road_mark_weights'] = self.params['lanes_left_road_mark_weights']
+            obj['lanes_left_road_mark_colors'] = self.params['lanes_left_road_mark_colors']
             obj['lanes_right_road_mark_types'] = self.params['lanes_right_road_mark_types']
+            obj['lanes_right_road_mark_weights'] = self.params['lanes_right_road_mark_weights']
+            obj['lanes_right_road_mark_colors'] = self.params['lanes_right_road_mark_colors']
             obj['lane_center_road_mark_type'] = self.params['lane_center_road_mark_type']
+            obj['lane_center_road_mark_weight'] = self.params['lane_center_road_mark_weight']
+            obj['lane_center_road_mark_color'] = self.params['lane_center_road_mark_color']
 
             return obj
 
@@ -104,8 +110,13 @@ class DSC_OT_road(DSC_OT_two_point_base):
         self.geometry.update(self.params_input)
         # Get values in t and s direction where the faces of the road start and end
         strips = context.scene.road_properties.strips
-        strips_t_values = self.get_strips_t_values(strips)
-        strips_s_boundaries = self.get_strips_s_boundaries(context.scene.road_properties)
+        length_broken_line = context.scene.road_properties.length_broken_line
+        width_line_standard = context.scene.road_properties.width_line_standard
+        width_line_bold = context.scene.road_properties.width_line_bold
+        self.set_lane_params(strips, width_line_standard, width_line_bold)
+        # TODO: Possible optimization is to recalculate t values only when a cross section update occurs
+        strips_t_values = self.get_strips_t_values(strips, width_line_standard, width_line_bold)
+        strips_s_boundaries = self.get_strips_s_boundaries(strips, length_broken_line)
         road_sample_points = self.get_road_sample_points(strips, strips_t_values, strips_s_boundaries)
         vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
         materials = self.get_face_materials(strips, strips_s_boundaries)
@@ -128,10 +139,27 @@ class DSC_OT_road(DSC_OT_two_point_base):
                        'lanes_left_types': [],
                        'lanes_right_types': [],
                        'lanes_left_road_mark_types': [],
+                       'lanes_left_road_mark_weights': [],
+                       'lanes_left_road_mark_colors': [],
                        'lanes_right_road_mark_types': [],
-                       'lane_center_road_mark_type': [],}
+                       'lanes_right_road_mark_weights': [],
+                       'lanes_right_road_mark_colors': [],
+                       'lane_center_road_mark_type': [],
+                       'lane_center_road_mark_weight': [],
+                       'lane_center_road_mark_color': [],}
 
-    def get_width_road_left(self, strips):
+    def map_road_mark_weight_to_width(self, road_mark_weight, width_line_standard, width_line_bold):
+        '''
+            Map a road mark weight (standard/bold) to the specified width.
+        '''
+        mapping_road_mark_weight = {
+            'standard' : width_line_standard,
+            'bold' : width_line_bold,
+        }
+        width = mapping_road_mark_weight[road_mark_weight]
+        return width
+
+    def get_width_road_left(self, strips, width_line_standard, width_line_bold):
         '''
             Return the width of the left road side calculated by suming up all
             lane widths.
@@ -140,57 +168,101 @@ class DSC_OT_road(DSC_OT_two_point_base):
         for idx, strip in enumerate(strips):
             if idx == 0:
                 if strip.type == 'line':
-                    if strip.type_road_mark != 'none':
+                    if strip.road_mark_type != 'none':
                         # If first strip is a line we need to add half its width
-                        width_road_left += strip.width / 2
-            if not strip.type == 'line':
+                        width_line = self.map_road_mark_weight_to_width(strip.road_mark_weight,
+                            width_line_standard, width_line_bold)
+                        if strip.road_mark_type == 'solid_solid' or \
+                            strip.road_mark_type == 'solid_broken' or \
+                            strip.road_mark_type == 'broken_solid':
+                                width_road_left += width_line * 3.0 / 2.0
+                        else:
+                            width_road_left += width_line / 2.0
+            # Stop when reaching the right side
+            if strip.direction == 'right':
+                break
+            if strip.type != 'line':
                 if strip.direction == 'left':
                     width_road_left += strip.width
+        return width_road_left
+
+    def set_lane_params(self, strips, width_line_standard, width_line_bold):
+        '''
+            Set the lane parameters dictionary for later export.
+        '''
+        for idx, strip in enumerate(strips):
+            if strip.type != 'line':
+                if strip.direction == 'left':
                     self.params['lanes_left_widths'].insert(0, strip.width)
                     self.params['lanes_left_types'].insert(0, strip.type)
                 else:
                     self.params['lanes_right_widths'].append(strip.width)
                     self.params['lanes_right_types'].append(strip.type)
             elif strip.direction == 'center':
-                self.params['lane_center_road_mark_type'] = strip.type_road_mark
+                self.params['lane_center_road_mark_type'] = strip.road_mark_type
+                self.params['lane_center_road_mark_weight'] = strip.road_mark_weight
+                self.params['lane_center_road_mark_color'] = strip.road_mark_color
             else:
                 if strip.direction == 'left':
-                    self.params['lanes_left_road_mark_types'].insert(0, strip.type_road_mark)
+                    self.params['lanes_left_road_mark_types'].insert(0, strip.road_mark_type)
+                    self.params['lanes_left_road_mark_weights'].insert(0, strip.road_mark_weight)
+                    self.params['lanes_left_road_mark_colors'].insert(0, strip.road_mark_color)
                 else:
-                    self.params['lanes_right_road_mark_types'].append(strip.type_road_mark)
-        return width_road_left
+                    self.params['lanes_right_road_mark_types'].append(strip.road_mark_type)
+                    self.params['lanes_right_road_mark_weights'].append(strip.road_mark_weight)
+                    self.params['lanes_right_road_mark_colors'].append(strip.road_mark_color)
 
-    def get_strips_t_values(self, strips):
+    def get_strips_t_values(self, strips, width_line_standard, width_line_bold):
         '''
             Return list of t values of strip borders.
         '''
-        t = self.get_width_road_left(strips)
+        t = self.get_width_road_left(strips, width_line_standard, width_line_bold)
         t_values = [t, ]
         for idx_strip, strip in enumerate(strips):
             if strip.type == 'line':
                 # Add nothing for 'none' road marks
-                if strip.type_road_mark != 'none':
-                    t = t - strip.width
-                if strip.type_road_mark == 'solid_solid':
-                    t_values.append(t + strip.width * 2 / 3)
-                    t_values.append(t + strip.width / 3)
+                if strip.road_mark_type != 'none':
+                    width_line = self.map_road_mark_weight_to_width(strip.road_mark_weight,
+                        width_line_standard, width_line_bold)
+                    if strip.road_mark_type == 'solid_solid' or \
+                            strip.road_mark_type == 'solid_broken' or \
+                            strip.road_mark_type == 'broken_solid':
+                        t = t - 3 * width_line
+                        t_values.append(t + width_line * 2)
+                        t_values.append(t + width_line)
+                    else:
+                        t = t - width_line
             else:
                 # Check if lines exist to left and/or right
                 width_both_lines_on_lane = 0
                 if idx_strip >= 0:
                     if strips[idx_strip - 1].type == 'line':
-                        if strips[idx_strip - 1].type_road_mark != 'none':
-                            width_both_lines_on_lane += strips[idx_strip - 1].width / 2
+                        if strips[idx_strip - 1].road_mark_type != 'none':
+                            width_line = self.map_road_mark_weight_to_width(
+                                strips[idx_strip - 1].road_mark_weight, width_line_standard, width_line_bold)
+                            if strips[idx_strip - 1].road_mark_type == 'solid_solid' or \
+                                    strips[idx_strip - 1].road_mark_type == 'solid_broken' or \
+                                    strips[idx_strip - 1].road_mark_type == 'broken_solid':
+                                width_both_lines_on_lane += width_line * 3.0 / 2.0
+                            else:
+                                width_both_lines_on_lane += width_line / 2.0
                 if idx_strip < len(strips) - 1:
                     if strips[idx_strip + 1].type == 'line':
-                        if strips[idx_strip + 1].type_road_mark != 'none':
-                            width_both_lines_on_lane += strips[idx_strip + 1].width / 2
+                        if strips[idx_strip + 1].road_mark_type != 'none':
+                            width_line = self.map_road_mark_weight_to_width(
+                                strips[idx_strip + 1].road_mark_weight, width_line_standard, width_line_bold)
+                            if strips[idx_strip + 1].road_mark_type == 'solid_solid' or \
+                                    strips[idx_strip + 1].road_mark_type == 'solid_broken' or \
+                                    strips[idx_strip + 1].road_mark_type == 'broken_solid':
+                                width_both_lines_on_lane += width_line * 3.0 / 2.0
+                            else:
+                                width_both_lines_on_lane += width_line / 2.0
                 # Adjust lane mesh width to not overlap with lines
                 t = t - strip.width + width_both_lines_on_lane
             t_values.append(t)
         return t_values
 
-    def get_strips_s_boundaries(self, road_properties):
+    def get_strips_s_boundaries(self, strips, length_broken_line):
         '''
             Return list of tuples with a line toggle flag and a list with the
             start and stop values of the faces in each strip.
@@ -199,25 +271,25 @@ class DSC_OT_road(DSC_OT_two_point_base):
         # TODO offset must be provided by predecessor road for each marking
         length = self.geometry.params['length']
         offset = 0.5
-        if offset < road_properties.length_broken_line:
+        if offset < length_broken_line:
             offset_first = offset
             line_toggle_start = True
         else:
-            offset_first = offset % road_properties.length_broken_line
+            offset_first = offset % length_broken_line
             line_toggle_start = False
         s_values = []
-        for strip in road_properties.strips:
+        for strip in strips:
             # Calculate broken line parameters
-            if strip.type_road_mark == 'broken':
+            if strip.road_mark_type == 'broken':
                 num_faces_strip = ceil((length \
-                                        - (road_properties.length_broken_line - offset_first)) \
-                                       / road_properties.length_broken_line)
+                                        - (length_broken_line - offset_first)) \
+                                       / length_broken_line)
                 # Add one extra step for the shorter first piece
                 if offset_first > 0:
                     num_faces_strip += 1
-                length_first = min(length, road_properties.length_broken_line - offset_first)
+                length_first = min(length, length_broken_line - offset_first)
                 if num_faces_strip > 1:
-                    length_last = length - length_first - (num_faces_strip - 2) * road_properties.length_broken_line
+                    length_last = length - length_first - (num_faces_strip - 2) * length_broken_line
                 else:
                     length_last = length_first
             else:
@@ -228,19 +300,19 @@ class DSC_OT_road(DSC_OT_two_point_base):
             for idx_face_strip in range(num_faces_strip):
                 # Calculate end points of the faces
                 s_stop = length
-                if strip.type_road_mark == 'broken':
+                if strip.road_mark_type == 'broken':
                     if idx_face_strip == 0:
                         # First piece
                         s_stop = length_first
                     elif idx_face_strip > 0 and idx_face_strip + 1 == num_faces_strip:
                         # Last piece and more than one piece
-                        s_stop = length_first + (idx_face_strip - 1) * road_properties.length_broken_line \
+                        s_stop = length_first + (idx_face_strip - 1) * length_broken_line \
                                  + length_last
                     else:
                         # Middle piece
-                        s_stop = length_first + idx_face_strip * road_properties.length_broken_line
+                        s_stop = length_first + idx_face_strip * length_broken_line
                 s_values_strip.append(s_stop)
-            if strip.type_road_mark == 'solid_solid':
+            if strip.road_mark_type == 'solid_solid':
                 s_values.append((line_toggle_start, s_values_strip))
                 s_values.append((line_toggle_start, s_values_strip))
             s_values.append((line_toggle_start, s_values_strip))
@@ -260,9 +332,9 @@ class DSC_OT_road(DSC_OT_two_point_base):
         t_offset = 0
         for idx_strip, strip in enumerate(strips):
             index = idx_strip + t_offset
-            if strip.type == 'line' and strip.type_road_mark == 'none':
+            if strip.type == 'line' and strip.road_mark_type == 'none':
                 continue
-            if strip.type_road_mark == 'solid_solid':
+            if strip.road_mark_type == 'solid_solid':
                 lane_num = 3
                 for i in range(lane_num):
                     step_index = index + i
@@ -380,6 +452,16 @@ class DSC_OT_road(DSC_OT_two_point_base):
             point_index = point_index + 2
         return vertices, edges, faces
 
+    def get_road_mark_material(self, color):
+        '''
+            Return material name for road mark color.
+        '''
+        mapping_color_material = {
+            'white': 'road_mark_white',
+            'yellow': 'road_mark_yellow',
+        }
+        return mapping_color_material[color]
+
     def get_face_materials(self, strips, strips_s_boundaries):
         '''
             Return dictionary with index of faces for each material.
@@ -390,33 +472,33 @@ class DSC_OT_road(DSC_OT_two_point_base):
         for idx_strip, strip in enumerate(strips):
             line_toggle = strips_s_boundaries[idx_strip + offset][0]
             num_faces = int(len(strips_s_boundaries[idx_strip + offset][1]) - 1)
+            if strip.type == 'line' and strip.road_mark_type != 'none':
+                material = self.get_road_mark_material(strip.road_mark_color)
+            elif strip.type == 'median':
+                material = 'grass'
+            else:
+                material = 'asphalt'
             for idx in range(num_faces):
                 # Determine material
-                if strip.type_road_mark == 'broken':
+                if strip.road_mark_type == 'broken':
                     if line_toggle:
-                        materials['road_mark_white'].append(idx_face)
+                        materials[material].append(idx_face)
                         line_toggle = False
                     else:
                         materials['asphalt'].append(idx_face)
                         line_toggle = True
-                elif strip.type_road_mark == 'solid':
-                    materials['road_mark_white'].append(idx_face)
-                elif strip.type_road_mark == 'solid_solid':
-                    materials['road_mark_yellow'].append(idx_face)
+                elif strip.road_mark_type == 'solid_solid':
+                    materials[material].append(idx_face)
                     materials['asphalt'].append(idx_face + 1)
-                    materials['road_mark_yellow'].append(idx_face + 2)
+                    materials[material].append(idx_face + 2)
                     idx_face = idx_face + 2
                     offset += 2
-                elif strip.type == 'median':
-                    materials['grass'].append(idx_face)
-                elif strip.type == 'shoulder':
-                    materials['grass'].append(idx_face)
                 else:
                     # Do not add material for 'none' lines
-                    if not (strip.type == 'line' and strip.type_road_mark == 'none'):
-                        materials['asphalt'].append(idx_face)
+                    if not (strip.type == 'line' and strip.road_mark_type == 'none'):
+                        materials[material].append(idx_face)
                 # Do not count 'none' road marks which create no faces
-                if not (strip.type == 'line' and strip.type_road_mark == 'none'):
+                if not (strip.type == 'line' and strip.road_mark_type == 'none'):
                     idx_face += 1
         return materials
 

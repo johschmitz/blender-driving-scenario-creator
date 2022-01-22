@@ -39,7 +39,7 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
     def invoke(self, context, event):
         if len(context.scene.road_properties.strips) == 0:
             context.scene.road_properties.init()
-        return context.window_manager.invoke_popup(self)
+        return context.window_manager.invoke_popup(self, width=400)
 
     def draw(self, context):
         box = self.layout.box()
@@ -60,12 +60,12 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
             # Expand
             box_params.prop(self, 'expand_parameters', icon="TRIA_DOWN", text="Parameters", emboss=False)
             row = box_params.row(align=True)
-            row.label(text='Width line thin:')
+            row.label(text='Width line standard:')
             row.prop(context.scene.road_properties, 'width_line_standard', text='')
-            # row = box_params.row(align=True)
-            # row.label(text='Width line bold:')
-            # row.prop(context.scene.road_properties, 'width_line_bold', text='')
-            # row = box_params.row(align=True)
+            row = box_params.row(align=True)
+            row.label(text='Width line bold:')
+            row.prop(context.scene.road_properties, 'width_line_bold', text='')
+            row = box_params.row(align=True)
             # row.label(text='Length line broken:')
             # row.prop(context.scene.road_properties, 'length_broken_line', text='')
             # row = box_params.row(align=True)
@@ -113,12 +113,15 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
 
         for idx, strip in enumerate(context.scene.road_properties.strips):
             row = box.row(align=True)
-            split = row.split(factor=0.2, align=True)
+            split = row.split(factor=0.15, align=True)
             split.label(text='Strip ' + str(idx+1) + ':')
-            split = split.split(factor=0.5, align=True)
+            split = split.split(factor=0.3, align=True)
             split.prop(strip, 'type', text='')
             if context.scene.road_properties.strips[idx].type == 'line':
-                split.prop(strip, 'type_road_mark', text='')
+                split.prop(strip, 'road_mark_type', text='')
+                split.prop(strip, 'road_mark_weight', text='')
+                split.prop(strip, 'road_mark_color', text='')
             else:
-                split.label(text='Width:')
+                split.label(text='Width')
                 split.prop(strip, 'width', text='')
+                split.separator()

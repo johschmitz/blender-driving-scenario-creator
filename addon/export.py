@@ -45,13 +45,23 @@ mapping_lane_type = {
     'none': xodr.LaneType.none,
 }
 
-mapping_roadmark = {
+mapping_road_mark_type = {
     'none': xodr.RoadMarkType.none,
     'solid': xodr.RoadMarkType.solid,
     'broken': xodr.RoadMarkType.broken,
     'solid_solid': xodr.RoadMarkType.solid_solid,
     #'solid_broken': xodr.RoadMarkType.solid_broken,
     #'broken_solid': xodr.RoadMarkType.broken_solid,
+}
+
+mapping_road_mark_weight = {
+    'standard': xodr.RoadMarkWeight.standard,
+    'bold': xodr.RoadMarkWeight.bold,
+}
+
+mapping_road_mark_color = {
+    'white': xodr.RoadMarkColor.white,
+    'yellow': xodr.RoadMarkColor.yellow,
 }
 
 mapping_object_type = {
@@ -442,22 +452,40 @@ class DSC_OT_export(bpy.types.Operator):
         print('WARNING: No road with ID {} found. Maybe a junction?'.format(id))
         return None
 
+    def get_road_mark(self, marking_type, weight, color):
+        '''
+            Return road mark based on object lane parameters.
+        '''
+        if marking_type == 'none':
+            # Make sure to not set a 'none' weight or color
+            return xodr.RoadMark(mapping_road_mark_type['none'])
+        else:
+            return xodr.RoadMark(marking_type=mapping_road_mark_type[marking_type],
+                                 color=mapping_road_mark_color[color],
+                                 marking_weight=mapping_road_mark_weight[weight])
+
     def create_lanes(self, obj):
         lanes = xodr.Lanes()
-        road_mark = xodr.RoadMark(mapping_roadmark[obj['lane_center_road_mark_type']])
+        road_mark = self.get_road_mark(obj['lane_center_road_mark_type'],
+                                       obj['lane_center_road_mark_weight'],
+                                       obj['lane_center_road_mark_color'])
         lane_center = xodr.standard_lane(rm=road_mark)
         lane_center.add_roadmark
         lanesection = xodr.LaneSection(0,lane_center)
         for idx in range(obj['lanes_left_num']):
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_left_types'][idx]],
                 a=obj['lanes_left_widths'][idx])
-            road_mark = xodr.RoadMark(mapping_roadmark[obj['lanes_left_road_mark_types'][idx]])
+            road_mark = self.get_road_mark(obj['lanes_left_road_mark_types'][idx],
+                                           obj['lanes_left_road_mark_weights'][idx],
+                                           obj['lanes_left_road_mark_colors'][idx])
             lane.add_roadmark(road_mark)
             lanesection.add_left_lane(lane)
         for idx in range(obj['lanes_right_num']):
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_right_types'][idx]],
                 a=obj['lanes_right_widths'][idx])
-            road_mark = xodr.RoadMark(mapping_roadmark[obj['lanes_right_road_mark_types'][idx]])
+            road_mark = self.get_road_mark(obj['lanes_right_road_mark_types'][idx],
+                                           obj['lanes_right_road_mark_weights'][idx],
+                                           obj['lanes_right_road_mark_colors'][idx])
             lane.add_roadmark(road_mark)
             lanesection.add_right_lane(lane)
         lanes.add_lanesection(lanesection)
