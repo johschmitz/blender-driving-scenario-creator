@@ -384,7 +384,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
             Return dictionary with index of faces for each material.
         '''
-        materials = {'asphalt': [], 'road_mark_white': [], 'grass': [], 'road_mark_yellow': []}
+        materials = {'asphalt': [], 'road_mark_white': [], 'road_mark_yellow': [], 'grass': []}
         idx_face = 0
         offset = 0
         for idx_strip, strip in enumerate(strips):

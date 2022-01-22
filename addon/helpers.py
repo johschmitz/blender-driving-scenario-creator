@@ -338,8 +338,8 @@ def assign_road_materials(obj):
     default_materials = {
         'road_asphalt': [.3, .3, .3, 1],
         'road_mark_white': [.9, .9, .9, 1],
+        'road_mark_yellow': [.85, .63, .0, 1],
         'grass': [.05, .6, .01, 1],
-        'road_mark_yellow': [.6, .356, .022, 1]
     }
     for key in default_materials.keys():
         material = bpy.data.materials.get(key)
