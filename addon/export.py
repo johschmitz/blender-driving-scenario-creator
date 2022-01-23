@@ -369,15 +369,26 @@ class DSC_OT_export(bpy.types.Operator):
                     car_name = obj.name
                     print('Add car with name', obj.name)
                     entities.add_scenario_object(car_name,xosc.CatalogReference('VehicleCatalog', car_name))
+                    # Teleport to initial position
                     init.add_init_action(car_name,
                         xosc.TeleportAction(
                             xosc.WorldPosition(
                                 x=obj['position'][0], y=obj['position'][1], z=obj['position'][2], h=obj['hdg'])))
-                    init.add_init_action(car_name, xosc.AbsoluteSpeedAction(
-                        helpers.kmh_to_ms(obj['speed_initial']),
-                        xosc.TransitionDynamics(xosc.DynamicsShapes.step, xosc.DynamicsDimension.time, 1)))
-                    init.add_init_action(car_name, xosc.RelativeLaneChangeAction(0, car_name,
-                        xosc.TransitionDynamics(xosc.DynamicsShapes.cubic, xosc.DynamicsDimension.rate, 2.0)))
+                    # Get pitch and roll from road
+                    init.add_init_action(car_name,
+                        xosc.TeleportAction(
+                            xosc.RelativeRoadPosition(0, 0, car_name,
+                                xosc.Orientation(p=0, r=0, reference=xosc.ReferenceContext.relative))))
+                    # Begin driving
+                    init.add_init_action(car_name,
+                        xosc.AbsoluteSpeedAction(helpers.kmh_to_ms(obj['speed_initial']),
+                            xosc.TransitionDynamics(xosc.DynamicsShapes.step,
+                                                    xosc.DynamicsDimension.time, 1)))
+                    # Center on closest lane
+                    init.add_init_action(car_name,
+                        xosc.RelativeLaneChangeAction(0, car_name,
+                            xosc.TransitionDynamics(xosc.DynamicsShapes.cubic,
+                                                    xosc.DynamicsDimension.rate, 2.0)))
         if helpers.collection_exists(['OpenSCENARIO','trajectories']):
             for obj in bpy.data.collections['OpenSCENARIO'].children['trajectories'].objects:
                 if 'dsc_type' in obj and obj['dsc_type'] == 'trajectory':
