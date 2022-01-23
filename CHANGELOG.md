@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.9.0] - 2022-01-23
+
+### Added
+- Double line road mark type "solid solid"
+- Property for road mark weight (standard and bold)
+- Property for road mark color (available: white and yellow)
+
+### Fixed
+- Initial pitch and roll of vehicle is adopted from road surface
+
 ## [0.8.0] - 2022-01-02
 
 ### Added
@@ -93,7 +103,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.0...v0.7.1
