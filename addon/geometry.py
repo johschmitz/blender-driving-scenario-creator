@@ -27,7 +27,8 @@ class DSC_geometry():
         'heading_end': 0,
         'curvature_end': 0,
         'slope_end': 0,
-        'elevation': [{'s': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}]
+        'elevation': [{'s': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}],
+        'valid': True,
     }
 
     def sample_cross_section(self, s, t):

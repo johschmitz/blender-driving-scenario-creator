@@ -108,6 +108,8 @@ class DSC_OT_road(DSC_OT_two_point_base):
         # Update based on selected points
         self.update_lane_params(context)
         self.geometry.update(self.params_input)
+        if self.geometry.params['valid'] == False:
+            self.report({'WARNING'}, 'No valid road geometry solution found!')
         # Get values in t and s direction where the faces of the road start and end
         strips = context.scene.road_properties.strips
         length_broken_line = context.scene.road_properties.length_broken_line
