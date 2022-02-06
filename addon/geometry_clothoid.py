@@ -20,41 +20,57 @@ from math import pi
 
 class DSC_geometry_clothoid(DSC_geometry):
 
-    def update_plan_view(self, params):
+    def update_plan_view(self, params, geometry_solver):
         # Calculate transform between global and local coordinates
         self.update_local_to_global(params['point_start'], params['heading_start'],
             params['point_end'], params['heading_end'])
 
         # Calculate geometry
-        self.geometry_base = Clothoid.G1Hermite(0, 0, 0,
-            self.point_end_local.x, self.point_end_local.y, self.heading_end_local)
-
-        # When the heading of start and end point is colinear the curvature
-        # becomes very small and the length becomes huge (solution is a gigantic
-        # circle). Therefore as a workaround we limit the length to 10 km.
-        if self.geometry_base.length > 10000.0:
-            # Use old parameters instead
-            self.update_local_to_global(self.params['point_start'], self.params['heading_start'],
-                self.params['point_end'], self.params['heading_end'])
+        if geometry_solver == 'hermite':
             self.geometry_base = Clothoid.G1Hermite(0, 0, 0,
                 self.point_end_local.x, self.point_end_local.y, self.heading_end_local)
-            self.params['valid'] = False
+
+            # When the heading of start and end point is colinear the curvature
+            # becomes very small and the length becomes huge (solution is a gigantic
+            # circle). Therefore as a workaround we limit the length to 10 km.
+            if self.geometry_base.length < 10000.0:
+                self.params['valid'] = True
+            else:
+                # Use old parameters
+                self.update_local_to_global(self.params['point_start'], self.params['heading_start'],
+                    self.params['point_end'], self.params['heading_end'])
+                self.geometry_base = Clothoid.G1Hermite(0, 0, 0,
+                    self.point_end_local.x, self.point_end_local.y, self.heading_end_local)
+                self.params['valid'] = False
+        elif geometry_solver == 'forward':
+            self.geometry_base = Clothoid.Forward(0, 0, 0,
+                params['curvature_start'], self.point_end_local.x, self.point_end_local.y)
+            # Check for a valid solution based on the length
+            if self.geometry_base.length > 0.0:
+                self.params['valid'] = True
+            else:
+                # Use old parameters
+                self.update_local_to_global(self.params['point_start'], self.params['heading_start'],
+                    self.params['point_end'], self.params['heading_end'])
+                self.geometry_base = Clothoid.Forward(0, 0, 0,
+                    self.params['curvature_start'], self.point_end_local.x, self.point_end_local.y)
+                self.params['valid'] = False
         else:
-            self.params['valid'] = True
-        # TODO implement second mode for forward clothoid solution
-        # self.geometry_base = Clothoid.Forward(0, 0, 0,
-        #     params['curvature_start'], self.point_end_local.x, self.point_end_local.y)
+            # Should never happen
+            self.geometry_base = Clothoid.Forward(0, 0, 0, 0, 1, 0)
+            return
 
         # Remember geometry parameters
-        self.params['curve'] = 'spiral'
-        self.params['point_start'] = params['point_start']
-        self.params['heading_start'] = params['heading_start']
-        self.params['point_end'] = params['point_end']
-        self.params['heading_end'] = params['heading_start'] + self.geometry_base.ThetaEnd
-        self.params['length'] = self.geometry_base.length
-        self.params['curvature_start'] = self.geometry_base.KappaStart
-        self.params['curvature_end'] = self.geometry_base.KappaEnd
-        self.params['angle_end'] = self.geometry_base.ThetaEnd
+        if self.params['valid']:
+            self.params['curve'] = 'spiral'
+            self.params['point_start'] = params['point_start']
+            self.params['heading_start'] = params['heading_start']
+            self.params['point_end'] = params['point_end']
+            self.params['heading_end'] = params['heading_start'] + self.geometry_base.ThetaEnd
+            self.params['length'] = self.geometry_base.length
+            self.params['curvature_start'] = self.geometry_base.KappaStart
+            self.params['curvature_end'] = self.geometry_base.KappaEnd
+            self.params['angle_end'] = self.geometry_base.ThetaEnd
 
     def sample_plan_view(self, s):
         x_s = self.geometry_base.X(s)

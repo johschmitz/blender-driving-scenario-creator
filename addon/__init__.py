@@ -74,8 +74,11 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.road_properties_popup', text='Arc',
             icon_value=custom_icons['road_arc'].icon_id).operator = 'road_arc'
         row = box.row(align=True)
-        row.operator('dsc.road_properties_popup', text='Clothoid',
-            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid'
+        row.operator('dsc.road_properties_popup', text='Clothoid (Hermite)',
+            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_hermite'
+        row = box.row(align=True)
+        row.operator('dsc.road_properties_popup', text='Clothoid (Forward)',
+            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_forward'
         row = box.row(align=True)
         row.operator('dsc.road_parametric_polynomial', text='Parametric polynomial',
             icon_value=custom_icons['road_parametric_polynomial'].icon_id)

@@ -38,12 +38,12 @@ class DSC_geometry():
         '''
         raise NotImplementedError()
 
-    def update(self, params_input):
+    def update(self, params_input, geometry_solver):
         '''
             Update parameters of the geometry and local to global tranformation
             matrix.
         '''
-        self.update_plan_view(params_input)
+        self.update_plan_view(params_input, geometry_solver)
         self.update_elevation(params_input)
 
     def update_local_to_global(self, point_start, heading_start, point_end, heading_end):

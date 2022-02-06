@@ -20,7 +20,7 @@ from math import pi
 
 class DSC_geometry_line(DSC_geometry):
 
-    def update_plan_view(self, params):
+    def update_plan_view(self, params, geometry_solver):
         if params['connected_start']:
             point_end = helpers.project_point_vector(params['point_start'].to_2d(),
                 params['heading_start'], params['point_end'].to_2d())
@@ -45,8 +45,10 @@ class DSC_geometry_line(DSC_geometry):
         self.params['curve'] = 'line'
         self.params['point_start'] = params['point_start']
         self.params['heading_start'] = heading_start_line
+        self.params['curvature_start'] = 0
         self.params['point_end'] = point_end
         self.params['heading_end'] = heading_start_line
+        self.params['curvature_end'] = 0
         self.params['length'] = length
 
     def sample_plan_view(self, s):

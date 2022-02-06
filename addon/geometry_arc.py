@@ -82,7 +82,7 @@ class Arc():
 
 class DSC_geometry_arc(DSC_geometry):
 
-    def update_plan_view(self, params):
+    def update_plan_view(self, params, geometry_solver):
         # Calculate transform between global and local coordinates
         self.update_local_to_global(params['point_start'], params['heading_start'],
             params['point_end'], params['heading_end'])
