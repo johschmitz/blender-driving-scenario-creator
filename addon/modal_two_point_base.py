@@ -316,7 +316,8 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
         elif event.type == 'MIDDLEMOUSE':
             if event.alt:
-                bpy.ops.view3d.view_center_cursor()
+                if event.value == 'RELEASE':
+                    bpy.ops.view3d.view_center_cursor()
 
         # Catch everything else arriving here
         return {'RUNNING_MODAL'}
