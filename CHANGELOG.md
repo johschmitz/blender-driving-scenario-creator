@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.10.0] - 2022-02-06
+
+### Added
+- Additional clothoid road operator using forward solver based on the curvature
+  of the predecessor road section
+
+### Fixed
+- Avoid rendering blowup when start and end angle of clothoid roads are
+  identical, notify user that no valid solution has been found
+- Moving with ALT+MIDDLEMOUSE to only move on mouse button release
+
 ## [0.9.0] - 2022-01-23
 
 ### Added
@@ -103,7 +114,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.1...v0.7.2
