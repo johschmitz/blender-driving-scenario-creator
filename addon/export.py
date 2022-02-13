@@ -18,6 +18,7 @@ from scenariogeneration import xosc
 from scenariogeneration import xodr
 from scenariogeneration import ScenarioGenerator
 
+from mathutils import Vector
 from math import pi
 
 import pathlib
@@ -398,11 +399,7 @@ class DSC_OT_export(bpy.types.Operator):
                         if speed_kmh == None:
                             self.report({'ERROR'}, 'Trajectory ' + obj.name + ' owner not found!')
                             break
-                        times = self.calculate_trajectory_times(obj.data.vertices, helpers.kmh_to_ms(speed_kmh))
-                        positions = []
-                        for vert in obj.data.vertices:
-                            vert_global = obj.matrix_world @ vert.co
-                            positions.append(xosc.WorldPosition(vert_global.x, vert_global.y, vert_global.z))
+                        times, positions = self.calculate_trajectory_values(obj, helpers.kmh_to_ms(speed_kmh))
                         shape = xosc.Polyline(times, positions)
                     if obj['dsc_subtype'] == 'nurbs':
                         order = obj.data.splines[0].order_u
@@ -425,6 +422,18 @@ class DSC_OT_export(bpy.types.Operator):
                     action = xosc.FollowTrajectoryAction(trajectory,xosc.FollowMode.follow,
                         None,None,None,None)
                     init.add_init_action(obj['owner_name'], action)
+                    # FIXME the following does not seem to work with esmini in
+                    # init, we need a separate maneuver group/act
+                    # # After trajectory following get pitch and roll from road
+                    # init.add_init_action(car_name,
+                    #     xosc.TeleportAction(
+                    #         xosc.RelativeRoadPosition(0, 0, car_name,
+                    #             xosc.Orientation(p=0, r=0, reference=xosc.ReferenceContext.relative))))
+                    # # Finally center on closest lane
+                    # init.add_init_action(car_name,
+                    #     xosc.RelativeLaneChangeAction(0, car_name,
+                    #         xosc.TransitionDynamics(xosc.DynamicsShapes.cubic,
+                    #                                 xosc.DynamicsDimension.rate, 2.0)))
 
         # Link .xodr to .xosc with relative path
         dotdot = pathlib.Path('..')
@@ -503,12 +512,34 @@ class DSC_OT_export(bpy.types.Operator):
 
         return lanes
 
-    def calculate_trajectory_times(self, positions, speed):
+    def calculate_trajectory_values(self, obj, speed):
         times = [0]
-        for idx in range(len(positions)-1):
-            distance = (positions[idx].co - positions[idx+1].co).length
+        for idx in range(len(obj.data.vertices)-1):
+            distance = (obj.data.vertices[idx].co - obj.data.vertices[idx+1].co).length
             times.append(times[idx] + distance/speed)
-        return times
+        positions = []
+        for idx, vert in enumerate(obj.data.vertices):
+            vert_global = obj.matrix_world @ vert.co
+            if idx == 0:
+                vert_global_next = obj.matrix_world @ obj.data.vertices[idx+1].co
+                vec_hdg_after = Vector(vert_global_next - vert_global)
+                heading = vec_hdg_after.to_2d().angle_signed(Vector((1.0, 0.0)))
+            elif idx < len(obj.data.vertices)-1:
+                vert_global_next = obj.matrix_world @ obj.data.vertices[idx+1].co
+                vert_global_last = obj.matrix_world @ obj.data.vertices[idx-1].co
+                vec_hdg_before = Vector(vert_global - vert_global_last)
+                vec_hdg_after = Vector(vert_global_next - vert_global)
+                vec_avg = vec_hdg_before + vec_hdg_after
+                if vec_avg.length == 0:
+                    heading = vec_hdg_after.to_2d().angle_signed(Vector((1.0, 0.0)))
+                else:
+                    heading = (vec_hdg_before + vec_hdg_after).to_2d().angle_signed(Vector((1.0, 0.0)))
+            else:
+                vert_global_last = obj.matrix_world @ obj.data.vertices[idx-1].co
+                vec_hdg_before = Vector(vert_global - vert_global_last)
+                heading = vec_hdg_before.to_2d().angle_signed(Vector((1.0, 0.0)))
+            positions.append(xosc.WorldPosition(vert_global.x, vert_global.y, vert_global.z, heading))
+        return times, positions
 
     def add_elevation_profiles(self, obj, road):
         '''
