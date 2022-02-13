@@ -44,9 +44,9 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
         return None
 
     def invoke(self, context, event):
-        if len(context.scene.road_properties.strips) == 0:
+        if len(context.scene.road_properties.lanes) == 0:
             context.scene.road_properties.init()
-        return context.window_manager.invoke_popup(self, width=400)
+        return context.window_manager.invoke_popup(self, width=500)
 
     def draw(self, context):
         box = self.layout.box()
@@ -107,39 +107,58 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
             row.label(text='Design speed:')
             row.prop(context.scene.road_properties, 'design_speed', text='')
 
-        row = box.row(align=True)
+        row = box.row()
         row.label(text='Number of lanes:')
-        row = box.row(align=True)
-        split = row.split(factor=0.5, align=True)
-        split_sub = split.split(factor=0.3, align=True)
-        split_sub.label(text='Left:')
-        split_sub.prop(context.scene.road_properties, 'num_lanes_left', text='')
+        row = box.row()
         row.separator()
-        split_sub = split.split(factor=0.3, align=True)
-        split_sub.label(text='Right:')
-        split_sub.prop(context.scene.road_properties, 'num_lanes_right', text='')
+        row.label(text='Left:')
+        row.prop(context.scene.road_properties, 'num_lanes_left', text='')
+        row.separator()
+        row.separator()
+        row.separator()
+        row.label(text='Right:')
+        row.prop(context.scene.road_properties, 'num_lanes_right', text='')
+        row.separator()
 
         row = box.row(align=True)
+        row = box.row(align=True)
 
-        for idx, strip in enumerate(context.scene.road_properties.strips):
-            row = box.row(align=True)
-            split = row.split(factor=0.12, align=True)
-            split.label(text='Strip ' + str(idx+1) + ':')
-            split = split.split(factor=0.25, align=True)
-            split.prop(strip, 'type', text='')
-            if context.scene.road_properties.strips[idx].type == 'line':
-                split.prop(strip, 'road_mark_type', text='')
-                split.prop(strip, 'road_mark_weight', text='')
-                split.prop(strip, 'road_mark_color', text='')
+        num_lanes_left = context.scene.road_properties.num_lanes_left
+        for idx, lane in enumerate(context.scene.road_properties.lanes):
+            # Lane marking left side
+            if lane.side == 'left':
+                row = box.row(align=True)
+                split = row.split(factor=0.12, align=True)
+                split.label(text='Line:')
+                split.prop(lane, 'road_mark_type', text='')
+                split.prop(lane, 'road_mark_color', text='')
+                split.prop(lane, 'road_mark_weight', text='')
+                split.prop(lane, 'road_mark_width', text='')
                 split.separator()
-            else:
-                split = split.split(factor=0.2, align=True)
+                split.separator()
+            # Basic lane settings
+            if lane.side != 'center':
+                row = box.row(align=True)
+                split = row.split(factor=0.12, align=True)
+                split.label(text='Lane ' + str(idx-num_lanes_left) + ':')
+                split.label(text='Type:')
+                split.prop(lane, 'type', text='')
                 split.label(text='Width:')
-                # split = split.split(factor=0.4, align=True)
-                split.prop(strip, 'width', text='')
-                split = split.split(factor=0.35, align=True)
+                # Splitting of lanes (creates direct junction)
+                split.prop(lane, 'width', text='')
                 split.label(text='Split:')
-                if strip.split_right == False:
-                    split.prop(strip, 'split_right',icon="SORT_DESC", icon_only=True)
+                if lane.split_right == False:
+                    split.prop(lane, 'split_right',icon="SORT_DESC", icon_only=True)
                 else:
-                    split.prop(strip, 'split_right',icon="SORT_ASC", icon_only=True)
+                    split.prop(lane, 'split_right',icon="SORT_ASC", icon_only=True)
+            # Lane marking right side
+            if lane.side == 'right' or lane.side == 'center':
+                row = box.row(align=True)
+                split = row.split(factor=0.12, align=True)
+                split.label(text='Line:')
+                split.prop(lane, 'road_mark_type', text='')
+                split.prop(lane, 'road_mark_color', text='')
+                split.prop(lane, 'road_mark_weight', text='')
+                split.prop(lane, 'road_mark_width', text='')
+                split.separator()
+                split.separator()

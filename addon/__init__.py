@@ -26,7 +26,7 @@ from . object_truck import DSC_OT_object_truck
 from . road_arc import DSC_OT_road_arc
 from . road_properties_popup import DSC_OT_road_properties_popup
 from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
-from . road_properties import DSC_road_properties, DSC_enum_strip
+from . road_properties import DSC_road_properties, DSC_enum_lane
 from . road_clothoid import DSC_OT_road_clothoid
 from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
@@ -115,7 +115,7 @@ def menu_func_export(self, context):
     self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xosc, .xodr, .fbx/.gltf/.osgb)')
 
 classes = (
-    DSC_enum_strip,
+    DSC_enum_lane,
     DSC_OT_export,
     DSC_OT_junction,
     DSC_OT_object_bicycle,

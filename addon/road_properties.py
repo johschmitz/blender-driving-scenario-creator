@@ -19,16 +19,18 @@ from . params_cross_section import params_cross_section
 # We need global wrapper callbacks due to Blender update callback implementation
 def callback_cross_section(self, context):
     self.update_cross_section()
-def callback_width(self, context):
-    self.update_width(context)
+def callback_lane_width(self, context):
+    self.update_lane_width(context)
+def callback_road_mark_weight(self, context):
+    self.update_road_mark_weight(context)
 def callback_num_lanes(self, context):
     self.update_num_lanes()
 def callback_road_split(self, context):
     self.update_road_split(context)
 
-class DSC_enum_strip(bpy.types.PropertyGroup):
+class DSC_enum_lane(bpy.types.PropertyGroup):
     idx: bpy.props.IntProperty(min=0)
-    direction: bpy.props.EnumProperty(
+    side: bpy.props.EnumProperty(
         items=(('left', 'left', '', 0),
                ('right', 'right', '', 1),
                ('center', 'center', '', 2),
@@ -36,11 +38,11 @@ class DSC_enum_strip(bpy.types.PropertyGroup):
         default='right',
     )
     width: bpy.props.FloatProperty(
-        name='Width of lane',
+        name='Width',
         default=4.0, min=0.01, max=10.0, step=1
     )
     type: bpy.props.EnumProperty(
-        name = 'Strip type',
+        name = 'Type',
         items=(('driving', 'Driving', '', 0),
                #('bidirectional', 'Bidirectional', '', 1),
                #('bus', 'Bus', '', 2),
@@ -60,10 +62,10 @@ class DSC_enum_strip(bpy.types.PropertyGroup):
                #('offRamp', 'Off ramp', '', 16),
                #('connectingRamp', 'Connecting ramp', '', 17),
                ('none', 'None', '', 18),
-               ('line', 'Line', '', 19),
+               ('center', 'Center', '', 19),
               ),
         default='driving',
-        update=callback_width,
+        update=callback_lane_width,
     )
     road_mark_type: bpy.props.EnumProperty(
         name = 'Type',
@@ -76,14 +78,6 @@ class DSC_enum_strip(bpy.types.PropertyGroup):
               ),
         default='none',
     )
-    road_mark_weight: bpy.props.EnumProperty(
-        name = 'Weight',
-        items=(('none', 'None', '', 0),
-               ('standard', 'Standard', '', 1),
-               ('bold', 'Bold', '', 2),
-              ),
-        default='none',
-    )
     road_mark_color: bpy.props.EnumProperty(
         name = 'Color',
         items=(('none', 'None', '', 0),
@@ -92,46 +86,65 @@ class DSC_enum_strip(bpy.types.PropertyGroup):
               ),
         default='none',
     )
+    road_mark_weight: bpy.props.EnumProperty(
+        name = 'Weight',
+        items=(('none', 'None', '', 0),
+               ('standard', 'Standard', '', 1),
+               ('bold', 'Bold', '', 2),
+              ),
+        default='none',
+        update=callback_road_mark_weight,
+    )
+    road_mark_width: bpy.props.FloatProperty(
+        name='Width of road mark line',
+        default=0.12, min=0.0, max=10.0, step=1
+    )
 
-    # False for the strips/lanes going left, True for those going right
+
+    # False for the lanes/lanes going left, True for those going right
     split_right: bpy.props.BoolProperty(description='Split above here', update=callback_road_split)
 
-    def update_width(self, context):
-        if self.type == 'line':
-            # We treat line width separately based on road mark line weights
-            self.width = 0.0
-        else:
-            mapping_width_type_lane = {
-                'driving' : context.scene.road_properties.width_driving,
-                'stop' : context.scene.road_properties.width_stop,
-                'border' : context.scene.road_properties.width_border,
-                'shoulder' : context.scene.road_properties.width_shoulder,
-                'median' : context.scene.road_properties.width_median,
-                'none' : context.scene.road_properties.width_none,
-            }
-            self.width = mapping_width_type_lane[self.type]
+    def update_lane_width(self, context):
+        mapping_width_type_lane = {
+            'driving' : context.scene.road_properties.width_driving,
+            'stop' : context.scene.road_properties.width_stop,
+            'border' : context.scene.road_properties.width_border,
+            'shoulder' : context.scene.road_properties.width_shoulder,
+            'median' : context.scene.road_properties.width_median,
+            'none' : context.scene.road_properties.width_none,
+            'center': 0,
+        }
+        self.width = mapping_width_type_lane[self.type]
+
+    def update_road_mark_weight(self, context):
+        mapping_width_type_road_mark = {
+            'none' : 0,
+            'standard' : context.scene.road_properties.width_line_standard,
+            'bold' : context.scene.road_properties.width_line_bold,
+        }
+        self.road_mark_width = mapping_width_type_road_mark[self.road_mark_weight]
 
     def update_road_split(self, context):
         # Avoid updating recursively
-        if context.scene.road_properties.lock_strips:
+        if context.scene.road_properties.lock_lanes:
             return
-        context.scene.road_properties.lock_strips = True
+        context.scene.road_properties.lock_lanes = True
         # Toggle
         if self.split_right == True:
             self.split_right = True
-            road_split_strip_idx = self.idx
+            road_split_lane_idx = self.idx
         else:
             self.split_right = False
-            road_split_strip_idx = self.idx + 1
-        # Split at the desired lane/strip
-        for idx, strip in enumerate(context.scene.road_properties.strips):
-            if idx < road_split_strip_idx:
-                strip.split_right = False
+            road_split_lane_idx = self.idx + 1
+        # Split at the desired lane
+        for idx, lane in enumerate(context.scene.road_properties.lanes):
+            if idx < road_split_lane_idx:
+                lane.split_right = False
             else:
-                strip.split_right = True
-        context.scene.road_properties.road_split_strip_idx = road_split_strip_idx
+                lane.split_right = True
+        context.scene.road_properties.road_split_lane_idx = road_split_lane_idx
         # Unlock updating
-        context.scene.road_properties.lock_strips = False
+        context.scene.road_properties.lock_lanes = False
 
 
 class DSC_road_properties(bpy.types.PropertyGroup):
@@ -152,11 +165,11 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     num_lanes_left: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
     num_lanes_right: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
 
-    # Strip idx where the road is split at the end
-    road_split_strip_idx: bpy.props.IntProperty(default=0, min=0)
+    # Lane idx of first right lane in case of a split road
+    road_split_lane_idx: bpy.props.IntProperty(default=0, min=0)
 
-    strip_idx_current: bpy.props.IntProperty(default=0, min=0)
-    strips: bpy.props.CollectionProperty(type=DSC_enum_strip)
+    lane_idx_current: bpy.props.IntProperty(default=0, min=0)
+    lanes: bpy.props.CollectionProperty(type=DSC_enum_lane)
 
     cross_section_preset: bpy.props.EnumProperty(
             items=(
@@ -181,116 +194,98 @@ class DSC_road_properties(bpy.types.PropertyGroup):
             update=callback_cross_section,
             )
 
-    lock_strips: bpy.props.BoolProperty(default=False)
+    lock_lanes: bpy.props.BoolProperty(default=False)
 
     def init(self):
         self.update_cross_section()
 
-    def clear_strips(self):
-        self.strips.clear()
-        self.strip_idx_current = 0
-        self.road_split_strip_idx = 0
+    def clear_lanes(self):
+        self.lanes.clear()
+        self.lane_idx_current = 0
+        self.road_split_lane_idx = 0
 
     def update_num_lanes(self):
         # Do not update recursively when switching presets
-        if self.lock_strips:
+        if self.lock_lanes:
             return
-        self.clear_strips()
+        self.clear_lanes()
         # Left lanes
         for idx in range(self.num_lanes_left - 1,-1,-1):
             if self.num_lanes_left == 1:
-                self.add_strip('left', 'line', 0.0, 'solid', 'standard', 'white')
-                self.add_strip('left', 'driving', self.width_driving, 'none', 'none', 'none')
+                self.add_lane('left', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
             else:
                 if idx == self.num_lanes_left - 1:
-                    self.add_strip('left', 'line', 0.0, 'none', 'none', 'none')
-                    self.add_strip('left', 'border', self.width_border, 'none', 'none', 'none')
-                    self.add_strip('left', 'line', 0.0, 'solid', 'standard', 'white')
+                    self.add_lane('left', 'border', self.width_border, 'none', 'none', 0.0, 'none')
                 elif idx == 0:
-                    self.add_strip('left', 'driving', self.width_driving, 'none', 'none', 'none')
+                    self.add_lane('left', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
                 else:
-                    self.add_strip('left', 'driving', self.width_driving, 'none', 'none', 'none')
-                    self.add_strip('left', 'line', 0.0, 'broken', 'standard', 'white')
+                    self.add_lane('left', 'driving', self.width_driving, 'broken', 'standard', 0.12, 'white')
         # Center line
         if self.num_lanes_left == 0:
-            self.add_strip('center', 'line', 0.0, 'solid', 'standard', 'white')
+            self.add_lane('center', 'driving', 0.0, 'solid', 'standard', 0.12, 'white')
         elif self.num_lanes_right == 0:
-            self.add_strip('center', 'line', 0.0, 'solid', 'standard', 'white')
+            self.add_lane('center', 'driving', 0.0, 'solid', 'standard', 0.12, 'white')
         else:
-            self.add_strip('center', 'line', 0.0, 'broken', 'standard', 'white')
+            self.add_lane('center', 'driving', 0.0, 'broken', 'standard', 0.12, 'white')
         # Right lanes
         for idx in range(self.num_lanes_right):
             if self.num_lanes_right == 1:
-                self.add_strip('right', 'driving', self.width_driving, 'none', 'none', 'none')
-                self.add_strip('right', 'line', 0.0, 'solid', 'standard', 'white')
+                self.add_lane('right', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
             else:
                 if idx == self.num_lanes_right - 1:
-                    self.add_strip('right', 'border', self.width_border, 'none', 'none', 'none')
-                    self.add_strip('right', 'line', 0.0, 'none', 'none', 'none')
+                    self.add_lane('right', 'border', self.width_border, 'none', 'none', 0.0, 'none')
                 elif idx == self.num_lanes_right - 2:
-                    self.add_strip('right', 'driving', self.width_driving, 'none', 'none', 'none')
-                    self.add_strip('right', 'line', 0.0, 'solid', 'standard', 'white')
+                    self.add_lane('right', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
                 else:
-                    self.add_strip('right', 'driving', self.width_driving, 'none', 'none', 'none')
-                    self.add_strip('right', 'line', 0.0, 'broken', 'standard', 'white')
+                    self.add_lane('right', 'driving', self.width_driving, 'broken', 'standard', 0.12, 'white')
 
-    def add_strip(self, direction, type, width, road_mark_type, road_mark_weight, road_mark_color, split_right=False):
-        strip = self.strips.add()
-        strip.idx = self.strip_idx_current
-        self.strip_idx_current += 1
-        strip.direction = direction
-        strip.type = type
-        strip.width = width
-        strip.road_mark_type = road_mark_type
-        strip.road_mark_weight = road_mark_weight
-        strip.road_mark_color = road_mark_color
-        strip.split_right = split_right
+    def add_lane(self, side, type, width,
+                 road_mark_type, road_mark_weight, road_mark_width, road_mark_color,
+                 split_right=False):
+        lane = self.lanes.add()
+        lane.idx = self.lane_idx_current
+        self.lane_idx_current += 1
+        lane.side = side
+        lane.type = type
+        lane.width = width
+        lane.road_mark_type = road_mark_type
+        lane.road_mark_weight = road_mark_weight
+        lane.road_mark_width = road_mark_width
+        lane.road_mark_color = road_mark_color
+        lane.split_right = split_right
 
     def update_cross_section(self):
         # Reset
-        self.clear_strips()
+        self.clear_lanes()
         num_lanes_left = 0
         num_lanes_right = 0
         # Build up cross section
         params = params_cross_section[self.cross_section_preset]
-        for idx in range(len(params['directions'])):
-            self.add_strip(params['directions'][idx], params['types'][idx],
+        for idx in range(len(params['sides'])):
+            self.add_lane(params['sides'][idx], params['types'][idx],
                 params['widths'][idx], params['road_mark_types'][idx],
-                params['road_mark_weights'][idx], params['road_mark_colors'][idx])
-            if params['types'][idx] != 'line':
-                if params['directions'][idx] == 'left':
-                    num_lanes_left += 1
-                if params['directions'][idx] == 'right':
-                    num_lanes_right += 1
+                params['road_mark_weights'][idx], params['road_mark_widths'][idx],
+                params['road_mark_colors'][idx])
+            if params['sides'][idx] == 'left':
+                num_lanes_left += 1
+            if params['sides'][idx] == 'right':
+                num_lanes_right += 1
         self.print_cross_section()
         # Block recursive callbacks
-        self.lock_strips = True
+        self.lock_lanes = True
         self.num_lanes_left = num_lanes_left
         self.num_lanes_right = num_lanes_right
         # Re-activate callbacks
-        self.lock_strips = False
+        self.lock_lanes = False
 
     def print_cross_section(self):
         print('New cross section:', self.cross_section_preset)
-        directions = []
+        sides = []
         widths = []
         types = []
         road_mark_types = []
-        for strip in self.strips:
-            directions.append(strip.direction)
-            widths.append(strip.width)
-            types.append(strip.type)
-            road_mark_types.append(strip.road_mark_type)
-
-# Helpers
-
-def get_num_split_lanes_left(road_properties):
-    '''
-        Convert road split strip index to road split lane number.
-    '''
-    num_split_lanes_left = 0
-    for idx, strip in enumerate(road_properties.strips):
-        if idx < road_properties.road_split_strip_idx:
-            if strip.type != 'line':
-                num_split_lanes_left += 1
-    return num_split_lanes_left
+        for lane in self.lanes:
+            sides.append(lane.side)
+            widths.append(lane.width)
+            types.append(lane.type)
+            road_mark_types.append(lane.road_mark_type)
