@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.10.1] - 2022-02-16
+
+### Fixed
+- Add polyline trajectory point headings which are now required for correct
+  playback in esmini
+
 ## [0.10.0] - 2022-02-06
 
 ### Added
@@ -114,7 +120,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.7.2...v0.8.0
