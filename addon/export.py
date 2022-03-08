@@ -38,10 +38,10 @@ mapping_lane_type = {
     #'sidewalk': xodr.LaneType.sidewalk,
     'shoulder': xodr.LaneType.shoulder,
     'median': xodr.LaneType.median,
-    #'entry': xodr.LaneType.entry,
-    #'exit': xodr.LaneType.exit,
-    #'onRamp': xodr.LaneType.onRamp,
-    #'offRamp': xodr.LaneType.offRamp,
+    'entry': xodr.LaneType.entry,
+    'exit': xodr.LaneType.exit,
+    'onRamp': xodr.LaneType.onRamp,
+    'offRamp': xodr.LaneType.offRamp,
     #'connectingRamp': xodr.LaneType.connectingRamp,
     'none': xodr.LaneType.none,
 }
@@ -249,7 +249,7 @@ class DSC_OT_export(bpy.types.Operator):
         # Create OpenDRIVE roads from object collection
         if helpers.collection_exists(['OpenDRIVE']):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
-                if 'road' in obj.name:
+                if obj.name.startswith('road'):
                     planview = xodr.PlanView()
                     planview.set_start_point(obj['geometry']['point_start'][0],
                         obj['geometry']['point_start'][1],obj['geometry']['heading_start'])
@@ -266,27 +266,63 @@ class DSC_OT_export(bpy.types.Operator):
                     road = xodr.Road(obj['id_xodr'],planview,lanes)
                     self.add_elevation_profiles(obj, road)
                     # Add road level linking
-                    if 'link_predecessor' in obj:
-                        element_type = self.get_element_type_by_id(obj['link_predecessor'])
+                    if 'link_predecessor_id' in obj:
+                        element_type = self.get_element_type_by_id(obj['link_predecessor_id'])
                         if obj['link_predecessor_cp'] == 'cp_start':
                             cp_type = xodr.ContactPoint.start
-                        elif obj['link_predecessor_cp'] == 'cp_end':
+                        elif obj['link_predecessor_cp'] == 'cp_end_l' or \
+                                obj['link_predecessor_cp'] == 'cp_end_r':
                             cp_type = xodr.ContactPoint.end
                         else:
                             cp_type = None
-                        road.add_predecessor(element_type, obj['link_predecessor'], cp_type)
-                    if 'link_successor' in obj:
-                        element_type = self.get_element_type_by_id(obj['link_successor'])
-                        if obj['link_successor_cp'] == 'cp_start':
-                            cp_type = xodr.ContactPoint.start
-                        elif obj['link_successor_cp'] == 'cp_end':
-                            cp_type = xodr.ContactPoint.end
+                        if 'id_xodr_direct_junction_start' in obj:
+                            # Connect to direction junction attached to the other (split) road
+                            lane_offset = self.get_lane_offset(obj,obj['link_predecessor_id'])
+                            road.add_predecessor(xodr.ElementType.junction, obj['id_xodr_direct_junction_start'],
+                                cp_type, lane_offset, direct_junction=[obj['link_predecessor_id']])
                         else:
-                            cp_type = None
-                        road.add_successor(element_type, obj['link_successor'], cp_type)
+                            road.add_predecessor(element_type, obj['link_predecessor_id'], cp_type)
+                    if 'link_successor_id_l' in obj:
+                        if obj['split_end']:
+                            # Attach to direct junction from the split road
+                            road.add_successor(xodr.ElementType.junction, obj['id_xodr_direct_junction_end'],
+                                direct_junction=[obj['link_successor_id_l'], obj['link_successor_id_r']])
+                        else:
+                            # TODO also make it work for predecessors
+                            #      also make it work for road_split_lane_idx == 0
+                            element_type = self.get_element_type_by_id(obj['link_successor_id_l'])
+                            if obj['link_successor_cp_l'] == 'cp_start':
+                                cp_type = xodr.ContactPoint.start
+                            elif obj['link_successor_cp_l'] == 'cp_end_l' or \
+                                    obj['link_successor_cp_l'] == 'cp_end_l':
+                                cp_type = xodr.ContactPoint.end
+                            else:
+                                cp_type = None
+                            if 'id_xodr_direct_junction_end' in obj:
+                                # Connect to direction junction attached to the other (split) road
+                                lane_offset = self.get_lane_offset(obj,obj['link_successor_id_l'])
+                                road.add_successor(xodr.ElementType.junction, obj['id_xodr_direct_junction_end'],
+                                    cp_type, lane_offset, direct_junction=[obj['link_successor_id_l']])
+                            else:
+                                road.add_successor(element_type, obj['link_successor_id_l'], cp_type)
                     print('Add road with ID', obj['id_xodr'])
                     odr.add_road(road)
                     roads.append(road)
+            # Now that all roads exist create direct junctions
+            for obj in bpy.data.collections['OpenDRIVE'].objects:
+                if obj.name.startswith('road'):
+                    if obj['split_end']:
+                        if 'link_successor_id_l' in obj and 'link_successor_id_r' in obj:
+                            road_in = self.get_road_by_id(roads, obj['id_xodr'])
+                            road_out_l = self.get_road_by_id(roads, obj['link_successor_id_l'])
+                            road_out_r = self.get_road_by_id(roads, obj['link_successor_id_r'])
+                            direct_junction = xodr.create_direct_junction(
+                                [road_in, road_out_l, road_out_r],
+                                id=obj['id_xodr_direct_junction_end'],
+                                name='direct_junction_'+str(obj['id_xodr_direct_junction_end']))
+                            odr.add_junction(direct_junction)
+                        else:
+                            print('WARNING: Direct junction of road with ID {} not fully connected.'.format(obj['id_xodr']))
         # Add lane level linking for all roads
         # TODO: Improve performance by exploiting symmetry
         for road in roads:
@@ -302,7 +338,7 @@ class DSC_OT_export(bpy.types.Operator):
         num_junctions = 0
         if helpers.collection_exists(['OpenDRIVE']):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
-                if 'junction' in obj.name:
+                if obj.name.startswith('junction'):
                     if not len(obj['incoming_roads']) == 4:
                         self.report({'ERROR'}, 'Junction must have 4 connected roads.')
                         break
@@ -455,10 +491,10 @@ class DSC_OT_export(bpy.types.Operator):
             Return element type of an OpenDRIVE element with given ID
         '''
         for obj in bpy.data.collections['OpenDRIVE'].objects:
-            if 'road' in obj.name:
+            if obj.name.startswith('road'):
                 if obj['id_xodr'] == id:
                     return xodr.ElementType.road
-            elif 'junction' in obj.name:
+            elif obj.name.startswith('junction'):
                 if obj['id_xodr'] == id:
                     return xodr.ElementType.junction
 
@@ -567,3 +603,24 @@ class DSC_OT_export(bpy.types.Operator):
     def add_junction_roads_elevation(self, junction_roads, elevation_level):
         for road in junction_roads:
             road.add_elevation(s=0, a=elevation_level, b=0, c=0, d=0)
+
+    def get_lane_offset(self, road_obj, id_split_road):
+        '''
+            Return lane offset of road connected to the split road via direct
+            junction.
+        '''
+        for obj_split in bpy.data.collections['OpenDRIVE'].objects:
+            if obj_split.name.startswith('road'):
+                if obj_split['id_xodr'] == id_split_road:
+                    if obj_split['link_successor_id_l'] == road_obj['id_xodr']:
+                        if obj_split['road_split_lane_idx'] < obj_split['lanes_left_num'] + 1:
+                            lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx'] + 1
+                        else:
+                            lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx']
+                    elif obj_split['link_successor_id_r'] == road_obj['id_xodr']:
+                        # Remove center lane if necessary
+                        if obj_split['road_split_lane_idx'] > obj_split['lanes_left_num'] + 1:
+                            lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx']
+                        else:
+                            lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx'] - 1
+                    return lane_offset

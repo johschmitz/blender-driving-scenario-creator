@@ -42,8 +42,8 @@ class DSC_OT_object_car(DSC_OT_two_point_base):
         if not valid:
             return None
         else:
-            obj_id = helpers.get_new_id_openscenario(context)
-            obj_name = str(obj_id) + '_' + context.scene.object_properties.name
+            id_obj = helpers.get_new_id_openscenario(context)
+            obj_name = str(id_obj) + '_' + context.scene.object_properties.name
             mesh.name = obj_name
             obj = bpy.data.objects.new(mesh.name, mesh)
             obj.matrix_world = matrix_world

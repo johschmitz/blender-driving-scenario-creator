@@ -57,7 +57,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             'design_speed': 130.0,
         }
         self.params_snap = {
-            'obj_id': None,
+            'id_obj': None,
             'point': Vector((0.0,0.0,0.0)),
             'type': 'cp_none',
             'heading': 0,
@@ -242,7 +242,8 @@ class DSC_OT_two_point_base(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_START':
-                    self.id_xodr_start = self.params_snap['obj_id']
+                    self.id_xodr_start = self.params_snap['id_obj']
+                    self.id_connected_junction_start = self.params_snap['id_connected_junction']
                     self.cp_type_start = self.params_snap['type']
                     # Create helper stencil mesh
                     self.create_stencil(context, self.params_input['point_start'])
@@ -257,12 +258,12 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                         obj = self.create_object(context)
                         if self.params_input['connected_start']:
                             link_type = 'start'
-                            helpers.create_object_xodr_links(context, obj, link_type,
-                                self.id_xodr_start, self.cp_type_start)
+                            helpers.create_object_xodr_links(context, obj, link_type, self.cp_type_start,
+                                self.id_xodr_start, self.id_connected_junction_start)
                         if self.params_input['connected_end']:
                             link_type = 'end'
-                            helpers.create_object_xodr_links(context, obj, link_type,
-                                self.params_snap['obj_id'], cp_type_end)
+                            helpers.create_object_xodr_links(context, obj, link_type, cp_type_end,
+                                self.params_snap['id_obj'], self.params_snap['id_connected_junction'])
                         # Remove stencil and go back to initial state to draw again
                         self.remove_stencil()
                         self.state = 'INIT'

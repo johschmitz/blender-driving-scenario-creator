@@ -32,8 +32,8 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
         return context.area.type == 'VIEW_3D'
 
     def make_trajectory_final(self, context):
-        obj_id = helpers.get_new_id_openscenario(context)
-        obj_name = 'trajectory' + '_' + str(obj_id)
+        id_obj = helpers.get_new_id_openscenario(context)
+        obj_name = 'trajectory' + '_' + str(id_obj)
         self.trajectory.name = obj_name
         self.set_xosc_properties()
 
@@ -102,7 +102,7 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
                         self.point_start = self.selected_point
                         self.trajectory_points.append(self.selected_point.copy())
                         self.create_trajectory_temp(context)
-                        self.trajectory_owner_name = self.params_snap['obj_id']
+                        self.trajectory_owner_name = self.params_snap['id_obj']
                         helpers.select_activate_object(context, self.trajectory)
                         self.state = 'SELECT_POINT'
                         return {'RUNNING_MODAL'}

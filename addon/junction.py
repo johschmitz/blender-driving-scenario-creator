@@ -37,8 +37,8 @@ class DSC_OT_junction(DSC_OT_two_point_base):
         if not valid:
             return None
         else:
-            obj_id = helpers.get_new_id_opendrive(context)
-            mesh.name = self.object_type + '_' + str(obj_id)
+            id_obj = helpers.get_new_id_opendrive(context)
+            mesh.name = self.object_type + '_' + str(id_obj)
             obj = bpy.data.objects.new(mesh.name, mesh)
             obj.matrix_world = matrix_world
             helpers.link_object_opendrive(context, obj)
@@ -58,7 +58,7 @@ class DSC_OT_junction(DSC_OT_two_point_base):
             obj['cp_up'] = obj.matrix_world @ obj.data.vertices[7].co
 
             # Set OpenDRIVE custom properties
-            obj['id_xodr'] = obj_id
+            obj['id_xodr'] = id_obj
             obj['junction_type'] = 'default'
             obj['planView_geometry_x'] = self.params['point_start'].x
             obj['planView_geometry_y'] = self.params['point_start'].y

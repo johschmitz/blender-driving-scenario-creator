@@ -110,7 +110,7 @@ def link_object_openscenario(context, obj, subcategory=None):
 
 def get_object_xodr_by_id(context, id_xodr):
     '''
-        Get reference to OpenDRIVE object by ID.
+        Get reference to OpenDRIVE object by ID, return None if not found.
     '''
     collection = bpy.data.collections.get('OpenDRIVE')
     for obj in collection.objects:
@@ -118,18 +118,22 @@ def get_object_xodr_by_id(context, id_xodr):
             if obj['id_xodr'] == id_xodr:
                 return obj
 
-def create_object_xodr_links(context, obj, link_type, id_other, cp_type):
+def create_object_xodr_links(context, obj, link_type, cp_type, id_other, id_connected_junction):
     '''
         Create OpenDRIVE predecessor/successor linkage for current object with
         other object.
     '''
     if 'road' in obj.name:
         if link_type == 'start':
-            obj['link_predecessor'] =  id_other
+            obj['link_predecessor_id'] =  id_other
             obj['link_predecessor_cp'] = cp_type
+            if id_connected_junction != None:
+                obj['id_xodr_direct_junction_start'] = id_connected_junction
         else:
-            obj['link_successor'] = id_other
-            obj['link_successor_cp'] = cp_type
+            obj['link_successor_id_l'] = id_other
+            obj['link_successor_cp_l'] = cp_type
+            if id_connected_junction != None:
+                obj['id_xodr_direct_junction_end'] = id_connected_junction
     elif 'junction' in obj.name:
         if link_type == 'start':
             obj['incoming_roads']['cp_left'] = id_other
@@ -141,19 +145,23 @@ def create_object_xodr_links(context, obj, link_type, id_other, cp_type):
             if link_type == 'start':
                 cp_type_other = 'cp_start'
             else:
-                cp_type_other = 'cp_end'
+                cp_type_other = 'cp_end_l'
         if 'junction' in obj.name:
             if link_type == 'start':
                 cp_type_other = 'cp_down'
             else:
                 cp_type_other = 'cp_up'
         if cp_type == 'cp_start':
-            obj_other['link_predecessor'] = obj['id_xodr']
+            obj_other['link_predecessor_id'] = obj['id_xodr']
             obj_other['link_predecessor_cp'] = cp_type_other
         else:
-            obj_other['link_successor'] = obj['id_xodr']
-            obj_other['link_successor_cp'] = cp_type_other
-    elif 'junction' in obj_other.name:
+            if cp_type == 'cp_end_l':
+                obj_other['link_successor_id_l'] = obj['id_xodr']
+                obj_other['link_successor_cp_l'] = cp_type_other
+            else:
+                obj_other['link_successor_id_r'] = obj['id_xodr']
+                obj_other['link_successor_cp_r'] = cp_type_other
+    elif obj_other.name.startswith('junction'):
         obj_other['incoming_roads'][cp_type] = obj['id_xodr']
 
 def select_activate_object(context, obj):
@@ -249,10 +257,10 @@ def point_to_road_connector(obj, point):
         return 'cp_start', Vector(obj['cp_start']), obj['geometry']['heading_start'] - pi, \
             obj['geometry']['curvature_start'], obj['geometry']['slope_start']
     elif arg_min_dist == 1:
-        return 'cp_end', Vector(obj['cp_end_l']), obj['geometry']['heading_end'], \
+        return 'cp_end_l', Vector(obj['cp_end_l']), obj['geometry']['heading_end'], \
             obj['geometry']['curvature_end'], obj['geometry']['slope_end']
     else:
-        return 'cp_end', Vector(obj['cp_end_r']), obj['geometry']['heading_end'], \
+        return 'cp_end_r', Vector(obj['cp_end_r']), obj['geometry']['heading_end'], \
             obj['geometry']['curvature_end'], obj['geometry']['slope_end']
 
 def point_to_junction_connector(obj, point):
@@ -297,7 +305,8 @@ def mouse_to_object_params(context, event, filter):
     '''
     # Initialize with some defaults in case nothing is hit
     hit = False
-    obj_id = None
+    id_obj = None
+    id_connected_junction = None
     point_type = None
     snapped_point = Vector((0.0,0.0,0.0))
     heading = 0
@@ -315,27 +324,32 @@ def mouse_to_object_params(context, event, filter):
                 if obj['dsc_type'] == 'road':
                     hit = True
                     point_type, snapped_point, heading, curvature, slope = point_to_road_connector(obj, point_raycast)
-                    obj_id = obj['id_xodr']
+                    id_obj = obj['id_xodr']
+                    # TODO also implement direct junction for start of road
+                    if point_type == 'cp_end_l' or point_type == 'cp_end_r':
+                        if 'id_xodr_direct_junction_end' in obj:
+                            id_connected_junction = obj['id_xodr_direct_junction_end']
                 if obj['dsc_type'] == 'junction':
                     hit = True
                     point_type, snapped_point, heading = point_to_junction_connector(obj, point_raycast)
-                    obj_id = obj['id_xodr']
+                    id_obj = obj['id_xodr']
         elif filter == 'OpenSCENARIO':
             if obj['dsc_category'] == 'OpenSCENARIO':
                 hit = True
                 point_type, snapped_point, heading = point_to_object_connector(obj, point_raycast)
-                obj_id = obj.name
+                id_obj = obj.name
         elif filter == 'surface':
             hit = True
             point_type = 'surface'
             snapped_point = point_raycast
-            obj_id = obj.name
-    return hit ,{'obj_id': obj_id,
-                'point': snapped_point,
-                'type': point_type,
-                'heading': heading,
-                'curvature': curvature,
-                'slope': slope}
+            id_obj = obj.name
+    return hit ,{'id_obj': id_obj,
+                 'id_connected_junction': id_connected_junction,
+                 'point': snapped_point,
+                 'type': point_type,
+                 'heading': heading,
+                 'curvature': curvature,
+                 'slope': slope}
 
 def assign_road_materials(obj):
     '''
