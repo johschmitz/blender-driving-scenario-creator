@@ -125,8 +125,8 @@ def create_object_xodr_links(context, obj, link_type, cp_type, id_other, id_conn
     '''
     if 'road' in obj.name:
         if link_type == 'start':
-            obj['link_predecessor_id'] =  id_other
-            obj['link_predecessor_cp'] = cp_type
+            obj['link_predecessor_id_l'] =  id_other
+            obj['link_predecessor_cp_l'] = cp_type
             if id_connected_junction != None:
                 obj['id_xodr_direct_junction_start'] = id_connected_junction
         else:
@@ -143,7 +143,7 @@ def create_object_xodr_links(context, obj, link_type, cp_type, id_other, id_conn
     if 'road' in obj_other.name:
         if 'road' in obj.name:
             if link_type == 'start':
-                cp_type_other = 'cp_start'
+                cp_type_other = 'cp_start_l'
             else:
                 cp_type_other = 'cp_end_l'
         if 'junction' in obj.name:
@@ -151,16 +151,18 @@ def create_object_xodr_links(context, obj, link_type, cp_type, id_other, id_conn
                 cp_type_other = 'cp_down'
             else:
                 cp_type_other = 'cp_up'
-        if cp_type == 'cp_start':
-            obj_other['link_predecessor_id'] = obj['id_xodr']
-            obj_other['link_predecessor_cp'] = cp_type_other
-        else:
-            if cp_type == 'cp_end_l':
-                obj_other['link_successor_id_l'] = obj['id_xodr']
-                obj_other['link_successor_cp_l'] = cp_type_other
-            else:
-                obj_other['link_successor_id_r'] = obj['id_xodr']
-                obj_other['link_successor_cp_r'] = cp_type_other
+        if cp_type == 'cp_start_l':
+            obj_other['link_predecessor_id_l'] = obj['id_xodr']
+            obj_other['link_predecessor_cp_l'] = cp_type_other
+        elif cp_type == 'cp_start_r':
+            obj_other['link_predecessor_id_r'] = obj['id_xodr']
+            obj_other['link_predecessor_cp_r'] = cp_type_other
+        elif cp_type == 'cp_end_l':
+            obj_other['link_successor_id_l'] = obj['id_xodr']
+            obj_other['link_successor_cp_l'] = cp_type_other
+        elif cp_type == 'cp_end_l':
+            obj_other['link_successor_id_r'] = obj['id_xodr']
+            obj_other['link_successor_cp_r'] = cp_type_other
     elif obj_other.name.startswith('junction'):
         obj_other['incoming_roads'][cp_type] = obj['id_xodr']
 
@@ -248,15 +250,19 @@ def point_to_road_connector(obj, point):
     '''
         Get a snapping point and heading from an existing road.
     '''
-    dist_start = (Vector(obj['cp_start']) - point).length
+    dist_start_l = (Vector(obj['cp_start_l']) - point).length
+    dist_start_r = (Vector(obj['cp_start_r']) - point).length
     dist_end_l = (Vector(obj['cp_end_l']) - point).length
     dist_end_r = (Vector(obj['cp_end_r']) - point).length
-    distances = [dist_start, dist_end_l, dist_end_r]
+    distances = [dist_start_l, dist_start_r, dist_end_l, dist_end_r]
     arg_min_dist = distances.index(min(distances))
     if arg_min_dist == 0:
-        return 'cp_start', Vector(obj['cp_start']), obj['geometry']['heading_start'] - pi, \
+        return 'cp_start_l', Vector(obj['cp_start_l']), obj['geometry']['heading_start'] - pi, \
             obj['geometry']['curvature_start'], obj['geometry']['slope_start']
-    elif arg_min_dist == 1:
+    if arg_min_dist == 1:
+        return 'cp_start_r', Vector(obj['cp_start_r']), obj['geometry']['heading_start'] - pi, \
+            obj['geometry']['curvature_start'], obj['geometry']['slope_start']
+    elif arg_min_dist == 2:
         return 'cp_end_l', Vector(obj['cp_end_l']), obj['geometry']['heading_end'], \
             obj['geometry']['curvature_end'], obj['geometry']['slope_end']
     else:

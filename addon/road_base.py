@@ -86,26 +86,37 @@ class DSC_OT_road(DSC_OT_two_point_base):
             obj['road_split_lane_idx'] = self.params['road_split_lane_idx']
 
             # Remember connecting points for road snapping
-            obj['cp_start'] = self.geometry.params['point_start']
-            obj['cp_end_l'], obj['cp_end_r']= self.get_cps_end()
+            if self.params['road_split_type'] == 'start':
+                obj['cp_start_l'], obj['cp_start_r'] = self.get_split_cps('start')
+                obj['cp_end_l'], obj['cp_end_r']= self.geometry.params['point_end'], self.geometry.params['point_end']
+            elif self.params['road_split_type'] == 'end':
+                obj['cp_start_l'], obj['cp_start_r'] = self.geometry.params['point_start'], self.geometry.params['point_start']
+                obj['cp_end_l'], obj['cp_end_r']= self.get_split_cps('end')
+            else:
+                obj['cp_start_l'], obj['cp_start_r'] = self.geometry.params['point_start'], self.geometry.params['point_start']
+                obj['cp_end_l'], obj['cp_end_r']= self.geometry.params['point_end'], self.geometry.params['point_end']
 
             # A road split needs to create an OpenDRIVE direct junction
-            if self.params['road_split_lane_idx'] < self.params['lanes_left_num'] + self.params['lanes_right_num'] + 1:
-                obj['split_end'] = True
+            obj['road_split_type'] = self.params['road_split_type']
+            if self.params['road_split_type'] != 'none':
                 direct_junction_id = helpers.get_new_id_opendrive(context)
                 direct_junction_name = 'direct_junction' + '_' + str(direct_junction_id)
                 obj_direct_junction = bpy.data.objects.new(direct_junction_name, None)
                 obj_direct_junction.empty_display_type = 'PLAIN_AXES'
                 if self.params['road_split_lane_idx'] > self.params['lanes_left_num']:
-                    obj_direct_junction.location = obj['cp_end_r']
+                    if self.params['road_split_type'] == 'start':
+                        obj_direct_junction.location = obj['cp_start_r']
+                    else:
+                        obj_direct_junction.location = obj['cp_end_r']
                 else:
-                    obj_direct_junction.location = obj['cp_end_l']
+                    if self.params['road_split_type'] == 'start':
+                        obj_direct_junction.location = obj['cp_start_l']
+                    else:
+                        obj_direct_junction.location = obj['cp_end_l']
                 # FIXME also add rotation based on road heading and slope
                 helpers.link_object_opendrive(context, obj_direct_junction)
                 obj_direct_junction['id_xodr'] = direct_junction_id
                 obj['id_xodr_direct_junction_end'] = direct_junction_id
-            else:
-                obj['split_end'] = False
 
             # Set OpenDRIVE custom properties
             obj['id_xodr'] = id_obj
@@ -180,6 +191,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                        'lane_center_road_mark_type': [],
                        'lane_center_road_mark_weight': [],
                        'lane_center_road_mark_color': [],
+                       'road_split_type': road_properties.road_split_type,
                        'road_split_lane_idx': road_properties.road_split_lane_idx}
         for idx, lane in enumerate(road_properties.lanes):
             if lane.side == 'left':
@@ -200,27 +212,27 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 self.params['lane_center_road_mark_weight'] = lane.road_mark_weight
                 self.params['lane_center_road_mark_color'] = lane.road_mark_color
 
-    def get_cps_end(self):
+    def get_split_cps(self, road_split_type):
         '''
-            Return the two connection points for a split road. Return identical points
-            in case of no split.
+            Return the two connection points for a split road.
         '''
         road_split_lane_idx = self.params['road_split_lane_idx']
         t_cp_split = self.road_split_lane_idx_to_t(road_split_lane_idx)
-        # Calculate connection points
-        if road_split_lane_idx > self.params['lanes_left_num'] + self.params['lanes_right_num'] + 1:
-            # No split
-            return self.geometry.params['point_end'], self.geometry.params['point_end']
+        if road_split_type == 'start':
+            t = 0
+            cp_base = self.geometry.params['point_start']
         else:
-            # Split
-            cp_split = self.geometry.matrix_world @ Vector(self.geometry.sample_cross_section(
-                self.geometry.params['length'], [t_cp_split])[0][0])
-            # Check which part of the split contains the center lane, that part
-            # gets the contact point on the center lane
-            if t_cp_split < 0:
-                return self.geometry.params['point_end'], cp_split
-            else:
-                return cp_split, self.geometry.params['point_end']
+            t = self.geometry.params['length']
+            cp_base = self.geometry.params['point_end']
+        # Split
+        cp_split = self.geometry.matrix_world @ Vector(self.geometry.sample_cross_section(
+            t, [t_cp_split])[0][0])
+        # Check which part of the split contains the center lane, that part
+        # gets the contact point on the center lane
+        if t_cp_split < 0:
+            return cp_base, cp_split
+        else:
+            return cp_split, cp_base
 
     def road_split_lane_idx_to_t(self, road_split_lane_idx):
         '''

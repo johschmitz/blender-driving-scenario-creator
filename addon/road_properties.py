@@ -170,6 +170,14 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     num_lanes_left: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
     num_lanes_right: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
 
+    road_split_type: bpy.props.EnumProperty(
+        name = 'Split type',
+        items=(('none', 'None', '', 0),
+               ('start', 'Start', '', 1),
+               ('end', 'End', '', 2),
+              ),
+        default='none',
+    )
     # Lane idx of first right lane in case of a split road (counting in -t direction)
     road_split_lane_idx: bpy.props.IntProperty(default=0, min=0)
 
@@ -191,6 +199,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 ('eka1_rq31', 'EKA 1, RQ 31', 'EKA 1, RQ 31'),
                 ('eka1_rq31_exit_right', 'EKA 1, RQ 31 - exit right', 'EKA 1, RQ 31 - exit right'),
                 ('eka1_rq31_exit_right_continuation', 'EKA 1, RQ 31 - exit right continuation', 'EKA 1, RQ 31 - exit right continuation'),
+                ('eka1_rq31_entry_right', 'EKA 1, RQ 31 - entry right', 'EKA 1, RQ 31 - entry right'),
                 ('eka1_rq36', 'EKA 1, RQ 36', 'EKA 1, RQ 36'),
                 ('eka1_rq43_5', 'EKA 1, RQ 43.5', 'EKA 1, RQ 43.5'),
                 ('on_ramp', 'On ramp', 'On ramp'),
@@ -202,6 +211,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
             update=callback_cross_section,
             )
 
+    # A lock for deactivating callbacks
     lock_lanes: bpy.props.BoolProperty(default=False)
 
     def init(self):
@@ -210,6 +220,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     def clear_lanes(self):
         self.lanes.clear()
         self.lane_idx_current = 0
+        self.road_split_type = 'none'
         self.road_split_lane_idx = 1
 
     def update_num_lanes(self):
@@ -248,6 +259,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                     self.add_lane('right', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
                 else:
                     self.add_lane('right', 'driving', self.width_driving, 'broken', 'standard', 0.12, 'white')
+        self.road_split_type = 'none'
         # Set split index one above maximum to make all lanes go left
         self.road_split_lane_idx = self.num_lanes_left + self.num_lanes_right + 1
         # Allow callbacks again
@@ -289,6 +301,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 num_lanes_left += 1
             if params['sides'][idx] == 'right':
                 num_lanes_right += 1
+        self.road_split_type = params['road_split_type']
         self.road_split_lane_idx = params['road_split_lane_idx']
         for idx, lane in enumerate(self.lanes):
             if idx < self.road_split_lane_idx:

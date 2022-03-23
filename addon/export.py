@@ -266,35 +266,36 @@ class DSC_OT_export(bpy.types.Operator):
                     road = xodr.Road(obj['id_xodr'],planview,lanes)
                     self.add_elevation_profiles(obj, road)
                     # Add road level linking
-                    if 'link_predecessor_id' in obj:
-                        element_type = self.get_element_type_by_id(obj['link_predecessor_id'])
-                        if obj['link_predecessor_cp'] == 'cp_start':
+                    if 'link_predecessor_id_l' in obj:
+                        element_type = self.get_element_type_by_id(obj['link_predecessor_id_l'])
+                        if obj['link_predecessor_cp_l'] == 'cp_start_l' or \
+                            obj['link_predecessor_cp_l'] == 'cp_start_r':
                             cp_type = xodr.ContactPoint.start
-                        elif obj['link_predecessor_cp'] == 'cp_end_l' or \
-                                obj['link_predecessor_cp'] == 'cp_end_r':
+                        elif obj['link_predecessor_cp_l'] == 'cp_end_l' or \
+                                obj['link_predecessor_cp_l'] == 'cp_end_r':
                             cp_type = xodr.ContactPoint.end
                         else:
                             cp_type = None
                         if 'id_xodr_direct_junction_start' in obj:
                             # Connect to direction junction attached to the other (split) road
-                            lane_offset = self.get_lane_offset(obj,obj['link_predecessor_id'])
+                            lane_offset = self.get_lane_offset(obj,obj['link_predecessor_id_l'])
                             road.add_predecessor(xodr.ElementType.junction, obj['id_xodr_direct_junction_start'],
-                                cp_type, lane_offset, direct_junction=[obj['link_predecessor_id']])
+                                cp_type, lane_offset, direct_junction=[obj['link_predecessor_id_l']])
                         else:
-                            road.add_predecessor(element_type, obj['link_predecessor_id'], cp_type)
+                            road.add_predecessor(element_type, obj['link_predecessor_id_l'], cp_type)
                     if 'link_successor_id_l' in obj:
-                        if obj['split_end']:
+                        if obj['road_split_type'] != 'none':
                             # Attach to direct junction from the split road
                             road.add_successor(xodr.ElementType.junction, obj['id_xodr_direct_junction_end'],
                                 direct_junction=[obj['link_successor_id_l'], obj['link_successor_id_r']])
                         else:
                             # TODO also make it work for predecessors
-                            #      also make it work for road_split_lane_idx == 0
                             element_type = self.get_element_type_by_id(obj['link_successor_id_l'])
-                            if obj['link_successor_cp_l'] == 'cp_start':
+                            if obj['link_successor_cp_l'] == 'cp_start_l' or \
+                                obj['link_successor_cp_l'] == 'cp_start_r':
                                 cp_type = xodr.ContactPoint.start
                             elif obj['link_successor_cp_l'] == 'cp_end_l' or \
-                                    obj['link_successor_cp_l'] == 'cp_end_l':
+                                    obj['link_successor_cp_l'] == 'cp_end_r':
                                 cp_type = xodr.ContactPoint.end
                             else:
                                 cp_type = None
@@ -311,7 +312,7 @@ class DSC_OT_export(bpy.types.Operator):
             # Now that all roads exist create direct junctions
             for obj in bpy.data.collections['OpenDRIVE'].objects:
                 if obj.name.startswith('road'):
-                    if obj['split_end']:
+                    if obj['road_split_type'] != 'none':
                         if 'link_successor_id_l' in obj and 'link_successor_id_r' in obj:
                             road_in = self.get_road_by_id(roads, obj['id_xodr'])
                             road_out_l = self.get_road_by_id(roads, obj['link_successor_id_l'])
