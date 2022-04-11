@@ -41,6 +41,15 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
         name='Width',
         default=4.0, min=0.01, max=10.0, step=1
     )
+    # Used to open up a new lane or end a lane
+    width_change: bpy.props.EnumProperty(
+        name = 'Width change',
+        items=(('none', 'None', '', 0),
+               ('open', 'Open', '', 1),
+               ('close', 'Close', '', 2),
+              ),
+        default='none',
+    )
     type: bpy.props.EnumProperty(
         name = 'Type',
         items=(('driving', 'Driving', '', 0),
@@ -99,7 +108,6 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
         name='Width of road mark line',
         default=0.12, min=0.0, max=10.0, step=1
     )
-
 
     # False for the lanes/lanes going left, True for those going right
     split_right: bpy.props.BoolProperty(description='Split above here', update=callback_road_split)
@@ -197,9 +205,11 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 # ('eka3_rq38_5', 'EKA 3, RQ 38_5', 'EKA 3, RQ 38_5'),
                 # ('eka2_rq28', 'EKA 1, RQ 28', 'EKA 1, RQ 28'),
                 ('eka1_rq31', 'EKA 1, RQ 31', 'EKA 1, RQ 31'),
+                ('eka1_rq31_exit_right_open', 'EKA 1, RQ 31 - exit right open', 'EKA 1, RQ 31 - exit right open'),
                 ('eka1_rq31_exit_right', 'EKA 1, RQ 31 - exit right', 'EKA 1, RQ 31 - exit right'),
                 ('eka1_rq31_exit_right_continuation', 'EKA 1, RQ 31 - exit right continuation', 'EKA 1, RQ 31 - exit right continuation'),
                 ('eka1_rq31_entry_right', 'EKA 1, RQ 31 - entry right', 'EKA 1, RQ 31 - entry right'),
+                ('eka1_rq31_entry_right_close', 'EKA 1, RQ 31 - entry right close', 'EKA 1, RQ 31 - entry right close'),
                 ('eka1_rq36', 'EKA 1, RQ 36', 'EKA 1, RQ 36'),
                 ('eka1_rq43_5', 'EKA 1, RQ 43.5', 'EKA 1, RQ 43.5'),
                 ('on_ramp', 'On ramp', 'On ramp'),
@@ -233,39 +243,39 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         # Left lanes
         for idx in range(self.num_lanes_left - 1,-1,-1):
             if self.num_lanes_left == 1:
-                self.add_lane('left', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
+                self.add_lane('left', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
             else:
                 if idx == self.num_lanes_left - 1:
-                    self.add_lane('left', 'border', self.width_border, 'none', 'none', 0.0, 'none')
+                    self.add_lane('left', 'border', self.width_border, 'none', 'none', 'none', 0.0, 'none')
                 elif idx == 0:
-                    self.add_lane('left', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
+                    self.add_lane('left', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
                 else:
-                    self.add_lane('left', 'driving', self.width_driving, 'broken', 'standard', 0.12, 'white')
+                    self.add_lane('left', 'driving', self.width_driving, 'none', 'broken', 'standard', 0.12, 'white')
         # Center line
         if self.num_lanes_left == 0:
-            self.add_lane('center', 'driving', 0.0, 'solid', 'standard', 0.12, 'white')
+            self.add_lane('center', 'driving', 0.0, 'none', 'solid', 'standard', 0.12, 'white')
         elif self.num_lanes_right == 0:
-            self.add_lane('center', 'driving', 0.0, 'solid', 'standard', 0.12, 'white')
+            self.add_lane('center', 'driving', 0.0, 'none', 'solid', 'standard', 0.12, 'white')
         else:
-            self.add_lane('center', 'driving', 0.0, 'broken', 'standard', 0.12, 'white')
+            self.add_lane('center', 'driving', 0.0, 'none', 'broken', 'standard', 0.12, 'white')
         # Right lanes
         for idx in range(self.num_lanes_right):
             if self.num_lanes_right == 1:
-                self.add_lane('right', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
+                self.add_lane('right', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
             else:
                 if idx == self.num_lanes_right - 1:
-                    self.add_lane('right', 'border', self.width_border, 'none', 'none', 0.0, 'none')
+                    self.add_lane('right', 'border', self.width_border, 'none', 'none', 'none', 0.0, 'none')
                 elif idx == self.num_lanes_right - 2:
-                    self.add_lane('right', 'driving', self.width_driving, 'solid', 'standard', 0.12, 'white')
+                    self.add_lane('right', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
                 else:
-                    self.add_lane('right', 'driving', self.width_driving, 'broken', 'standard', 0.12, 'white')
+                    self.add_lane('right', 'driving', self.width_driving, 'none', 'broken', 'standard', 0.12, 'white')
         self.road_split_type = 'none'
         # Set split index one above maximum to make all lanes go left
         self.road_split_lane_idx = self.num_lanes_left + self.num_lanes_right + 1
         # Allow callbacks again
         self.lock_lanes = False
 
-    def add_lane(self, side, type, width,
+    def add_lane(self, side, type, width, width_change,
                  road_mark_type, road_mark_weight, road_mark_width, road_mark_color,
                  split_right=False):
         lane = self.lanes.add()
@@ -274,6 +284,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         lane.side = side
         lane.type = type
         lane.width = width
+        lane.width_change = width_change
         lane.road_mark_type = road_mark_type
         lane.road_mark_weight = road_mark_weight
         lane.road_mark_width = road_mark_width
@@ -294,7 +305,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         params = params_cross_section[self.cross_section_preset]
         for idx in range(len(params['sides'])):
             self.add_lane(params['sides'][idx], params['types'][idx],
-                params['widths'][idx], params['road_mark_types'][idx],
+                params['widths'][idx], params['widths_change'][idx], params['road_mark_types'][idx],
                 params['road_mark_weights'][idx], params['road_mark_widths'][idx],
                 params['road_mark_colors'][idx])
             if params['sides'][idx] == 'left':

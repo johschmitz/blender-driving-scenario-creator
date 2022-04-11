@@ -128,7 +128,9 @@ class DSC_OT_road(DSC_OT_two_point_base):
             obj['lanes_left_types'] = self.params['lanes_left_types']
             obj['lanes_right_types'] = self.params['lanes_right_types']
             obj['lanes_left_widths'] = self.params['lanes_left_widths']
+            obj['lanes_left_widths_change'] = self.params['lanes_left_widths_change']
             obj['lanes_right_widths'] = self.params['lanes_right_widths']
+            obj['lanes_right_widths_change'] = self.params['lanes_right_widths_change']
             obj['lanes_left_road_mark_types'] = self.params['lanes_left_road_mark_types']
             obj['lanes_left_road_mark_weights'] = self.params['lanes_left_road_mark_weights']
             obj['lanes_left_road_mark_colors'] = self.params['lanes_left_road_mark_colors']
@@ -150,16 +152,12 @@ class DSC_OT_road(DSC_OT_two_point_base):
         if self.geometry.params['valid'] == False:
             self.report({'WARNING'}, 'No valid road geometry solution found!')
         length_broken_line = context.scene.road_properties.length_broken_line
-        width_line_standard = context.scene.road_properties.width_line_standard
-        width_line_bold = context.scene.road_properties.width_line_bold
-        self.set_lane_params(context.scene.road_properties, width_line_standard, width_line_bold)
+        self.set_lane_params(context.scene.road_properties)
         lanes = context.scene.road_properties.lanes
         # Get values in t and s direction where the faces of the road start and end
-        # TODO: Possible optimization is to recalculate t values only when a cross section update occurs
-        strips_t_values = self.get_strips_t_values(lanes, width_line_standard, width_line_bold)
         strips_s_boundaries = self.get_strips_s_boundaries(lanes, length_broken_line)
         # Calculate meshes for Blender
-        road_sample_points = self.get_road_sample_points(strips_t_values, strips_s_boundaries)
+        road_sample_points = self.get_road_sample_points(lanes, strips_s_boundaries)
         vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
         materials = self.get_face_materials(lanes, strips_s_boundaries)
 
@@ -172,14 +170,16 @@ class DSC_OT_road(DSC_OT_two_point_base):
         valid = True
         return valid, mesh, self.geometry.matrix_world, materials
 
-    def set_lane_params(self, road_properties, width_line_standard, width_line_bold):
+    def set_lane_params(self, road_properties):
         '''
             Set the lane parameters dictionary for later export.
         '''
         self.params = {'lanes_left_num': road_properties.num_lanes_left,
                        'lanes_right_num': road_properties.num_lanes_right,
                        'lanes_left_widths': [],
+                       'lanes_left_widths_change': [],
                        'lanes_right_widths': [],
+                       'lanes_right_widths_change': [],
                        'lanes_left_types': [],
                        'lanes_right_types': [],
                        'lanes_left_road_mark_types': [],
@@ -196,12 +196,14 @@ class DSC_OT_road(DSC_OT_two_point_base):
         for idx, lane in enumerate(road_properties.lanes):
             if lane.side == 'left':
                 self.params['lanes_left_widths'].insert(0, lane.width)
+                self.params['lanes_left_widths_change'].insert(0, lane.width_change)
                 self.params['lanes_left_types'].insert(0, lane.type)
                 self.params['lanes_left_road_mark_types'].insert(0, lane.road_mark_type)
                 self.params['lanes_left_road_mark_weights'].insert(0, lane.road_mark_weight)
                 self.params['lanes_left_road_mark_colors'].insert(0, lane.road_mark_color)
             elif lane.side == 'right':
                 self.params['lanes_right_widths'].append(lane.width)
+                self.params['lanes_right_widths_change'].append(lane.width_change)
                 self.params['lanes_right_types'].append(lane.type)
                 self.params['lanes_right_road_mark_types'].append(lane.road_mark_type)
                 self.params['lanes_right_road_mark_weights'].append(lane.road_mark_weight)
@@ -241,25 +243,31 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
         t_cp_split = 0
         # Check if there really is a split
-        if road_split_lane_idx < (self.params['lanes_left_num'] + self.params['lanes_right_num'] + 1):
+        if self.params['road_split_type'] != 'none':
             # Calculate lane ID from split index
             if self.params['lanes_left_num'] > 0:
                 lane_id_split = -1 * (road_split_lane_idx - self.params['lanes_left_num'])
-                # if road_split_lane_idx < self.params['lanes_left_num']:
-                #     # Subtract center lane
-                #     lane_id_split = abs(lane_id_split)
             else:
                 lane_id_split = -1 * road_split_lane_idx
             # Calculate t coordinate of split connection point
-            if lane_id_split > 0:
-                for idx in range(lane_id_split):
-                    t_cp_split += self.params['lanes_left_widths'][idx]
-            else:
-                for idx in range(abs(lane_id_split)):
-                    t_cp_split -= self.params['lanes_right_widths'][idx]
+            for idx in range(abs(lane_id_split)):
+                    if lane_id_split > 0:
+                        # Do not add lanes with 0 width
+                        if not ((self.params['road_split_type'] == 'start' and
+                                 self.params['lanes_left_widths_change'][idx] == 'open') or
+                                (self.params['road_split_type'] == 'end' and \
+                                 self.params['lanes_left_widths_change'][idx] == 'close')):
+                            t_cp_split += self.params['lanes_left_widths'][idx]
+                    else:
+                        # Do not add lanes with 0 width
+                        if not ((self.params['road_split_type'] == 'start' and
+                                 self.params['lanes_right_widths_change'][idx] == 'open') or
+                                (self.params['road_split_type'] == 'end' and \
+                                 self.params['lanes_right_widths_change'][idx] == 'close')):
+                            t_cp_split -= self.params['lanes_right_widths'][idx]
         return t_cp_split
 
-    def get_width_road_left(self, lanes, width_line_standard, width_line_bold):
+    def get_width_road_left(self, lanes):
         '''
             Return the width of the left road side calculated by suming up all
             lane widths.
@@ -283,13 +291,20 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 width_road_left += lane.width
         return width_road_left
 
-    def get_strips_t_values(self, lanes, width_line_standard, width_line_bold):
+    def get_strips_t_values(self, lanes, s):
         '''
             Return list of t values of strip borders.
         '''
-        t = self.get_width_road_left(lanes, width_line_standard, width_line_bold)
+        t = self.get_width_road_left(lanes)
         t_values = []
         for idx_lane, lane in enumerate(lanes):
+            s_norm = s / self.geometry.params['length']
+            if lane.width_change == 'open':
+                lane_width_s = (3.0 * s_norm**2 - 2.0 * s_norm**3) * lane.width
+            elif lane.width_change == 'close':
+                lane_width_s = (1.0 - 3.0 * s_norm**2 + 2.0 * s_norm**3) * lane.width
+            else:
+                lane_width_s = lane.width
             # Add lane width for right side of road BEFORE (in t-direction) road mark lines
             if lane.side == 'right':
                 width_left_lines_on_lane = 0.0
@@ -310,7 +325,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                         width_right_lines_on_lane = width_line * 3.0 / 2.0
                     else:
                         width_right_lines_on_lane = width_line / 2.0
-                t -= lane.width - width_left_lines_on_lane - width_right_lines_on_lane
+                t -= lane_width_s - width_left_lines_on_lane - width_right_lines_on_lane
             # Add road mark lines
             if lane.road_mark_type != 'none':
                 width_line = lane.road_mark_width
@@ -348,7 +363,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                         width_right_lines_on_lane = width_line * 3.0 / 2.0
                     else:
                         width_right_lines_on_lane = width_line / 2.0
-                t -= lane.width - width_left_lines_on_lane - width_right_lines_on_lane
+                t -= lane_width_s - width_left_lines_on_lane - width_right_lines_on_lane
         return t_values
 
     def get_strips_s_boundaries(self, lanes, length_broken_line):
@@ -415,12 +430,13 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 s_values.append((line_toggle_start, [0, length]))
         return s_values
 
-    def get_road_sample_points(self, strips_t_values, strips_s_boundaries):
+    def get_road_sample_points(self, lanes, strips_s_boundaries):
         '''
             Adaptively sample road in s direction based on local curvature.
         '''
         length = self.geometry.params['length']
         s = 0
+        strips_t_values = self.get_strips_t_values(lanes, s)
         # Obtain first curvature value
         xyz_samples, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values)
         # We need 2 vectors for each strip to later construct the faces with one
@@ -443,6 +459,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 s = length
 
             # Sample next points along road geometry (all t values for current s value)
+            strips_t_values = self.get_strips_t_values(lanes, s)
             xyz_samples, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values)
             point_index = -2
             while point_index < len(sample_points) - 2:

@@ -46,7 +46,7 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
     def invoke(self, context, event):
         if len(context.scene.road_properties.lanes) == 0:
             context.scene.road_properties.init()
-        return context.window_manager.invoke_popup(self, width=500)
+        return context.window_manager.invoke_popup(self, width=600)
 
     def draw(self, context):
         box = self.layout.box()
@@ -134,23 +134,26 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
             if lane.side == 'left':
                 row = box.row(align=True)
                 split = row.split(factor=0.12, align=True)
-                split.label(text='Line:')
+                split.label(text='─ Line ─ :')
+                split.label(text='Type:')
                 split.prop(lane, 'road_mark_type', text='')
+                split.label(text='Color:')
                 split.prop(lane, 'road_mark_color', text='')
+                split.label(text='Weight:')
                 split.prop(lane, 'road_mark_weight', text='')
+                split.label(text='Width:')
                 split.prop(lane, 'road_mark_width', text='')
-                if context.scene.road_properties.road_split_type != 'none':
-                    split.separator()
-                    split.separator()
             # Basic lane settings
             if lane.side != 'center':
                 row = box.row(align=True)
                 split = row.split(factor=0.12, align=True)
-                split.label(text='Lane ' + str(idx-num_lanes_left) + ':')
+                split.label(text=' Lane ' + str(idx-num_lanes_left) + ':')
                 split.label(text='Type:')
                 split.prop(lane, 'type', text='')
                 split.label(text='Width:')
                 split.prop(lane, 'width', text='')
+                split.label(text='Open/close:')
+                split.prop(lane, 'width_change', text='')
                 if context.scene.road_properties.road_split_type != 'none':
                     # Splitting of lanes (creates direct junction)
                     split.label(text='Split:')
@@ -158,15 +161,19 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
                         split.prop(lane, 'split_right',icon="SORT_DESC", icon_only=True)
                     else:
                         split.prop(lane, 'split_right',icon="SORT_ASC", icon_only=True)
+                else:
+                    split.separator()
+                    split.separator()
             # Lane marking right side
             if lane.side == 'right' or lane.side == 'center':
                 row = box.row(align=True)
                 split = row.split(factor=0.12, align=True)
-                split.label(text='Line:')
+                split.label(text='─ Line ─ :')
+                split.label(text='Type:')
                 split.prop(lane, 'road_mark_type', text='')
+                split.label(text='Color:')
                 split.prop(lane, 'road_mark_color', text='')
+                split.label(text='Weight:')
                 split.prop(lane, 'road_mark_weight', text='')
+                split.label(text='Width:')
                 split.prop(lane, 'road_mark_width', text='')
-                if context.scene.road_properties.road_split_type != 'none':
-                    split.separator()
-                    split.separator()
