@@ -331,10 +331,14 @@ def mouse_to_object_params(context, event, filter):
                     hit = True
                     point_type, snapped_point, heading, curvature, slope = point_to_road_connector(obj, point_raycast)
                     id_obj = obj['id_xodr']
-                    # TODO also implement direct junction for start of road
-                    if point_type == 'cp_end_l' or point_type == 'cp_end_r':
-                        if 'id_xodr_direct_junction_end' in obj:
-                            id_connected_junction = obj['id_xodr_direct_junction_end']
+                    if obj['road_split_type'] == 'end':
+                        if point_type == 'cp_end_l' or point_type == 'cp_end_r':
+                            if 'id_xodr_direct_junction_end' in obj:
+                                id_connected_junction = obj['id_xodr_direct_junction_end']
+                    if obj['road_split_type'] == 'start':
+                        if point_type == 'cp_start_l' or point_type == 'cp_start_r':
+                            if 'id_xodr_direct_junction_start' in obj:
+                                id_connected_junction = obj['id_xodr_direct_junction_start']
                 if obj['dsc_type'] == 'junction':
                     hit = True
                     point_type, snapped_point, heading = point_to_junction_connector(obj, point_raycast)
