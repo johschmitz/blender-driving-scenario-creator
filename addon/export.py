@@ -325,16 +325,7 @@ class DSC_OT_export(bpy.types.Operator):
                         else:
                             print('WARNING: Direct junction of road with ID {} not fully connected.'.format(obj['id_xodr']))
         # Add lane level linking for all roads
-        # TODO: Improve performance by exploiting symmetry
-        for road in roads:
-            if road.predecessor:
-                road_pre = self.get_road_by_id(roads, road.predecessor.element_id)
-                if road_pre:
-                    xodr.create_lane_links(road, road_pre)
-            if road.successor:
-                road_suc = self.get_road_by_id(roads, road.successor.element_id)
-                if road_suc:
-                    xodr.create_lane_links(road, road_suc)
+        self.link_lanes(roads)
         # Create OpenDRIVE junctions from object collection
         num_junctions = 0
         if helpers.collection_exists(['OpenDRIVE']):
@@ -530,16 +521,20 @@ class DSC_OT_export(bpy.types.Operator):
         lane_center.add_roadmark
         lanesection = xodr.LaneSection(0,lane_center)
         for idx in range(obj['lanes_left_num']):
+            a,b,c,d = self.get_lane_width_coefficients(obj['lanes_left_widths'][idx],
+                obj['lanes_left_widths_change'][idx], obj['geometry']['length'])
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_left_types'][idx]],
-                a=obj['lanes_left_widths'][idx])
+                a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_left_road_mark_types'][idx],
                                            obj['lanes_left_road_mark_weights'][idx],
                                            obj['lanes_left_road_mark_colors'][idx])
             lane.add_roadmark(road_mark)
             lanesection.add_left_lane(lane)
         for idx in range(obj['lanes_right_num']):
+            a,b,c,d = self.get_lane_width_coefficients(obj['lanes_right_widths'][idx],
+                obj['lanes_right_widths_change'][idx], obj['geometry']['length'])
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_right_types'][idx]],
-                a=obj['lanes_right_widths'][idx])
+                a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_right_road_mark_types'][idx],
                                            obj['lanes_right_road_mark_weights'][idx],
                                            obj['lanes_right_road_mark_colors'][idx])
@@ -548,6 +543,78 @@ class DSC_OT_export(bpy.types.Operator):
         lanes.add_lanesection(lanesection)
 
         return lanes
+
+    def get_lane_width_coefficients(self, lane_width, width_change, length_road):
+        '''
+            Return coefficients a, b, c, d for lane width polynomial
+        '''
+        if width_change == 'open':
+            a=0.0
+            b=0.0
+            c=3.0 / length_road**2 * lane_width
+            d=-2.0 / length_road**3 * lane_width
+        elif width_change == 'close':
+            a=lane_width
+            b=0.0
+            c=-3.0 / length_road**2 * lane_width
+            d=2.0 / length_road**3 * lane_width
+        else:
+            a=lane_width
+            b=0.0
+            c=0.0
+            d=0.0
+        return a, b, c, d
+
+    def link_lanes(self, roads):
+        '''
+            Create lane links for all roads.
+        '''
+        # TODO: Improve performance by exploiting symmetry, e.g., check for existing links
+        for road in roads:
+            road_obj = helpers.get_object_xodr_by_id(road.id)
+            if road.predecessor:
+                road_pre = self.get_road_by_id(roads, road.predecessor.element_id)
+                if road_pre:
+                    road_obj_pre = helpers.get_object_xodr_by_id(road.predecessor.element_id)
+                    lane_ids_road = self.get_lanes_ids_to_link(road_obj, 'predecessor')
+                    # Check if we are connected to beginning or end of the other road
+                    if road_obj['link_predecessor_cp_l'] == 'cp_start_l':
+                        lanes_ids_road_pre = self.get_lanes_ids_to_link(road_obj_pre, 'predecessor')
+                    elif road_obj['link_predecessor_cp_l'] == 'cp_end_l':
+                        lanes_ids_road_pre = self.get_lanes_ids_to_link(road_obj_pre, 'successor')
+                    xodr.create_lane_links_from_ids(road, road_pre, lane_ids_road, lanes_ids_road_pre)
+            if road.successor:
+                road_suc = self.get_road_by_id(roads, road.successor.element_id)
+                if road_suc:
+                    road_obj_suc = helpers.get_object_xodr_by_id(road.successor.element_id)
+                    lane_ids_road = self.get_lanes_ids_to_link(road_obj, 'successor')
+                    # Check if we are connected to beginning or end of the other road
+                    if road_obj['link_successor_cp_l'] == 'cp_start_l':
+                        lanes_ids_road_suc = self.get_lanes_ids_to_link(road_obj_suc, 'predecessor')
+                    elif road_obj['link_successor_cp_l'] == 'cp_end_l':
+                        lanes_ids_road_suc = self.get_lanes_ids_to_link(road_obj_suc, 'successor')
+                    xodr.create_lane_links_from_ids(road, road_suc, lane_ids_road, lanes_ids_road_suc)
+
+    def get_lanes_ids_to_link(self, road_obj, link_type):
+        '''
+            Get the lane IDs with non-zero lane width which should be linked.
+        '''
+        lane_ids_to_link = []
+        if link_type == 'predecessor':
+            for lane_idx in range(road_obj['lanes_left_num']):
+                if road_obj['lanes_left_widths_change'][lane_idx] != 'open':
+                    lane_ids_to_link.append(road_obj['lanes_left_num']-lane_idx)
+            for lane_idx in range(road_obj['lanes_right_num']):
+                if road_obj['lanes_right_widths_change'][lane_idx] != 'open':
+                    lane_ids_to_link.append(-lane_idx-1)
+        if link_type == 'successor':
+            for lane_idx in range(road_obj['lanes_left_num']):
+                if road_obj['lanes_left_widths_change'][lane_idx] != 'close':
+                    lane_ids_to_link.append(road_obj['lanes_left_num']-lane_idx)
+            for lane_idx in range(road_obj['lanes_right_num']):
+                if road_obj['lanes_right_widths_change'][lane_idx] != 'close':
+                    lane_ids_to_link.append(-lane_idx-1)
+        return lane_ids_to_link
 
     def calculate_trajectory_values(self, obj, speed):
         times = [0]

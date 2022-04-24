@@ -108,7 +108,7 @@ def link_object_openscenario(context, obj, subcategory=None):
         collection = bpy.data.collections.get('OpenSCENARIO').children.get(subcategory)
         collection.objects.link(obj)
 
-def get_object_xodr_by_id(context, id_xodr):
+def get_object_xodr_by_id(id_xodr):
     '''
         Get reference to OpenDRIVE object by ID, return None if not found.
     '''
@@ -118,7 +118,7 @@ def get_object_xodr_by_id(context, id_xodr):
             if obj['id_xodr'] == id_xodr:
                 return obj
 
-def create_object_xodr_links(context, obj, link_type, cp_type, id_other, id_connected_junction):
+def create_object_xodr_links(obj, link_type, cp_type, id_other, id_connected_junction):
     '''
         Create OpenDRIVE predecessor/successor linkage for current object with
         other object.
@@ -139,7 +139,7 @@ def create_object_xodr_links(context, obj, link_type, cp_type, id_other, id_conn
             obj['incoming_roads']['cp_left'] = id_other
         else:
             obj['incoming_roads']['cp_right'] = id_other
-    obj_other = get_object_xodr_by_id(context, id_other)
+    obj_other = get_object_xodr_by_id(id_other)
     if 'road' in obj_other.name:
         if 'road' in obj.name:
             if link_type == 'start':
@@ -160,7 +160,7 @@ def create_object_xodr_links(context, obj, link_type, cp_type, id_other, id_conn
         elif cp_type == 'cp_end_l':
             obj_other['link_successor_id_l'] = obj['id_xodr']
             obj_other['link_successor_cp_l'] = cp_type_other
-        elif cp_type == 'cp_end_l':
+        elif cp_type == 'cp_end_r':
             obj_other['link_successor_id_r'] = obj['id_xodr']
             obj_other['link_successor_cp_r'] = cp_type_other
     elif obj_other.name.startswith('junction'):

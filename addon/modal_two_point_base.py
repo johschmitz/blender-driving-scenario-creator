@@ -258,11 +258,11 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                         obj = self.create_object(context)
                         if self.params_input['connected_start']:
                             link_type = 'start'
-                            helpers.create_object_xodr_links(context, obj, link_type, self.cp_type_start,
+                            helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
                                 self.id_xodr_start, self.id_connected_junction_start)
                         if self.params_input['connected_end']:
                             link_type = 'end'
-                            helpers.create_object_xodr_links(context, obj, link_type, cp_type_end,
+                            helpers.create_object_xodr_links(obj, link_type, cp_type_end,
                                 self.params_snap['id_obj'], self.params_snap['id_connected_junction'])
                         # Remove stencil and go back to initial state to draw again
                         self.remove_stencil()
