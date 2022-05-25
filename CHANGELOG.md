@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.10.2] - 2022-05-25
+
+### Fixed
+- OpenSCENARIO init action to let cars drive in the direction they have been
+  placed when no trajectory is attached
+
 ## [0.10.1] - 2022-02-16
 
 ### Fixed
@@ -120,7 +126,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.2...HEAD
+[0.10.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.8.0...v0.9.0
