@@ -379,7 +379,7 @@ class DSC_OT_export(bpy.types.Operator):
                     init.add_init_action(car_name,
                         xosc.TeleportAction(
                             xosc.RelativeRoadPosition(0, 0, car_name,
-                                xosc.Orientation(p=0, r=0, reference=xosc.ReferenceContext.relative))))
+                                xosc.Orientation(h=obj['hdg'], p=0, r=0, reference=xosc.ReferenceContext.absolute))))
                     # Begin driving
                     init.add_init_action(car_name,
                         xosc.AbsoluteSpeedAction(helpers.kmh_to_ms(obj['speed_initial']),
