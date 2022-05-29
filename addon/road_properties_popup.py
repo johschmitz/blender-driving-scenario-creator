@@ -147,7 +147,7 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
             if lane.side != 'center':
                 row = box.row(align=True)
                 split = row.split(factor=0.12, align=True)
-                split.label(text=' Lane ' + str(idx-num_lanes_left) + ':')
+                split.label(text=' Lane ' + str(num_lanes_left-idx) + ':')
                 split.label(text='Type:')
                 split.prop(lane, 'type', text='')
                 split.label(text='Width:')
