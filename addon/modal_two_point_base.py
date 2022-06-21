@@ -243,7 +243,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_START':
                     self.id_xodr_start = self.params_snap['id_obj']
-                    self.id_connected_junction_start = self.params_snap['id_connected_junction']
+                    self.id_direct_junction_start = self.params_snap['id_direct_junction']
                     self.cp_type_start = self.params_snap['type']
                     # Create helper stencil mesh
                     self.create_stencil(context, self.params_input['point_start'])
@@ -258,12 +258,26 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                         obj = self.create_object(context)
                         if self.params_input['connected_start']:
                             link_type = 'start'
+                            if 'id_xodr_direct_junction_start' in obj:
+                                id_direct_junction = obj['id_xodr_direct_junction_start']
+                                if self.id_direct_junction_start != None:
+                                    self.report({'WARNING'}, 'Avoid connecting two split road' \
+                                        ' ends (direct junctions) to each other!')
+                            else:
+                                id_direct_junction = self.id_direct_junction_start
                             helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-                                self.id_xodr_start, self.id_connected_junction_start)
+                                self.id_xodr_start, id_direct_junction)
                         if self.params_input['connected_end']:
                             link_type = 'end'
+                            if 'id_xodr_direct_junction_end' in obj:
+                                id_direct_junction = obj['id_xodr_direct_junction_end']
+                                if self.params_snap['id_direct_junction'] != None:
+                                    self.report({'WARNING'}, 'Avoid connecting two split road' \
+                                        ' ends (direct junctions) to each other!')
+                            else:
+                                id_direct_junction = self.params_snap['id_direct_junction']
                             helpers.create_object_xodr_links(obj, link_type, cp_type_end,
-                                self.params_snap['id_obj'], self.params_snap['id_connected_junction'])
+                                self.params_snap['id_obj'], id_direct_junction)
                         # Remove stencil and go back to initial state to draw again
                         self.remove_stencil()
                         self.state = 'INIT'

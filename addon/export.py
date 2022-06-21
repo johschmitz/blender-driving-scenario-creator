@@ -329,26 +329,34 @@ class DSC_OT_export(bpy.types.Operator):
                     if obj['road_split_type'] != 'none':
                         if ('link_predecessor_id_l' in obj and 'link_predecessor_id_r' in obj) \
                                 or ('link_successor_id_l' in obj and 'link_successor_id_r' in obj):
-                            if 'id_xodr_direct_junction_start' in obj:
-                                junction_id = obj['id_xodr_direct_junction_start']
-                            else:
+                            if obj['road_split_type'] == 'end':
                                 junction_id = obj['id_xodr_direct_junction_end']
+                                road_out_id_l = obj['link_successor_id_l']
+                                road_out_cp_l = obj['link_successor_cp_l']
+                                road_out_id_r = obj['link_successor_id_r']
+                                road_out_cp_r = obj['link_successor_cp_r']
+                                road_in_cp_l = 'cp_end_l'
+                                road_in_cp_r = 'cp_end_r'
+                            elif obj['road_split_type'] == 'start':
+                                junction_id = obj['id_xodr_direct_junction_start']
+                                road_out_id_l = obj['link_predecessor_id_l']
+                                road_out_cp_l = obj['link_predecessor_cp_l']
+                                road_out_id_r = obj['link_predecessor_id_r']
+                                road_out_cp_r = obj['link_predecessor_cp_r']
+                                road_in_cp_l = 'cp_start_l'
+                                road_in_cp_r = 'cp_start_r'
                             dj_creator = xodr.DirectJunctionCreator(id=junction_id,
                                 name='direct_junction_' + str(junction_id))
                             road_in = self.get_road_by_id(roads, obj['id_xodr'])
-                            if obj['road_split_type'] != 'start':
-                                road_out_l = self.get_road_by_id(roads, obj['link_successor_id_l'])
-                                road_out_r = self.get_road_by_id(roads, obj['link_successor_id_r'])
-                            elif obj['road_split_type'] != 'end':
-                                road_out_l = self.get_road_by_id(roads, obj['link_predecessor_id_l'])
-                                road_out_r = self.get_road_by_id(roads, obj['link_predecessor_id_r'])
                             road_obj_in = helpers.get_object_xodr_by_id(obj['id_xodr'])
-                            lane_ids_road_in_l = self.get_lanes_ids_to_link(road_obj_in, 'cp_end_l')
-                            lane_ids_road_in_r = self.get_lanes_ids_to_link(road_obj_in, 'cp_end_r')
-                            road_obj_out_l = helpers.get_object_xodr_by_id(obj['link_successor_id_l'])
-                            lane_ids_road_out_l = self.get_lanes_ids_to_link(road_obj_out_l, obj['link_successor_cp_l'])
-                            road_obj_out_r = helpers.get_object_xodr_by_id(obj['link_successor_id_r'])
-                            lane_ids_road_out_r = self.get_lanes_ids_to_link(road_obj_out_r, obj['link_successor_cp_r'])
+                            lane_ids_road_in_l = self.get_lanes_ids_to_link(road_obj_in, road_in_cp_l)
+                            lane_ids_road_in_r = self.get_lanes_ids_to_link(road_obj_in, road_in_cp_r)
+                            road_out_l = self.get_road_by_id(roads, road_out_id_l)
+                            road_obj_out_l = helpers.get_object_xodr_by_id(road_out_id_l)
+                            lane_ids_road_out_l = self.get_lanes_ids_to_link(road_obj_out_l, road_out_cp_l)
+                            road_out_r = self.get_road_by_id(roads, road_out_id_r)
+                            road_obj_out_r = helpers.get_object_xodr_by_id(road_out_id_r)
+                            lane_ids_road_out_r = self.get_lanes_ids_to_link(road_obj_out_r, road_out_cp_r)
                             dj_creator.add_connection(road_in, road_out_l, lane_ids_road_in_l, lane_ids_road_out_l)
                             dj_creator.add_connection(road_in, road_out_r, lane_ids_road_in_r, lane_ids_road_out_r)
                             odr.add_junction(dj_creator.junction)

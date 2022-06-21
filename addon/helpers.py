@@ -118,7 +118,7 @@ def get_object_xodr_by_id(id_xodr):
             if obj['id_xodr'] == id_xodr:
                 return obj
 
-def create_object_xodr_links(obj, link_type, cp_type, id_other, id_connected_junction):
+def create_object_xodr_links(obj, link_type, cp_type, id_other, id_direct_junction):
     '''
         Create OpenDRIVE predecessor/successor linkage for current object with
         other object.
@@ -127,13 +127,13 @@ def create_object_xodr_links(obj, link_type, cp_type, id_other, id_connected_jun
         if link_type == 'start':
             obj['link_predecessor_id_l'] =  id_other
             obj['link_predecessor_cp_l'] = cp_type
-            if id_connected_junction != None:
-                obj['id_xodr_direct_junction_start'] = id_connected_junction
+            if id_direct_junction != None:
+                obj['id_xodr_direct_junction_start'] = id_direct_junction
         else:
             obj['link_successor_id_l'] = id_other
             obj['link_successor_cp_l'] = cp_type
-            if id_connected_junction != None:
-                obj['id_xodr_direct_junction_end'] = id_connected_junction
+            if id_direct_junction != None:
+                obj['id_xodr_direct_junction_end'] = id_direct_junction
     elif 'junction' in obj.name:
         if link_type == 'start':
             obj['incoming_roads']['cp_left'] = id_other
@@ -154,15 +154,23 @@ def create_object_xodr_links(obj, link_type, cp_type, id_other, id_connected_jun
         if cp_type == 'cp_start_l':
             obj_other['link_predecessor_id_l'] = obj['id_xodr']
             obj_other['link_predecessor_cp_l'] = cp_type_other
+            if id_direct_junction != None:
+                obj_other['id_xodr_direct_junction_start'] = id_direct_junction
         elif cp_type == 'cp_start_r':
             obj_other['link_predecessor_id_r'] = obj['id_xodr']
             obj_other['link_predecessor_cp_r'] = cp_type_other
+            if id_direct_junction != None:
+                obj_other['id_xodr_direct_junction_start'] = id_direct_junction
         elif cp_type == 'cp_end_l':
             obj_other['link_successor_id_l'] = obj['id_xodr']
             obj_other['link_successor_cp_l'] = cp_type_other
+            if id_direct_junction != None:
+                obj_other['id_xodr_direct_junction_end'] = id_direct_junction
         elif cp_type == 'cp_end_r':
             obj_other['link_successor_id_r'] = obj['id_xodr']
             obj_other['link_successor_cp_r'] = cp_type_other
+            if id_direct_junction != None:
+                obj_other['id_xodr_direct_junction_end'] = id_direct_junction
     elif obj_other.name.startswith('junction'):
         obj_other['incoming_roads'][cp_type] = obj['id_xodr']
 
@@ -312,7 +320,7 @@ def mouse_to_object_params(context, event, filter):
     # Initialize with some defaults in case nothing is hit
     hit = False
     id_obj = None
-    id_connected_junction = None
+    id_direct_junction = None
     point_type = None
     snapped_point = Vector((0.0,0.0,0.0))
     heading = 0
@@ -334,11 +342,11 @@ def mouse_to_object_params(context, event, filter):
                     if obj['road_split_type'] == 'end':
                         if point_type == 'cp_end_l' or point_type == 'cp_end_r':
                             if 'id_xodr_direct_junction_end' in obj:
-                                id_connected_junction = obj['id_xodr_direct_junction_end']
+                                id_direct_junction = obj['id_xodr_direct_junction_end']
                     if obj['road_split_type'] == 'start':
                         if point_type == 'cp_start_l' or point_type == 'cp_start_r':
                             if 'id_xodr_direct_junction_start' in obj:
-                                id_connected_junction = obj['id_xodr_direct_junction_start']
+                                id_direct_junction = obj['id_xodr_direct_junction_start']
                 if obj['dsc_type'] == 'junction':
                     hit = True
                     point_type, snapped_point, heading = point_to_junction_connector(obj, point_raycast)
@@ -354,7 +362,7 @@ def mouse_to_object_params(context, event, filter):
             snapped_point = point_raycast
             id_obj = obj.name
     return hit ,{'id_obj': id_obj,
-                 'id_connected_junction': id_connected_junction,
+                 'id_direct_junction': id_direct_junction,
                  'point': snapped_point,
                  'type': point_type,
                  'heading': heading,
