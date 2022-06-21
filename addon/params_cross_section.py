@@ -69,7 +69,7 @@ params_cross_section = {
         'road_split_type': 'none',
         'road_split_lane_idx': 15,
     },
-    'eka1_rq31_exit_right_branch': {
+    'eka1_rq31_exit_right_open': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
         'widths': [1.5, 3.0, 0.75, 3.75, 3.75, 0.75, 2.0, 0.0, 2.0, 0.75, 3.75, 3.75, 3.75, 0.75, 3.0, 1.5],
         'widths_change': ['none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'open', 'none', 'none', 'none'],
@@ -117,7 +117,7 @@ params_cross_section = {
         'road_split_type': 'start',
         'road_split_lane_idx': 12,
     },
-    'eka1_rq31_entry_right_merge': {
+    'eka1_rq31_entry_right_close': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
         'widths': [1.5, 3.0, 0.75, 3.75, 3.75, 0.75, 2.0, 0.0, 2.0, 0.75, 3.75, 3.75, 3.75, 0.75, 3.0, 1.5],
         'widths_change': ['none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'close', 'none', 'none', 'none'],
