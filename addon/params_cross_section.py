@@ -156,7 +156,7 @@ params_cross_section = {
     'on_ramp': {
         'sides': ['left', 'center', 'right', 'right', 'right'],
         'widths': [3.75, 0.0, 0.75, 3.0, 1.5],
-        'widths_change': ['none', 'none', 'none', 'none'],
+        'widths_change': ['none', 'none', 'none', 'none', 'none'],
         'types': ['onRamp', 'center', 'border', 'stop','shoulder'],
         'road_mark_types': ['solid', 'solid', 'none', 'none', 'none'],
         'road_mark_weights': ['bold', 'bold', 'none', 'none', 'none'],
