@@ -1,4 +1,18 @@
+# Changelog
+
 ## [Unreleased]
+
+## [0.11.0] - 2022-06-21
+
+### Added
+
+- Opening and closing of (new) lanes to create exit and entry lanes
+- Splitting and merging of roads at the beginning or end to connect on-ramps and
+  off-ramps, exported as OpenDRIVE direct juncions
+- Examplary road cross section templates for building an RQ31 Autobahn exit
+
+### Fixed
+- Lane ID signs in GUI popup
 
 ## [0.10.2] - 2022-05-25
 
@@ -126,7 +140,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.9.0...v0.10.0
