@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.11.1] - 2022-06-22
+
+### Fixed
+- Missing shoulder in on-ramp cross section template
+- Crashing export of Autobahn on-ramps/entries
+
 ## [0.11.0] - 2022-06-21
 
 ### Added
@@ -140,7 +146,8 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.0...v0.10.1
