@@ -72,7 +72,7 @@ insert the version number)
 
 Run the following command to install the scenariogeneration library
 
-    ./python -m pip install scenariogeneration
+    .\python -m pip install scenariogeneration --target ..\lib\site-packages
 
 Note that you might be able to do this without admin rights in case you are
 using the "Portable" version of Blender. Also if you are having trouble with
