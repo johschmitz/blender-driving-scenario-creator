@@ -369,20 +369,19 @@ class DSC_OT_export(bpy.types.Operator):
         if helpers.collection_exists(['OpenDRIVE']):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
                 if obj.name.startswith('junction'):
-                    if not len(obj['incoming_roads']) == 4:
-                        self.report({'ERROR'}, 'Junction must have 4 connected roads.')
-                        break
                     incoming_roads = []
                     angles = []
                     junction_id = obj['id_xodr']
                     # Create junction roads based on incoming road angles (simple 4-way for now)
-                    for idx in range(4):
-                        angles.append(idx * 2 * pi / len(obj['incoming_roads']))
                     # 0 angle road must point in 'right' direction
-                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_right']))
-                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_up']))
-                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_left']))
-                    incoming_roads.append(xodr.get_road_by_id(roads, obj['incoming_roads']['cp_down']))
+                    for idx,cp in enumerate(['cp_right','cp_up','cp_left','cp_down']):
+                        if cp in obj['incoming_roads']:
+                            inc_road = xodr.get_road_by_id(roads, obj['incoming_roads'][cp])
+                            if(inc_road != None):
+                                incoming_roads.append(inc_road)
+                                angles.append(idx * pi / 2)
+                        else:
+                            self.report({'WARNING'}, 'Junction is missing a connection.')
                     # Create connecting roads and link them to incoming roads
                     junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
                         spiral_part=0.01, arc_part=0.99, startnum=1000+6*num_junctions, lane_width=3.75)
