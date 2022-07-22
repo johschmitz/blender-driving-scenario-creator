@@ -14,7 +14,7 @@
 from . geometry import DSC_geometry
 
 from mathutils import Vector, Matrix
-from math import cos, sin, pi, degrees
+from math import cos, inf, sin, pi, degrees
 
 
 class Arc():
@@ -43,14 +43,16 @@ class Arc():
                     self.angle = -pi
                 else:
                     self.heading_end = self.angle
+            self.length = self.radius * abs(self.angle)
         else:
-            self.radius = 1
-            self.curvature = 1
+            self.radius = inf
+            self.curvature = 0
             self.offset_y = self.radius
             self.angle = 0
             self.offset_angle = 0
             self.heading_end = 0
-        self.length = self.radius * abs(self.angle)
+            self.length = point_end.length
+
 
     def get_radius_angle_det(self, point_start, point_end):
         '''
@@ -106,18 +108,25 @@ class DSC_geometry_arc(DSC_geometry):
         self.params['length'] = self.geometry_base.length
 
     def sample_plan_view(self, s):
-        angle_s = s / self.geometry_base.radius
-        if self.geometry_base.determinant > 0:
-            x_s = cos(angle_s + self.geometry_base.offset_angle - pi/2) \
-                    * self.geometry_base.radius
-            y_s = sin(angle_s + self.geometry_base.offset_angle - pi/2) \
-                    * self.geometry_base.radius + self.geometry_base.offset_y
-            hdg_t = angle_s + pi/2
+        if self.geometry_base.radius == inf:
+            # Circle degenerates into a straight line
+            x_s = s
+            y_s = 0
+            hdg_t = pi/2
         else:
-            x_s = cos(-angle_s + self.geometry_base.offset_angle - pi/2) \
-                    * self.geometry_base.radius
-            y_s = sin(-angle_s + self.geometry_base.offset_angle - pi/2) \
-                    * self.geometry_base.radius + self.geometry_base.offset_y
-            hdg_t = -angle_s + pi/2
+            # We have a circle
+            angle_s = s / self.geometry_base.radius
+            if self.geometry_base.determinant > 0:
+                x_s = cos(angle_s + self.geometry_base.offset_angle - pi/2) \
+                        * self.geometry_base.radius
+                y_s = sin(angle_s + self.geometry_base.offset_angle - pi/2) \
+                        * self.geometry_base.radius + self.geometry_base.offset_y
+                hdg_t = angle_s + pi/2
+            else:
+                x_s = cos(-angle_s + self.geometry_base.offset_angle - pi/2) \
+                        * self.geometry_base.radius
+                y_s = sin(-angle_s + self.geometry_base.offset_angle - pi/2) \
+                        * self.geometry_base.radius + self.geometry_base.offset_y
+                hdg_t = -angle_s + pi/2
         curvature = self.geometry_base.curvature
         return x_s, y_s, curvature, hdg_t
