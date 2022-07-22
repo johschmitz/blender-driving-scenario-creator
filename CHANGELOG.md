@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.12.0] - 2022-07-22
+
+### Fixed
+- Creating degenerate arc road with infinite radius not possible (would throw
+  divide by zero exception)
+
+### Added
+- Enable changing the heading at the road start by holding SHIFT
+
 ## [0.11.1] - 2022-06-22
 
 ### Fixed
@@ -146,7 +155,9 @@
 - Export OpenSCENARIO and OpenDRIVE files using scenariogeneration lib
 - Export meshes as .osgb files for esmini using osgconv
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.1...HEAD
+
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.10.1...v0.10.2
