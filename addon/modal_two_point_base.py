@@ -147,6 +147,19 @@ class DSC_OT_two_point_base(bpy.types.Operator):
         else:
             return vector_end.angle_signed(Vector((1.0, 0.0)))
 
+    def calculate_heading_start_difference(self, point_start, heading_start_old, point_end_new):
+        '''
+            Return angle between vector in (old) heading start direction and
+            (new) start-end vector
+        '''
+        vector_hdg = Vector((1.0, 0.0))
+        vector_hdg.rotate(Matrix.Rotation(heading_start_old, 2))
+        vector_start_end = (point_end_new - point_start).to_2d()
+        if vector_start_end.length == 0:
+            return 0
+        else:
+            return vector_hdg.angle_signed(vector_start_end)
+
     def input_valid(self, for_stencil):
         '''
             Return False if start and end point are identical, otherwise True.
@@ -166,6 +179,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
         # Display help text
         if self.state == 'INIT':
             context.workspace.status_text_set('Place object by clicking, hold CTRL to snap to grid, '
+                                              'hold SHIFT to change start heading, '
                                               'hold E to adjust elevation, '
                                               'hold S to toggle sideview and adjust elevation, '
                                               'press RIGHTMOUSE to cancel selection, press ESCAPE to exit.')
@@ -175,7 +189,8 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             self.snapped = False
             self.selected_elevation = 0
             self.selected_point = Vector((0.0,0.0,0.0))
-            self.selected_heading = 0
+            self.selected_heading_start = 0
+            self.selected_heading_end = 0
             self.selected_curvature = 0
             self.selected_slope = 0
             self.state = 'SELECT_START'
@@ -190,7 +205,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                     self.selected_point)
                 if self.state == 'SELECT_START':
                     self.selected_point = self.params_input['point_start']
-                if self.state == 'SELECT_END':
+                elif self.state == 'SELECT_END':
                     self.selected_point = self.params_input['point_end']
                 self.selected_point.z = self.selected_elevation
             else:
@@ -199,15 +214,23 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                     context, event, filter=self.snap_filter)
                 if self.snapped:
                     self.selected_point = self.params_snap['point']
-                    self.selected_heading = self.params_snap['heading']
+                    if self.state == 'SELECT_START':
+                        self.selected_heading_start = self.params_snap['heading']
+                    elif self.state == 'SELECT_END':
+                        self.selected_heading_end = self.params_snap['heading']
                     self.selected_curvature = self.params_snap['curvature']
                     self.selected_slope = self.params_snap['slope']
                 else:
-                    self.selected_point = helpers.mouse_to_xy_parallel_plane(context, event,
+                    selected_point_new = helpers.mouse_to_xy_parallel_plane(context, event,
                         self.selected_elevation)
-                    self.selected_heading = 0
+                    if event.shift:
+                        # Calculate angular change to update start heading
+                        heading_difference = self.calculate_heading_start_difference(
+                                self.params_input['point_start'], self.selected_heading_start, selected_point_new)
+                        self.selected_heading_start = self.selected_heading_start - heading_difference
                     self.selected_curvature = 0
                     self.selected_slope = 0
+                    self.selected_point = selected_point_new
             context.scene.cursor.location = self.selected_point.copy()
             # CTRL activates grid snapping if not snapped to object
             if event.ctrl and not self.snapped:
@@ -216,7 +239,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             # Process and remember plan view (floor) points according to modal state machine
             if self.state == 'SELECT_START':
                 self.params_input['point_start'] = self.selected_point.copy()
-                self.params_input['heading_start'] = self.selected_heading
+                self.params_input['heading_start'] = self.selected_heading_start
                 if self.params_snap['type'] is not None:
                     if self.params_snap['type'] != 'surface':
                         self.params_input['connected_start'] = True
@@ -226,10 +249,11 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                 self.params_input['slope_start'] = self.selected_slope
             if self.state == 'SELECT_END':
                 self.params_input['point_end'] = self.selected_point.copy()
+                self.params_input['heading_start'] = self.selected_heading_start
                 if self.params_snap['type'] is not None:
                     if self.params_snap['type'] != 'surface':
                         self.params_input['connected_end'] = True
-                        self.params_input['heading_end'] = self.selected_heading + pi
+                        self.params_input['heading_end'] = self.selected_heading_end + pi
                         self.params_input['curvature_end'] = self.selected_curvature
                         self.params_input['slope_end'] = self.selected_slope
                 else:
