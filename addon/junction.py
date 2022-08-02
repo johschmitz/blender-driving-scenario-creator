@@ -33,7 +33,7 @@ class DSC_OT_junction(DSC_OT_two_point_base):
         '''
             Create a junction object
         '''
-        valid, mesh, matrix_world, materials = self.get_mesh_update_params(context, for_stencil=False)
+        valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -72,7 +72,7 @@ class DSC_OT_junction(DSC_OT_two_point_base):
 
             return obj
 
-    def get_mesh_update_params(self, context, for_stencil):
+    def update_params_get_mesh(self, context, for_stencil):
         '''
             Calculate and return the vertices, edges and faces to create a road
             mesh and road parameters.

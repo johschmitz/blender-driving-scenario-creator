@@ -44,7 +44,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
         '''
             Create the Blender road object
         '''
-        valid, mesh_road, matrix_world, materials = self.get_mesh_update_params(context, for_stencil=False)
+        valid, mesh_road, matrix_world, materials = self.update_params_get_mesh(context, for_stencil=False)
         if not valid:
             return None
         else:
@@ -146,7 +146,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
 
             return obj
 
-    def get_mesh_update_params(self, context, for_stencil):
+    def update_params_get_mesh(self, context, for_stencil):
         '''
             Calculate and return the vertices, edges, faces and parameters to create a road mesh.
         '''
@@ -163,6 +163,20 @@ class DSC_OT_road(DSC_OT_two_point_base):
         road_sample_points = self.get_road_sample_points(lanes, strips_s_boundaries)
         vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
         materials = self.get_face_materials(lanes, strips_s_boundaries)
+
+        if for_stencil:
+            # Transform start and end point to local coordinate system then add
+            # a vertical edge down to the xy-plane to make elevation profile
+            # more easily visible
+            point_start = (self.geometry.params['point_start'])
+            point_start_local = (0.0, 0.0, 0.0)
+            point_start_bottom = (0.0, 0.0, -point_start.z)
+            point_end = self.geometry.params['point_end']
+            point_end_local = self.geometry.matrix_world.inverted() @ point_end
+            point_end_local.z = point_end.z - point_start.z
+            point_end_bottom = (point_end_local.x, point_end_local.y, -point_start.z)
+            vertices += [point_start_local[:], point_start_bottom, point_end_local[:], point_end_bottom]
+            edges += [[len(vertices)-1, len(vertices)-2], [len(vertices)-3, len(vertices)-4]]
 
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp_road')

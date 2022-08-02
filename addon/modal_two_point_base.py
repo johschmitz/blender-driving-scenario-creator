@@ -112,7 +112,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             # This can happen due to start point snapping -> ignore
             return
         # Try getting data for a new mesh
-        valid, mesh, matrix_world, materials = self.get_mesh_update_params(context, for_stencil=True)
+        valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, for_stencil=True)
         # If we get a valid solution we can update the mesh, otherwise just return
         if valid:
             helpers.replace_mesh(self.stencil, mesh)
@@ -128,7 +128,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
         faces = []
         return vertices, edges, faces
 
-    def get_mesh_update_params(self, context, for_stencil=True):
+    def update_params_get_mesh(self, context, for_stencil=True):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
