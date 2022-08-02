@@ -381,7 +381,7 @@ class DSC_OT_export(bpy.types.Operator):
                                 incoming_roads.append(inc_road)
                                 angles.append(idx * pi / 2)
                         else:
-                            self.report({'WARNING'}, 'Junction is missing a connection.')
+                            self.report({'WARNING'}, 'Junction with ID {} is missing a connection.'.format(obj['id_xodr']))
                     # Create connecting roads and link them to incoming roads
                     junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
                         spiral_part=0.01, arc_part=0.99, startnum=1000+6*num_junctions, lane_width=3.75)
