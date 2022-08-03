@@ -16,9 +16,9 @@ import bpy
 from . import helpers
 
 
-class DSC_OT_trajectory_base(bpy.types.Operator):
-    bl_idname = 'dsc.trajectory_base'
-    bl_label = 'DSC trajectory operator'
+class DSC_OT_modal_trajectory_base(bpy.types.Operator):
+    bl_idname = 'dsc.modal_trajectory_base'
+    bl_label = 'DSC trajectory modal operator'
     bl_options = {'REGISTER', 'UNDO'}
 
     snap_filter = 'OpenSCENARIO'
@@ -65,8 +65,9 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
-            context.workspace.status_text_set('Select object then place points. '
-                'Press RIGHTMOUSE to go back. Press RETURN to finish, ESCAPE to exit.')
+            context.workspace.status_text_set(
+                'Select object then place points. Press RIGHTMOUSE to go back. '
+                'Press RETURN or SPACE to finish, ESCAPE to exit.')
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.state = 'SELECT_OBJECT'
@@ -112,7 +113,7 @@ class DSC_OT_trajectory_base(bpy.types.Operator):
                     self.trajectory_points.append(self.selected_point.copy())
                     self.update_trajectory(context)
                     return {'RUNNING_MODAL'}
-        elif event.type in {'RET'}:
+        elif event.type in {'RET'} or event.type in {'SPACE'}:
             if self.state == 'SELECT_POINT':
                 self.make_trajectory_final(context)
                 self.clean_up(context)

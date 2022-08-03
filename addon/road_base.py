@@ -11,17 +11,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from re import T
 import bpy
 from mathutils import Vector
 
-from . modal_two_point_base import DSC_OT_two_point_base
+from . modal_two_point_base import DSC_OT_modal_two_point_base
 from . import helpers
 
 from math import ceil
 
 
-class DSC_OT_road(DSC_OT_two_point_base):
+class DSC_OT_road(DSC_OT_modal_two_point_base):
     bl_idname = 'dsc.road'
     bl_label = 'Road'
     bl_description = 'Create road mesh'
@@ -32,19 +31,21 @@ class DSC_OT_road(DSC_OT_two_point_base):
     geometry = None
     params = {}
 
-    width_road_left = 0
-
     geometry_solver: bpy.props.StringProperty(
         name='Geometry solver',
         description='Solver used to determine geometry parameters.',
         options={'HIDDEN'},
         default='default')
 
-    def create_object(self, context):
+    def create_3d_object(self, context):
         '''
             Create the Blender road object
         '''
-        valid, mesh_road, matrix_world, materials = self.update_params_get_mesh(context, for_stencil=False)
+        if self.object_type == 'junction_connecting_road':
+            wireframe = True
+        else:
+            wireframe = False
+        valid, mesh_road, matrix_world, materials = self.update_params_get_mesh(context, wireframe=wireframe)
         if not valid:
             return None
         else:
@@ -80,7 +81,10 @@ class DSC_OT_road(DSC_OT_two_point_base):
 
             # Metadata
             obj['dsc_category'] = 'OpenDRIVE'
-            obj['dsc_type'] = 'road'
+            if self.object_type == 'junction_connecting_road':
+                obj['dsc_type'] = 'junction_connecting_road'
+            else:
+                obj['dsc_type'] = 'road'
 
             # Number lanes which split to the left side at road end
             obj['road_split_lane_idx'] = self.params['road_split_lane_idx']
@@ -116,10 +120,12 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 # FIXME also add rotation based on road heading and slope
                 helpers.link_object_opendrive(context, obj_direct_junction)
                 obj_direct_junction['id_xodr'] = direct_junction_id
+                obj_direct_junction['dsc_category'] = 'OpenDRIVE'
+                obj_direct_junction['dsc_type'] = 'junction_direct'
                 if self.params['road_split_type'] == 'start':
-                    obj['id_xodr_direct_junction_start'] = direct_junction_id
+                    obj['id_direct_junction_start'] = direct_junction_id
                 else:
-                    obj['id_xodr_direct_junction_end'] = direct_junction_id
+                    obj['id_direct_junction_end'] = direct_junction_id
 
             # Set OpenDRIVE custom properties
             obj['id_xodr'] = id_obj
@@ -146,7 +152,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
 
             return obj
 
-    def update_params_get_mesh(self, context, for_stencil):
+    def update_params_get_mesh(self, context, wireframe):
         '''
             Calculate and return the vertices, edges, faces and parameters to create a road mesh.
         '''
@@ -164,7 +170,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
         vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
         materials = self.get_face_materials(lanes, strips_s_boundaries)
 
-        if for_stencil:
+        if wireframe:
             # Transform start and end point to local coordinate system then add
             # a vertical edge down to the xy-plane to make elevation profile
             # more easily visible
@@ -180,7 +186,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
 
         # Create blender mesh
         mesh = bpy.data.meshes.new('temp_road')
-        if not for_stencil:
+        if not wireframe:
             mesh.from_pydata(vertices, edges, faces)
         else:
             mesh.from_pydata(vertices, edges, [])
@@ -266,7 +272,7 @@ class DSC_OT_road(DSC_OT_two_point_base):
                 lane_id_split = -1 * (road_split_lane_idx - self.params['lanes_left_num'])
             else:
                 lane_id_split = -1 * road_split_lane_idx
-            # Calculate t coordinate of split connection point
+            # Calculate t coordinate of split connecting point
             for idx in range(abs(lane_id_split)):
                     if lane_id_split > 0:
                         # Do not add lanes with 0 width

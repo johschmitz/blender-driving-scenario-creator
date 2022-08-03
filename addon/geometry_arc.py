@@ -57,13 +57,13 @@ class Arc():
     def get_radius_angle_det(self, point_start, point_end):
         '''
             Calculate center and radius of the arc that is defined by the
-            starting point (predecessor connection point), the start heading
+            starting point (predecessor connecting point), the start heading
             (heading of the connected road) and the end point. Also return
             determinant that tells us if point end is left or right of heading
             direction.
         '''
         # The center of the arc is the crossing point of line orthogonal to the
-        # predecessor road in the connection point and the perpendicular
+        # predecessor road in the connecting point and the perpendicular
         # bisector of the connection between start and end point.
         p = point_start.to_2d()
         a = Vector((0.0, 1.0))

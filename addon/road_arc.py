@@ -11,14 +11,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
-from mathutils import Vector, Matrix
-
 from . road_base import DSC_OT_road
 from . geometry_arc import DSC_geometry_arc
-from . import helpers
-
-from math import pi, sin, cos, acos, ceil
 
 
 class DSC_OT_road_arc(DSC_OT_road):

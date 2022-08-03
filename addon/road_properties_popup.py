@@ -22,6 +22,7 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
                  'road_arc': bpy.ops.dsc.road_arc,
                  'road_clothoid_hermite': bpy.ops.dsc.road_clothoid,
                  'road_clothoid_forward': bpy.ops.dsc.road_clothoid,
+                 'junction_connection': bpy.ops.dsc.junction_connection,
                  'road_parametric_polynomial': bpy.ops.dsc.road_parametric_polynomial,}
 
     operator: bpy.props.StringProperty(

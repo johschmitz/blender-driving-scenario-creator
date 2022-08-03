@@ -17,7 +17,9 @@ import bpy.utils.previews
 import os
 
 from . export import DSC_OT_export
-from . junction import DSC_OT_junction
+from . junction_four_way import DSC_OT_junction_four_way
+from . modal_junction_generic import DSC_OT_junction_generic
+from . junction_connection import DSC_OT_junction_connection
 from . object_bicycle import DSC_OT_object_bicycle
 from . object_car import DSC_OT_object_car
 from . object_motorbike import DSC_OT_object_motorbike
@@ -65,8 +67,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
         global custom_icons
 
         layout = self.layout
+        layout.label(text='OpenDRIVE')
         box = layout.box()
-        box.label(text='Road primitives (OpenDRIVE)')
+        box.label(text='Roads')
         row = box.row(align=True)
         row.operator('dsc.road_properties_popup', text='Straight',
             icon_value=custom_icons['road_straight'].icon_id).operator = 'road_straight'
@@ -83,11 +86,20 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.road_parametric_polynomial', text='Parametric polynomial',
             icon_value=custom_icons['road_parametric_polynomial'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.junction', text='Junction', icon_value=custom_icons['junction'].icon_id)
+        row.label(text='Junctions')
         row = box.row(align=True)
+        row.operator('dsc.junction_four_way', text='4-way junction',
+            icon_value=custom_icons['junction_4way'].icon_id)
+        row = box.row(align=True)
+        row.operator('dsc.junction_generic', text='Generic junction (area)',
+            icon_value=custom_icons['junction_area'].icon_id)
+        row = box.row(align=True)
+        row.operator('dsc.road_properties_popup', text='Junction connection',
+            icon_value=custom_icons['junction_connection'].icon_id).operator = 'junction_connection'
 
+        layout.label(text='OpenSCENARIO')
         box = layout.box()
-        box.label(text='Objects (OpenSCENARIO)')
+        box.label(text='Objects')
         row = box.row(align=True)
         row.operator('dsc.object_properties_popup', text='Car').operator = 'object_car'
         row = box.row(align=True)
@@ -99,15 +111,14 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.operator('dsc.object_pedestrian')
 
-        box = layout.box()
-        box.label(text='Trajectories (OpenSCENARIO)')
+        box.label(text='Trajectories')
         row = box.row(align=True)
         row.operator('dsc.trajectory_polyline', icon_value=custom_icons['trajectory_polyline'].icon_id)
         row = box.row(align=True)
         row.operator('dsc.trajectory_nurbs', icon_value=custom_icons['trajectory_nurbs'].icon_id)
 
+        layout.label(text='Export (Track, Scenario, Mesh)')
         box = layout.box()
-        box.label(text='Export (Track, Scenario, Mesh)')
         row = box.row(align=True)
         row.operator('dsc.export_driving_scenario', icon='EXPORT')
 
@@ -117,7 +128,9 @@ def menu_func_export(self, context):
 classes = (
     DSC_enum_lane,
     DSC_OT_export,
-    DSC_OT_junction,
+    DSC_OT_junction_four_way,
+    DSC_OT_junction_generic,
+    DSC_OT_junction_connection,
     DSC_OT_object_bicycle,
     DSC_OT_object_car,
     DSC_OT_object_motorbike,
@@ -145,7 +158,9 @@ def register():
     custom_icons.load('road_arc', os.path.join(icons_dir, 'road_arc.png'), 'IMAGE')
     custom_icons.load('road_clothoid', os.path.join(icons_dir, 'road_clothoid.png'), 'IMAGE')
     custom_icons.load('road_parametric_polynomial', os.path.join(icons_dir, 'road_parametric_polynomial.png'), 'IMAGE')
-    custom_icons.load('junction', os.path.join(icons_dir, 'junction.png'), 'IMAGE')
+    custom_icons.load('junction_4way', os.path.join(icons_dir, 'junction_4way.png'), 'IMAGE')
+    custom_icons.load('junction_area', os.path.join(icons_dir, 'junction_area.png'), 'IMAGE')
+    custom_icons.load('junction_connection', os.path.join(icons_dir, 'junction_connection.png'), 'IMAGE')
     custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
     custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')
 

@@ -13,20 +13,19 @@
 
 from . geometry import DSC_geometry
 
-from mathutils import Vector, Matrix
 from pyclothoids import Clothoid
 from math import pi
 
 
 class DSC_geometry_clothoid(DSC_geometry):
 
-    def update_plan_view(self, params, geometry_solver):
+    def update_plan_view(self, params, geometry_solver='default'):
         # Calculate transform between global and local coordinates
         self.update_local_to_global(params['point_start'], params['heading_start'],
             params['point_end'], params['heading_end'])
 
         # Calculate geometry
-        if geometry_solver == 'hermite':
+        if geometry_solver == 'hermite' or geometry_solver == 'default':
             self.geometry_base = Clothoid.G1Hermite(0, 0, 0,
                 self.point_end_local.x, self.point_end_local.y, self.heading_end_local)
 
@@ -55,10 +54,6 @@ class DSC_geometry_clothoid(DSC_geometry):
                 self.geometry_base = Clothoid.Forward(0, 0, 0,
                     self.params['curvature_start'], self.point_end_local.x, self.point_end_local.y)
                 self.params['valid'] = False
-        else:
-            # Should never happen
-            self.geometry_base = Clothoid.Forward(0, 0, 0, 0, 1, 0)
-            return
 
         # Remember geometry parameters
         if self.params['valid']:

@@ -11,20 +11,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
+from . road_base import DSC_OT_road
+from . geometry_clothoid import DSC_geometry_clothoid
 
 
-class DSC_OT_object_bicycle(bpy.types.Operator):
-    bl_idname = "dsc.object_bicycle"
-    bl_label = "Bicycle"
-    bl_description = "Place a bicycle object"
+class DSC_OT_junction_connection(DSC_OT_road):
+    bl_idname = 'dsc.junction_connection'
+    bl_label = 'Junction connection'
+    bl_description = 'Create a connecting road inside a junction'
     bl_options = {'REGISTER', 'UNDO'}
 
-    @classmethod
-    def poll(cls, context):
-        return False
+    object_type = 'junction_connecting_road'
+    snap_filter = 'OpenDRIVE_junction'
+    snapped_only = True
 
-    def execute(self, context):
-        self.report({'INFO'}, "Not implemented.")
-
-        return {'FINISHED'}
+    geometry = DSC_geometry_clothoid()

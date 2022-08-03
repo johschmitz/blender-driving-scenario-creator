@@ -11,16 +11,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
-
-import bmesh
-from mathutils import Vector, Matrix
-
-from math import pi, ceil
-
 from . road_base import DSC_OT_road
 from . geometry_line import DSC_geometry_line
-from . import helpers
 
 
 class DSC_OT_road_straight(DSC_OT_road):

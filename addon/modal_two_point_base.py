@@ -12,7 +12,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-import bmesh
 from mathutils import Vector, Matrix, Euler
 
 from math import pi
@@ -21,12 +20,13 @@ from . import helpers
 from . import view_memory_helper
 
 
-class DSC_OT_two_point_base(bpy.types.Operator):
-    bl_idname = 'dsc.two_point_base'
-    bl_label = 'DSC snap draw operator'
+class DSC_OT_modal_two_point_base(bpy.types.Operator):
+    bl_idname = 'dsc.modal_two_point_base'
+    bl_label = 'DSC snap draw modal operator'
     bl_options = {'REGISTER', 'UNDO'}
 
     snap_filter = None
+    snapped_only = False
 
     # Elevation adjustment can be 'DISABLED', 'SIDEVIEW', 'GENERIC'
     adjust_elevation = 'DISABLED'
@@ -42,30 +42,9 @@ class DSC_OT_two_point_base(bpy.types.Operator):
     def poll(cls, context):
         return context.area.type == 'VIEW_3D'
 
-    def reset_params(self):
-        self.params_input = {
-            'point_start': Vector((0.0,0.0,0.0)),
-            'point_end': Vector((0.0,0.0,0.0)),
-            'heading_start': 0,
-            'heading_end': 0,
-            'curvature_start': 0,
-            'curvature_end': 0,
-            'slope_start': 0,
-            'slope_end': 0,
-            'connected_start': False,
-            'connected_end': False,
-            'design_speed': 130.0,
-        }
-        self.params_snap = {
-            'id_obj': None,
-            'point': Vector((0.0,0.0,0.0)),
-            'type': 'cp_none',
-            'heading': 0,
-            'curvature': 0,
-            'slope': 0,
-        }
 
-    def create_object(self, context):
+
+    def create_3d_object(self, context):
         '''
             Create a road object
         '''
@@ -112,7 +91,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             # This can happen due to start point snapping -> ignore
             return
         # Try getting data for a new mesh
-        valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, for_stencil=True)
+        valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, wireframe=True)
         # If we get a valid solution we can update the mesh, otherwise just return
         if valid:
             helpers.replace_mesh(self.stencil, mesh)
@@ -128,7 +107,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
         faces = []
         return vertices, edges, faces
 
-    def update_params_get_mesh(self, context, for_stencil=True):
+    def update_params_get_mesh(self, context, wireframe=True):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
@@ -160,12 +139,12 @@ class DSC_OT_two_point_base(bpy.types.Operator):
         else:
             return vector_hdg.angle_signed(vector_start_end)
 
-    def input_valid(self, for_stencil):
+    def input_valid(self, wireframe):
         '''
             Return False if start and end point are identical, otherwise True.
         '''
         if self.params_input['point_start'].to_2d() == self.params_input['point_end'].to_2d():
-            if not for_stencil:
+            if not wireframe:
                 self.report({'WARNING'}, 'Start and end point can not be the same!')
             return False
         elif (self.params_input['point_end'].to_2d()-self.params_input['point_start'].to_2d()).length > 10000:
@@ -174,6 +153,29 @@ class DSC_OT_two_point_base(bpy.types.Operator):
             return False
         else:
             return True
+
+    def reset_modal_state(self):
+        self.params_input = {
+            'point_start': Vector((0.0,0.0,0.0)),
+            'point_end': Vector((0.0,0.0,0.0)),
+            'heading_start': 0,
+            'heading_end': 0,
+            'curvature_start': 0,
+            'curvature_end': 0,
+            'slope_start': 0,
+            'slope_end': 0,
+            'connected_start': False,
+            'connected_end': False,
+            'design_speed': 130.0,
+        }
+        self.params_snap = {
+            'id_obj': None,
+            'point': Vector((0.0,0.0,0.0)),
+            'type': 'cp_none',
+            'heading': 0,
+            'curvature': 0,
+            'slope': 0,
+        }
 
     def modal(self, context, event):
         # Display help text
@@ -185,7 +187,7 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                                               'press RIGHTMOUSE to cancel selection, press ESCAPE to exit.')
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
-            self.reset_params()
+            self.reset_modal_state()
             self.snapped = False
             self.selected_elevation = 0
             self.selected_point = Vector((0.0,0.0,0.0))
@@ -260,14 +262,17 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                     self.params_input['connected_end'] = False
                     self.params_input['heading_end'] = self.calculate_heading_end(self.params_input['point_start'],
                         self.params_input['heading_start'], self.params_input['point_end'])
-                if self.input_valid(for_stencil=True):
+                if self.input_valid(wireframe=True):
                     self.update_stencil(context)
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
+                # For junction connecting roads we may only proceed snapped
+                if self.snapped_only and not self.snapped:
+                    return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_START':
                     self.id_xodr_start = self.params_snap['id_obj']
-                    self.id_direct_junction_start = self.params_snap['id_direct_junction']
+                    self.id_direct_junction_start = self.params_snap['id_junction']
                     self.cp_type_start = self.params_snap['type']
                     # Create helper stencil mesh
                     self.create_stencil(context, self.params_input['point_start'])
@@ -278,12 +283,12 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                 if self.state == 'SELECT_END':
                     cp_type_end = self.params_snap['type']
                     # Create the final object
-                    if self.input_valid(for_stencil=False):
-                        obj = self.create_object(context)
+                    if self.input_valid(wireframe=False):
+                        obj = self.create_3d_object(context)
                         if self.params_input['connected_start']:
                             link_type = 'start'
-                            if 'id_xodr_direct_junction_start' in obj:
-                                id_direct_junction = obj['id_xodr_direct_junction_start']
+                            if 'id_direct_junction_start' in obj:
+                                id_direct_junction = obj['id_direct_junction_start']
                                 if self.id_direct_junction_start != None:
                                     self.report({'WARNING'}, 'Avoid connecting two split road' \
                                         ' ends (direct junctions) to each other!')
@@ -293,13 +298,13 @@ class DSC_OT_two_point_base(bpy.types.Operator):
                                 self.id_xodr_start, id_direct_junction)
                         if self.params_input['connected_end']:
                             link_type = 'end'
-                            if 'id_xodr_direct_junction_end' in obj:
-                                id_direct_junction = obj['id_xodr_direct_junction_end']
-                                if self.params_snap['id_direct_junction'] != None:
+                            if 'id_direct_junction_end' in obj:
+                                id_direct_junction = obj['id_direct_junction_end']
+                                if self.params_snap['id_junction'] != None:
                                     self.report({'WARNING'}, 'Avoid connecting two split road' \
                                         ' ends (direct junctions) to each other!')
                             else:
-                                id_direct_junction = self.params_snap['id_direct_junction']
+                                id_direct_junction = self.params_snap['id_junction']
                             helpers.create_object_xodr_links(obj, link_type, cp_type_end,
                                 self.params_snap['id_obj'], id_direct_junction)
                         # Remove stencil and go back to initial state to draw again

@@ -14,7 +14,7 @@
 from . geometry import DSC_geometry
 from . import helpers
 
-from mathutils import Vector, Matrix
+from mathutils import Vector
 from math import pi
 
 

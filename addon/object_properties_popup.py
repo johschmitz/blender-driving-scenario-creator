@@ -38,9 +38,6 @@ class DSC_OT_object_properties_popup(bpy.types.Operator):
         return None
 
     def invoke(self, context, event):
-        if len(context.scene.road_properties.lanes) == 0:
-            context.scene.road_properties.init()
-        # TODO: for now only straight road parameterization implemented
         if self.operator == 'object_car':
             return context.window_manager.invoke_popup(self)
         else:

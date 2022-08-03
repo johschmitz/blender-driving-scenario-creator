@@ -12,7 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-import bmesh
+
 
 class DSC_OT_object_motorbike(bpy.types.Operator):
     bl_idname = "dsc.object_motorbike"

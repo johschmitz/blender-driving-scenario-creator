@@ -13,6 +13,7 @@
 
 import bpy
 
+
 class DSC_object_properties(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default='Car', maxlen=0, options={'ANIMATABLE'})
     speed_initial: bpy.props.FloatProperty(default=50, min=0.1, max=500.0, step=10)

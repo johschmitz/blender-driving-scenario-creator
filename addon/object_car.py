@@ -16,11 +16,11 @@ from mathutils import Vector, Matrix
 
 from math import pi
 
-from .modal_two_point_base import DSC_OT_two_point_base
+from .modal_two_point_base import DSC_OT_modal_two_point_base
 from . import helpers
 
 
-class DSC_OT_object_car(DSC_OT_two_point_base):
+class DSC_OT_object_car(DSC_OT_modal_two_point_base):
     bl_idname = 'dsc.object_car'
     bl_label = 'Car'
     bl_description = 'Place a car object'
@@ -34,11 +34,11 @@ class DSC_OT_object_car(DSC_OT_two_point_base):
     # TODO snap to road contact points, requires a lot of work
     snap_filter = 'surface'
 
-    def create_object(self, context):
+    def create_3d_object(self, context):
         '''
             Create a car object
         '''
-        valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, for_stencil=False)
+        valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, wireframe=False)
         if not valid:
             return None
         else:
@@ -69,12 +69,12 @@ class DSC_OT_object_car(DSC_OT_two_point_base):
 
         return obj
 
-    def update_params_get_mesh(self, context, for_stencil):
+    def update_params_get_mesh(self, context, wireframe):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
         if self.params_input['point_start'] == self.params_input['point_end']:
-            if not for_stencil:
+            if not wireframe:
                 self.report({'WARNING'}, 'Start and end point can not be the same!')
             valid = False
             return valid, None, {}
@@ -88,7 +88,7 @@ class DSC_OT_object_car(DSC_OT_two_point_base):
         mat_rotation = Matrix.Rotation(heading, 4, 'Z')
         matrix_world = mat_translation @ mat_rotation
         # Create blender mesh
-        if for_stencil:
+        if wireframe:
             faces = []
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)

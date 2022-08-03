@@ -12,13 +12,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-import bmesh
-from mathutils import Vector
 
-from . modal_trajectory_base import DSC_OT_trajectory_base
+from . modal_trajectory_base import DSC_OT_modal_trajectory_base
 from . import helpers
 
-class DSC_OT_trajectory_nurbs(DSC_OT_trajectory_base):
+
+class DSC_OT_trajectory_nurbs(DSC_OT_modal_trajectory_base):
     bl_idname = "dsc.trajectory_nurbs"
     bl_label = "NURBS"
     bl_description = "Place a NURBS based trajectory"

@@ -13,11 +13,11 @@
 
 import bpy
 
-from . modal_trajectory_base import DSC_OT_trajectory_base
+from . modal_trajectory_base import DSC_OT_modal_trajectory_base
 from . import helpers
 
 
-class DSC_OT_trajectory_polyline(DSC_OT_trajectory_base):
+class DSC_OT_trajectory_polyline(DSC_OT_modal_trajectory_base):
     bl_idname = 'dsc.trajectory_polyline'
     bl_label = 'Polyline'
     bl_description = 'Place a polyline based trajectory'
