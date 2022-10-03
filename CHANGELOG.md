@@ -2,7 +2,19 @@
 
 ## [Unreleased]
 
-## [0.13.0] - 2022-02-08
+## [0.14.0] - 2022-10-03
+
+### Added
+- New operators to build generic junctions, a junction area tool based on
+  selecting incoming roads and a junction connection tool which creates the
+  connecting roads inside of junctions
+
+### Changed
+- Enable finishing trajectory by pressing <kbd>Space</kbd> (finishing with
+  <kbd>Return</kbd> is still possible)
+- Slightly update extension UI menu layout
+
+## [0.13.0] - 2022-08-02
 
 ### Added
 - Helpful vertical lines to better visualize the elevation during road drawing
@@ -59,7 +71,8 @@
 ### Fixed
 - Avoid rendering blowup when start and end angle of clothoid roads are
   identical, notify user that no valid solution has been found
-- Moving with ALT+MIDDLEMOUSE to only move on mouse button release
+- Moving with <kbd>ALT</kbd>+<kbd>MIDDLEMOUSE</kbd> to only move on mouse button
+  release
 
 ## [0.9.0] - 2022-01-23
 
@@ -165,7 +178,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.11.0...v0.11.1
