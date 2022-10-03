@@ -188,30 +188,64 @@ class junction:
             Calculate and return the vertices, edges and faces to create a
             junction mesh.
         '''
-        # Shift origin to connecting point
-        mat_translation = Matrix.Translation(self.joints[0].contact_point_vec)
-        mat_rotation = Matrix.Rotation(self.joints[0].heading, 4, 'Z')
-        matrix_world = mat_translation @ mat_rotation
-        # Create mesh
-        vertices = []
-        for joint in self.joints:
-            vector_hdg = Vector((1.0, 0.0, 0.0))
-            vector_hdg.rotate(Matrix.Rotation(joint.heading + pi/2, 3, 'Z'))
-            point_local_left = matrix_world.inverted() @ (joint.contact_point_vec + vector_hdg * joint.width_left)
-            point_local_right = matrix_world.inverted() @ (joint.contact_point_vec - vector_hdg * joint.width_right)
-            vertices.append(point_local_left)
-            vertices.append(point_local_right)
-        edges = [[idx, idx+1] for idx in range(len(vertices)-1)]
-        edges += [[len(vertices)-1, 0]]
-        if wireframe:
-            faces = []
+        if len(self.joints) == 0:
+            valid = False
+            return valid, None, None
         else:
-            if len(vertices) > 2:
-                faces = [[idx for idx in range(len(vertices))] + [0]]
-            else:
+            # Shift origin to connecting point
+            mat_translation = Matrix.Translation(self.joints[0].contact_point_vec)
+            mat_rotation = Matrix.Rotation(self.joints[0].heading, 4, 'Z')
+            matrix_world = mat_translation @ mat_rotation
+            # Create mesh
+            corners_joints = []
+            for joint in self.joints:
+                vector_hdg = Vector((1.0, 0.0, 0.0))
+                vector_hdg.rotate(Matrix.Rotation(joint.heading + pi/2, 3, 'Z'))
+                point_local_left = matrix_world.inverted() \
+                    @ (joint.contact_point_vec + vector_hdg * joint.width_left)
+                point_local_right = matrix_world.inverted() \
+                    @ (joint.contact_point_vec - vector_hdg * joint.width_right)
+                corners_joints.append([point_local_left, point_local_right])
+            vertices = get_junction_hull(corners_joints)
+            edges = [[idx, idx+1] for idx in range(len(vertices)-1)]
+            edges += [[len(vertices)-1, 0]]
+            if wireframe:
                 faces = []
-        # Create blender mesh
-        mesh = bpy.data.meshes.new('temp')
-        mesh.from_pydata(vertices, edges, faces)
-        valid = True
-        return valid, mesh, matrix_world
+            else:
+                if len(vertices) > 2:
+                    faces = [[idx for idx in range(len(vertices))] + [0]]
+                else:
+                    faces = []
+            # Create blender mesh
+            mesh = bpy.data.meshes.new('temp')
+            mesh.from_pydata(vertices, edges, faces)
+            valid = True
+            return valid, mesh, matrix_world
+
+def get_junction_hull(corners_joints):
+    '''
+        Return ordered list of junction hull corners based on joint corners
+        [[left corner 0, right corner 0], ... ].
+    '''
+    ordered_indices = [0]
+    vertices = [corners_joints[0][0], corners_joints[0][1]]
+    idx_next = 0
+    for _ in range(len(corners_joints)):
+        vec_right_2_left = corners_joints[idx_next][1] - corners_joints[idx_next][0]
+        vec_right = corners_joints[idx_next][1]
+        angle_next = 0
+        found = False
+        for idx_j, corners in enumerate(corners_joints):
+            if not idx_j in ordered_indices:
+                vec_right_2_left_next = vec_right - corners[0]
+                angle_check = vec_right_2_left.angle(vec_right_2_left_next)
+                if angle_check > angle_next:
+                    angle_next = angle_check
+                    idx_next = idx_j
+                    found = True
+        if found:
+            ordered_indices.append(idx_next)
+            vertices.append(corners_joints[idx_next][0])
+            vertices.append(corners_joints[idx_next][1])
+    return vertices
+
