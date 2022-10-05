@@ -85,8 +85,9 @@ class DSC_OT_export(bpy.types.Operator):
 
     mesh_file_type : bpy.props.EnumProperty(
         items=(('fbx', '.fbx', '', 0),
-               ('gltf', '.gltf', '', 1),
-               ('osgb', '.osgb', '', 2),
+               ('glb', '.glb', '', 1),
+               ('gltf', '.gltf', '', 2),
+               ('osgb', '.osgb', '', 3),
               ),
         default='osgb',
     )
@@ -193,6 +194,7 @@ class DSC_OT_export(bpy.types.Operator):
                                      group_by_material=False, keep_vertex_order=False, global_scale=1.0,
                                      path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
             self.convert_to_osgb(file_path)
+            # TODO remove mtl and obj files
         elif self.mesh_file_type == 'fbx':
             file_path = file_path.with_suffix('.fbx')
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -212,31 +214,42 @@ class DSC_OT_export(bpy.types.Operator):
                                      bake_anim_simplify_factor=1.0, path_mode='AUTO',
                                      embed_textures=False, batch_mode='OFF', use_batch_own_dir=True,
                                      use_metadata=True, axis_forward='-Z', axis_up='Y')
-        elif self.mesh_file_type == 'gltf':
-            file_path = file_path.with_suffix('.gltf')
+        elif self.mesh_file_type == 'gltf' or self.mesh_file_type == 'glb':
+            if self.mesh_file_type == 'glb':
+                export_format = 'GLB'
+                file_path = file_path.with_suffix('.glb')
+            elif self.mesh_file_type == 'gltf':
+                export_format = 'GLTF_EMBEDDED'
+                file_path = file_path.with_suffix('.gltf')
             file_path.parent.mkdir(parents=True, exist_ok=True)
             bpy.ops.export_scene.gltf(filepath=str(file_path), check_existing=True,
-                                      export_format='GLTF_EMBEDDED', ui_tab='GENERAL', export_copyright='',
+                                      export_format=export_format, ui_tab='GENERAL',
+                                      export_copyright='Blender Driving Scenario Creator',
                                       export_image_format='AUTO', export_texture_dir='',
-                                      export_texcoords=True, export_normals=True,
+                                      export_keep_originals=False, export_texcoords=True,
+                                      export_normals=True,
                                       export_draco_mesh_compression_enable=False,
                                       export_draco_mesh_compression_level=6,
                                       export_draco_position_quantization=14,
                                       export_draco_normal_quantization=10,
                                       export_draco_texcoord_quantization=12,
                                       export_draco_color_quantization=10,
-                                      export_draco_generic_quantization=12, export_tangents=False,
-                                      export_materials='EXPORT', export_colors=True, use_mesh_edges=False,
-                                      use_mesh_vertices=False, export_cameras=False, export_selected=False,
-                                      use_selection=True, use_visible=False, use_renderable=False,
-                                      use_active_collection=False, export_extras=False, export_yup=True,
-                                      export_apply=False, export_animations=True, export_frame_range=True,
-                                      export_frame_step=1, export_force_sampling=True,
-                                      export_nla_strips=True, export_def_bones=False,
-                                      export_current_frame=False, export_skins=True,
-                                      export_all_influences=False, export_morph=True,
-                                      export_morph_normal=True, export_morph_tangent=False,
-                                      export_lights=False, export_displacement=False,
+                                      export_draco_generic_quantization=12,
+                                      export_tangents=False, export_materials='EXPORT',
+                                      export_original_specular=False, export_colors=True,
+                                      use_mesh_edges=False, use_mesh_vertices=False,
+                                      export_cameras=False, use_selection=False, use_visible=False,
+                                      use_renderable=False, use_active_collection=False,
+                                      use_active_scene=False, export_extras=False, export_yup=True,
+                                      export_apply=False, export_animations=True,
+                                      export_frame_range=True, export_frame_step=1,
+                                      export_force_sampling=True, export_nla_strips=True,
+                                      export_nla_strips_merged_animation_name='Animation',
+                                      export_def_bones=False, export_optimize_animation_size=False,
+                                      export_anim_single_armature=True, export_current_frame=False,
+                                      export_skins=True, export_all_influences=False,
+                                      export_morph=True, export_morph_normal=True,
+                                      export_morph_tangent=False, export_lights=False,
                                       will_save_settings=False, filter_glob='*.glb;*.gltf')
 
     def convert_to_osgb(self, input_file_path):
