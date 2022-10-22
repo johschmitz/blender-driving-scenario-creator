@@ -213,7 +213,7 @@ class junction:
                 faces = []
             else:
                 if len(vertices) > 2:
-                    faces = [[idx for idx in range(len(vertices))] + [0]]
+                    faces = [[idx for idx in range(len(vertices))]]
                 else:
                     faces = []
             # Create blender mesh
