@@ -85,8 +85,11 @@ class DSC_OT_object_car(DSC_OT_modal_two_point_base):
                   'point_end': self.params_input['point_end']}
         vertices, edges, faces = self.get_vertices_edges_faces()
         mat_translation = Matrix.Translation(self.params_input['point_start'])
-        mat_rotation = Matrix.Rotation(heading, 4, 'Z')
-        matrix_world = mat_translation @ mat_rotation
+        vec_up = Vector((0.0, 0.0, 1.0))
+        vec_normal = self.params_input['normal_start']
+        mat_normal = vec_up.rotation_difference(vec_normal).to_matrix().to_4x4()
+        mat_heading = Matrix.Rotation(heading, 4, 'Z')
+        matrix_world = mat_translation @ mat_normal @ mat_heading
         # Create blender mesh
         if wireframe:
             faces = []

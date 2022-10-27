@@ -166,15 +166,20 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             'slope_end': 0,
             'connected_start': False,
             'connected_end': False,
+            'normal_start': Vector((0.0,0.0,1.0)),
             'design_speed': 130.0,
         }
         self.params_snap = {
             'id_obj': None,
+            'id_junction': None,
             'point': Vector((0.0,0.0,0.0)),
+            'normal': Vector((0.0,0.0,1.0)),
             'type': 'cp_none',
             'heading': 0,
             'curvature': 0,
             'slope': 0,
+            'width_left': 0,
+            'width_right': 0,
         }
 
     def modal(self, context, event):
@@ -191,6 +196,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             self.snapped = False
             self.selected_elevation = 0
             self.selected_point = Vector((0.0,0.0,0.0))
+            self.selected_normal_start = Vector((0.0,0.0,1.0))
             self.selected_heading_start = 0
             self.selected_heading_end = 0
             self.selected_curvature = 0
@@ -218,6 +224,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.selected_point = self.params_snap['point']
                     if self.state == 'SELECT_START':
                         self.selected_heading_start = self.params_snap['heading']
+                        self.selected_normal_start = self.params_snap['normal']
                     elif self.state == 'SELECT_END':
                         self.selected_heading_end = self.params_snap['heading']
                     self.selected_curvature = self.params_snap['curvature']
@@ -233,6 +240,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.selected_curvature = 0
                     self.selected_slope = 0
                     self.selected_point = selected_point_new
+                    self.selected_normal_start = Vector((0.0,0.0,1.0))
             context.scene.cursor.location = self.selected_point.copy()
             # CTRL activates grid snapping if not snapped to object
             if event.ctrl and not self.snapped:
@@ -242,6 +250,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             if self.state == 'SELECT_START':
                 self.params_input['point_start'] = self.selected_point.copy()
                 self.params_input['heading_start'] = self.selected_heading_start
+                self.params_input['normal_start'] = self.selected_normal_start.copy()
                 if self.params_snap['type'] is not None:
                     if self.params_snap['type'] != 'surface':
                         self.params_input['connected_start'] = True
@@ -298,6 +307,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                                 self.id_odr_start, id_direct_junction)
                         if self.params_input['connected_end']:
                             link_type = 'end'
+                            # FIXME keep it generic, direct junction should not appear at this point!
                             if 'id_direct_junction_end' in obj:
                                 id_direct_junction = obj['id_direct_junction_end']
                                 if self.params_snap['id_junction'] != None:

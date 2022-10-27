@@ -317,15 +317,15 @@ def raycast_mouse_to_object(context, event, filter=None):
         if filter is not None:
             # Return hit only if not filtered out
             if filter in obj:
-                return True, point, obj
+                return True, point, normal, obj
             else:
-                return False, point, None
+                return False, point, normal, None
         else:
             # No filter, return any hit
-            return True, point, obj
+            return True, point, normal, obj
     else:
         # No hit
-        return False, point, None
+        return False, point, normal, None
 
 def point_to_road_connector(obj, point):
     '''
@@ -418,6 +418,7 @@ def mouse_to_object_params(context, event, filter):
     id_junction = None
     point_type = None
     snapped_point = Vector((0.0,0.0,0.0))
+    snapped_normal = Vector((0.0,0.0,1.0))
     heading = 0
     curvature = 0
     slope = 0
@@ -425,9 +426,11 @@ def mouse_to_object_params(context, event, filter):
     width_right = 0
     # Do the raycasting
     if filter is None:
-        dsc_hit, point_raycast, obj = raycast_mouse_to_object(context, event, filter=None)
+        dsc_hit, raycast_point, raycast_normal, obj \
+            = raycast_mouse_to_object(context, event, filter=None)
     else:
-        dsc_hit, point_raycast, obj = raycast_mouse_to_object(context, event, filter='dsc_category')
+        dsc_hit, raycast_point, raycast_normal, obj \
+        = raycast_mouse_to_object(context, event, filter='dsc_category')
     if dsc_hit:
         # DSC mesh hit
         if filter == 'OpenDRIVE':
@@ -435,7 +438,7 @@ def mouse_to_object_params(context, event, filter):
                 if obj['dsc_type'] == 'road':
                     hit = True
                     point_type, snapped_point, heading, curvature, \
-                    slope, width_left, width_right = point_to_road_connector(obj, point_raycast)
+                    slope, width_left, width_right = point_to_road_connector(obj, raycast_point)
                     id_obj = obj['id_odr']
                     if obj['road_split_type'] == 'end':
                         if point_type == 'cp_end_l' or point_type == 'cp_end_r':
@@ -449,7 +452,7 @@ def mouse_to_object_params(context, event, filter):
             if obj.name.startswith('junction_4way'):
                 # TODO later remove this path and unify junctions
                 hit = True
-                point_type, snapped_point, heading = point_to_junction_connector(obj, point_raycast)
+                point_type, snapped_point, heading = point_to_junction_connector(obj, raycast_point)
                 # For the legacy junction we do not explicitly model the
                 # connecting roads hence we set both IDs to the junction ID
                 id_obj = obj['id_odr']
@@ -457,22 +460,24 @@ def mouse_to_object_params(context, event, filter):
         if filter == 'OpenDRIVE_junction':
             if obj.name.startswith('junction_area'):
                 hit = True
-                id_incoming, point_type, snapped_point, heading = point_to_junction_joint(obj, point_raycast)
+                id_incoming, point_type, snapped_point, heading = point_to_junction_joint(obj, raycast_point)
                 id_obj = id_incoming
                 id_junction = obj['id_odr']
         elif filter == 'OpenSCENARIO':
             if obj['dsc_category'] == 'OpenSCENARIO':
                 hit = True
-                point_type, snapped_point, heading = point_to_object_connector(obj, point_raycast)
+                point_type, snapped_point, heading = point_to_object_connector(obj, raycast_point)
                 id_obj = obj.name
         elif filter == 'surface':
             hit = True
             point_type = 'surface'
-            snapped_point = point_raycast
+            snapped_point = raycast_point
+            snapped_normal = raycast_normal
             id_obj = obj.name
     return hit ,{'id_obj': id_obj,
                  'id_junction': id_junction,
                  'point': snapped_point,
+                 'normal': snapped_normal,
                  'type': point_type,
                  'heading': heading,
                  'curvature': curvature,
