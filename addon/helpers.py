@@ -54,22 +54,43 @@ def get_new_id_openscenario(context):
     dummy_obj['id_xosc_next'] += 1
     return id_next
 
-def ensure_collection_opendrive(context):
-    if not 'OpenDRIVE' in bpy.data.collections:
-        collection = bpy.data.collections.new('OpenDRIVE')
+def ensure_collection_dsc(context):
+    if not 'Driving Scenario Creator' in bpy.data.collections:
+        collection = bpy.data.collections.new('Driving Scenario Creator')
         context.scene.collection.children.link(collection)
+    else:
+        collection = bpy.data.collections['Driving Scenario Creator']
+    return collection
+
+def ensure_collection_opendrive(context):
+    collection_dsc = ensure_collection_dsc(context)
+    if not 'OpenDRIVE' in collection_dsc.children:
+        collection = bpy.data.collections.new('OpenDRIVE')
+        collection_dsc.children.link(collection)
+        return collection
+    else:
+        collection = bpy.data.collections['OpenDRIVE']
+        return collection
 
 def ensure_collection_openscenario(context):
-    if not 'OpenSCENARIO' in bpy.data.collections:
+    collection_dsc = ensure_collection_dsc(context)
+    if not 'OpenSCENARIO' in collection_dsc.children:
         collection = bpy.data.collections.new('OpenSCENARIO')
-        context.scene.collection.children.link(collection)
+        collection_dsc.children.link(collection)
+        return collection
+    else:
+        collection = bpy.data.collections['OpenSCENARIO']
+        return collection
 
 def ensure_subcollection_openscenario(context, subcollection):
-    ensure_collection_openscenario(context)
-    collection_osc = bpy.data.collections['OpenSCENARIO']
+    collection_osc = ensure_collection_openscenario(context)
     if not subcollection in collection_osc.children:
         collection = bpy.data.collections.new(subcollection)
         collection_osc.children.link(collection)
+        return collection
+    else:
+        collection = bpy.data.collections[subcollection]
+        return collection
 
 def collection_exists(collection_path):
     '''
@@ -99,12 +120,10 @@ def link_object_openscenario(context, obj, subcategory=None):
         Link object to OpenSCENARIO scene collection.
     '''
     if subcategory is None:
-        ensure_collection_openscenario(context)
-        collection = bpy.data.collections.get('OpenSCENARIO')
+        collection = ensure_collection_openscenario(context)
         collection.objects.link(obj)
     else:
-        ensure_subcollection_openscenario(context, subcategory)
-        collection = bpy.data.collections.get('OpenSCENARIO').children.get(subcategory)
+        collection = ensure_subcollection_openscenario(context, subcategory)
         collection.objects.link(obj)
 
 def get_object_xodr_by_id(id_xodr):
