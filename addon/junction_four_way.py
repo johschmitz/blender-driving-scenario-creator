@@ -58,7 +58,7 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
             obj['cp_up'] = obj.matrix_world @ obj.data.vertices[7].co
 
             # Set OpenDRIVE custom properties
-            obj['id_xodr'] = id_obj
+            obj['id_odr'] = id_obj
             obj['junction_type'] = 'default'
             obj['planView_geometry_x'] = self.params['point_start'].x
             obj['planView_geometry_y'] = self.params['point_start'].y

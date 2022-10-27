@@ -282,7 +282,7 @@ class DSC_OT_export(bpy.types.Operator):
                             obj['geometry']['curvature_end'], length=obj['geometry']['length'])
                     planview.add_geometry(geometry)
                     lanes = self.create_lanes(obj)
-                    road = xodr.Road(obj['id_xodr'],planview,lanes)
+                    road = xodr.Road(obj['id_odr'],planview,lanes)
                     self.add_elevation_profiles(obj, road)
                     # Add road level linking
                     if 'link_predecessor_id_l' in obj:
@@ -339,7 +339,7 @@ class DSC_OT_export(bpy.types.Operator):
                     if 'id_direct_junction_end' in obj:
                         # Connect to direction junction attached to the other (split) road
                         road.add_successor(xodr.ElementType.junction, obj['id_direct_junction_end'])
-                    print('Add road with ID', obj['id_xodr'])
+                    print('Add road with ID', obj['id_odr'])
                     odr.add_road(road)
                     roads.append(road)
             # Now that all roads exist create direct junctions
@@ -366,8 +366,8 @@ class DSC_OT_export(bpy.types.Operator):
                                 road_in_cp_r = 'cp_start_r'
                             dj_creator = xodr.DirectJunctionCreator(id=junction_id,
                                 name='direct_junction_' + str(junction_id))
-                            road_in = self.get_road_by_id(roads, obj['id_xodr'])
-                            road_obj_in = helpers.get_object_xodr_by_id(obj['id_xodr'])
+                            road_in = self.get_road_by_id(roads, obj['id_odr'])
+                            road_obj_in = helpers.get_object_xodr_by_id(obj['id_odr'])
                             lane_ids_road_in_l = self.get_lanes_ids_to_link(road_obj_in, road_in_cp_l)
                             lane_ids_road_in_r = self.get_lanes_ids_to_link(road_obj_in, road_in_cp_r)
                             road_out_l = self.get_road_by_id(roads, road_out_id_l)
@@ -380,7 +380,7 @@ class DSC_OT_export(bpy.types.Operator):
                             dj_creator.add_connection(road_in, road_out_r, lane_ids_road_in_r, lane_ids_road_out_r)
                             odr.add_junction(dj_creator.junction)
                         else:
-                            print('WARNING: Direct junction of road with ID {} not fully connected.'.format(obj['id_xodr']))
+                            print('WARNING: Direct junction of road with ID {} not fully connected.'.format(obj['id_odr']))
         # Add lane level linking for all roads
         self.link_lanes(roads)
         # Create OpenDRIVE junctions from object collection
@@ -392,7 +392,7 @@ class DSC_OT_export(bpy.types.Operator):
                 if obj.name.startswith('junction_4way'):
                     incoming_roads = []
                     angles = []
-                    junction_id = obj['id_xodr']
+                    junction_id = obj['id_odr']
                     # Create junction roads based on incoming road angles (simple 4-way for now)
                     # 0 angle road must point in 'right' direction
                     for idx, cp in enumerate(['cp_right','cp_up','cp_left','cp_down']):
@@ -402,7 +402,7 @@ class DSC_OT_export(bpy.types.Operator):
                                 incoming_roads.append(inc_road)
                                 angles.append(idx * pi / 2)
                         else:
-                            self.report({'WARNING'}, 'Junction with ID {} is missing a connection.'.format(obj['id_xodr']))
+                            self.report({'WARNING'}, 'Junction with ID {} is missing a connection.'.format(obj['id_odr']))
                     # Create connecting roads and link them to incoming roads
                     # TODO use API to calculate junction road parameters
                     junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
@@ -420,13 +420,13 @@ class DSC_OT_export(bpy.types.Operator):
                 # Export generic junctions
                 if obj.name.startswith('junction_area'):
                     incoming_roads = []
-                    junction_id = obj['id_xodr']
+                    junction_id = obj['id_odr']
                     for joint in obj['joints']:
                         inc_road = xodr.get_road_by_id(roads, joint['id_incoming'])
                         if(inc_road != None):
                             incoming_roads.append(inc_road)
                         else:
-                            self.report({'WARNING'}, 'Junction with ID {} is missing a connection.'.format(obj['id_xodr']))
+                            self.report({'WARNING'}, 'Junction with ID {} is missing a connection.'.format(obj['id_odr']))
                     # Find and export connecting roads of this junction
                     junction_roads = []
                     for obj_jcr in bpy.data.collections['OpenDRIVE'].objects:
@@ -441,7 +441,7 @@ class DSC_OT_export(bpy.types.Operator):
                                     obj_jcr['geometry']['curvature_end'], length=obj_jcr['geometry']['length'])
                                 planview.add_geometry(geometry)
                                 lanes = self.create_lanes(obj_jcr)
-                                road = xodr.Road(obj_jcr['id_xodr'],planview,lanes, road_type=junction_id)
+                                road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
                                 self.add_elevation_profiles(obj_jcr, road)
                                 # Connect the junction connecting road to incoming and connecting roads
                                 incoming_road = self.get_road_by_id(roads, obj_jcr['link_predecessor_id_l'])
@@ -565,13 +565,13 @@ class DSC_OT_export(bpy.types.Operator):
         '''
         for obj in bpy.data.collections['OpenDRIVE'].objects:
             if obj.name.startswith('road'):
-                if obj['id_xodr'] == id:
+                if obj['id_odr'] == id:
                     return xodr.ElementType.road
             elif obj.name.startswith('junction'):
-                if obj['id_xodr'] == id:
+                if obj['id_odr'] == id:
                     return xodr.ElementType.junction
             elif obj.name.startswith('direct_junction'):
-                if obj['id_xodr'] == id:
+                if obj['id_odr'] == id:
                     return xodr.ElementType.junction
 
     def get_road_by_id(self, roads, id):
@@ -832,13 +832,13 @@ class DSC_OT_export(bpy.types.Operator):
         '''
         for obj_split in bpy.data.collections['OpenDRIVE'].objects:
             if obj_split.name.startswith('road'):
-                if obj_split['id_xodr'] == id_split_road:
-                    if obj_split['link_successor_id_l'] == road_obj['id_xodr']:
+                if obj_split['id_odr'] == id_split_road:
+                    if obj_split['link_successor_id_l'] == road_obj['id_odr']:
                         if obj_split['road_split_lane_idx'] < obj_split['lanes_left_num'] + 1:
                             lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx'] + 1
                         else:
                             lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx']
-                    elif obj_split['link_successor_id_r'] == road_obj['id_xodr']:
+                    elif obj_split['link_successor_id_r'] == road_obj['id_odr']:
                         # Remove center lane if necessary
                         if obj_split['road_split_lane_idx'] > obj_split['lanes_left_num'] + 1:
                             lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx']

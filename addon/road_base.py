@@ -119,7 +119,7 @@ class DSC_OT_road(DSC_OT_modal_two_point_base):
                         obj_direct_junction.location = obj['cp_end_l']
                 # FIXME also add rotation based on road heading and slope
                 helpers.link_object_opendrive(context, obj_direct_junction)
-                obj_direct_junction['id_xodr'] = direct_junction_id
+                obj_direct_junction['id_odr'] = direct_junction_id
                 obj_direct_junction['dsc_category'] = 'OpenDRIVE'
                 obj_direct_junction['dsc_type'] = 'junction_direct'
                 if self.params['road_split_type'] == 'start':
@@ -128,7 +128,7 @@ class DSC_OT_road(DSC_OT_modal_two_point_base):
                     obj['id_direct_junction_end'] = direct_junction_id
 
             # Set OpenDRIVE custom properties
-            obj['id_xodr'] = id_obj
+            obj['id_odr'] = id_obj
 
             obj['geometry'] = self.geometry.params
 

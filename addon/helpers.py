@@ -13,6 +13,7 @@
 
 import bpy
 import bmesh
+import addon_utils
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils.geometry import intersect_line_plane
 from mathutils import Vector, Matrix
@@ -25,16 +26,16 @@ def get_new_id_opendrive(context):
         Generate and return new ID for OpenDRIVE objects using a dummy object
         for storage.
     '''
-    dummy_obj = context.scene.objects.get('id_xodr_next')
+    dummy_obj = context.scene.objects.get('id_odr_next')
     if dummy_obj is None:
-        dummy_obj = bpy.data.objects.new('id_xodr_next',None)
+        dummy_obj = bpy.data.objects.new('id_odr_next',None)
         # Do not render
         dummy_obj.hide_viewport = True
         dummy_obj.hide_render = True
-        dummy_obj['id_xodr_next'] = 1
+        dummy_obj['id_odr_next'] = 1
         link_object_opendrive(context, dummy_obj)
-    id_next = dummy_obj['id_xodr_next']
-    dummy_obj['id_xodr_next'] += 1
+    id_next = dummy_obj['id_odr_next']
+    dummy_obj['id_odr_next'] += 1
     return id_next
 
 def get_new_id_openscenario(context):
@@ -42,22 +43,33 @@ def get_new_id_openscenario(context):
         Generate and return new ID for OpenSCENARIO objects using a dummy object
         for storage.
     '''
-    dummy_obj = context.scene.objects.get('id_xosc_next')
+    dummy_obj = context.scene.objects.get('id_osc_next')
     if dummy_obj is None:
-        dummy_obj = bpy.data.objects.new('id_xosc_next',None)
+        dummy_obj = bpy.data.objects.new('id_osc_next',None)
         # Do not render
         dummy_obj.hide_viewport = True
         dummy_obj.hide_render = True
-        dummy_obj['id_xosc_next'] = 0
+        dummy_obj['id_osc_next'] = 0
         link_object_openscenario(context, dummy_obj, subcategory=None)
-    id_next = dummy_obj['id_xosc_next']
-    dummy_obj['id_xosc_next'] += 1
+    id_next = dummy_obj['id_osc_next']
+    dummy_obj['id_osc_next'] += 1
     return id_next
 
 def ensure_collection_dsc(context):
     if not 'Driving Scenario Creator' in bpy.data.collections:
         collection = bpy.data.collections.new('Driving Scenario Creator')
         context.scene.collection.children.link(collection)
+        # Store addon version
+        version = (0, 0, 0)
+        for mod in addon_utils.modules():
+            if mod.bl_info['name'] == 'Driving Scenario Creator':
+                version = mod.bl_info['version']
+        version_obj = bpy.data.objects.new('dsc_addon_version',None)
+        # Do not render
+        version_obj.hide_viewport = True
+        version_obj.hide_render = True
+        version_obj['dsc_addon_version'] = version
+        link_object_opendrive(context, version_obj)
     else:
         collection = bpy.data.collections['Driving Scenario Creator']
     return collection
@@ -126,14 +138,14 @@ def link_object_openscenario(context, obj, subcategory=None):
         collection = ensure_subcollection_openscenario(context, subcategory)
         collection.objects.link(obj)
 
-def get_object_xodr_by_id(id_xodr):
+def get_object_xodr_by_id(id_odr):
     '''
         Get reference to OpenDRIVE object by ID, return None if not found.
     '''
     collection = bpy.data.collections.get('OpenDRIVE')
     for obj in collection.objects:
-        if 'id_xodr' in obj:
-            if obj['id_xodr'] == id_xodr:
+        if 'id_odr' in obj:
+            if obj['id_odr'] == id_odr:
                 return obj
 
 def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_junction):
@@ -198,28 +210,28 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_junctio
             else:
                 cp_type = 'cp_right'
         if cp_type_other == 'cp_start_l':
-            obj_other['link_predecessor_id_l'] = obj['id_xodr']
+            obj_other['link_predecessor_id_l'] = obj['id_odr']
             obj_other['link_predecessor_cp_l'] = cp_type
             if id_junction != None:
                 obj_other['id_direct_junction_start'] = id_junction
         elif cp_type_other == 'cp_start_r':
-            obj_other['link_predecessor_id_r'] = obj['id_xodr']
+            obj_other['link_predecessor_id_r'] = obj['id_odr']
             obj_other['link_predecessor_cp_r'] = cp_type
             if id_junction != None:
                 obj_other['id_direct_junction_start'] = id_junction
         elif cp_type_other == 'cp_end_l':
-            obj_other['link_successor_id_l'] = obj['id_xodr']
+            obj_other['link_successor_id_l'] = obj['id_odr']
             obj_other['link_successor_cp_l'] = cp_type
             if id_junction != None:
                 obj_other['id_direct_junction_end'] = id_junction
         elif cp_type_other == 'cp_end_r':
-            obj_other['link_successor_id_r'] = obj['id_xodr']
+            obj_other['link_successor_id_r'] = obj['id_odr']
             obj_other['link_successor_cp_r'] = cp_type
             if id_junction != None:
                 obj_other['id_direct_junction_end'] = id_junction
     elif obj_other.name.startswith('junction'):
         # Case: road to junction or junction to junction
-        obj_other['incoming_roads'][cp_type_other] = obj['id_xodr']
+        obj_other['incoming_roads'][cp_type_other] = obj['id_odr']
 
 def get_width_road_sides(obj):
     '''
@@ -424,7 +436,7 @@ def mouse_to_object_params(context, event, filter):
                     hit = True
                     point_type, snapped_point, heading, curvature, \
                     slope, width_left, width_right = point_to_road_connector(obj, point_raycast)
-                    id_obj = obj['id_xodr']
+                    id_obj = obj['id_odr']
                     if obj['road_split_type'] == 'end':
                         if point_type == 'cp_end_l' or point_type == 'cp_end_r':
                             if 'id_direct_junction_end' in obj:
@@ -440,14 +452,14 @@ def mouse_to_object_params(context, event, filter):
                 point_type, snapped_point, heading = point_to_junction_connector(obj, point_raycast)
                 # For the legacy junction we do not explicitly model the
                 # connecting roads hence we set both IDs to the junction ID
-                id_obj = obj['id_xodr']
-                id_junction = obj['id_xodr']
+                id_obj = obj['id_odr']
+                id_junction = obj['id_odr']
         if filter == 'OpenDRIVE_junction':
             if obj.name.startswith('junction_area'):
                 hit = True
                 id_incoming, point_type, snapped_point, heading = point_to_junction_joint(obj, point_raycast)
                 id_obj = id_incoming
-                id_junction = obj['id_xodr']
+                id_junction = obj['id_odr']
         elif filter == 'OpenSCENARIO':
             if obj['dsc_category'] == 'OpenSCENARIO':
                 hit = True

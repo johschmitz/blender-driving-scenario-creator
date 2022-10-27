@@ -271,7 +271,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 if self.snapped_only and not self.snapped:
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_START':
-                    self.id_xodr_start = self.params_snap['id_obj']
+                    self.id_odr_start = self.params_snap['id_obj']
                     self.id_direct_junction_start = self.params_snap['id_junction']
                     self.cp_type_start = self.params_snap['type']
                     # Create helper stencil mesh
@@ -295,7 +295,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                             else:
                                 id_direct_junction = self.id_direct_junction_start
                             helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-                                self.id_xodr_start, id_direct_junction)
+                                self.id_odr_start, id_direct_junction)
                         if self.params_input['connected_end']:
                             link_type = 'end'
                             if 'id_direct_junction_end' in obj:

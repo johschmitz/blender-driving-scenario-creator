@@ -127,7 +127,7 @@ class junction:
             obj['joints'] = joints
 
             # Set OpenDRIVE custom properties
-            obj['id_xodr'] = id_obj
+            obj['id_odr'] = id_obj
 
             obj['incoming_roads'] = {}
 
