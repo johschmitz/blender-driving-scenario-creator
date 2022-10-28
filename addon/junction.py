@@ -13,6 +13,7 @@
 
 import bpy
 from mathutils import Vector, Matrix
+from mathutils.geometry import intersect_line_line_2d
 
 from . import helpers
 
@@ -197,55 +198,96 @@ class junction:
             mat_rotation = Matrix.Rotation(self.joints[0].heading, 4, 'Z')
             matrix_world = mat_translation @ mat_rotation
             # Create mesh
-            corners_joints = []
+            joints_corners = []
+            joints_t_vecs = []
             for joint in self.joints:
-                vector_hdg = Vector((1.0, 0.0, 0.0))
-                vector_hdg.rotate(Matrix.Rotation(joint.heading + pi/2, 3, 'Z'))
+                # Find corner points of incoming road joint
+                vector_s = Vector((1.0, 0.0, 0.0))
+                vector_s.rotate(Matrix.Rotation(joint.heading + pi/2, 3, 'Z'))
                 point_local_left = matrix_world.inverted() \
-                    @ (joint.contact_point_vec + vector_hdg * joint.width_left)
+                    @ (joint.contact_point_vec + vector_s * joint.width_left)
                 point_local_right = matrix_world.inverted() \
-                    @ (joint.contact_point_vec - vector_hdg * joint.width_right)
-                corners_joints.append([point_local_left, point_local_right])
-            vertices = get_junction_hull(corners_joints)
-            edges = [[idx, idx+1] for idx in range(len(vertices)-1)]
-            edges += [[len(vertices)-1, 0]]
-            if wireframe:
-                faces = []
-            else:
-                if len(vertices) > 2:
-                    faces = [[idx for idx in range(len(vertices))]]
-                else:
+                    @ (joint.contact_point_vec - vector_s * joint.width_right)
+                # Get heading vector of incoming road joint (t-direction)
+                vector_t = Vector((1.0, 0.0, 0.0))
+                vector_t.rotate(Matrix.Rotation(joint.heading, 3, 'Z'))
+                vector_t.rotate(mat_rotation.inverted())
+                joints_t_vecs.append(vector_t)
+                joints_corners.append([point_local_left, point_local_right])
+            # Obtain the junction hull vertices and create a Blender mesh based of it
+            vertices = get_junction_hull(joints_corners, joints_t_vecs)
+            if len(vertices) == 2 * len(joints_corners):
+                edges = [[idx, idx+1] for idx in range(len(vertices)-1)]
+                edges += [[len(vertices)-1, 0]]
+                if wireframe:
                     faces = []
+                else:
+                    if len(vertices) > 2:
+                        faces = [[idx for idx in range(len(vertices))]]
+                    else:
+                        faces = []
+            else:
+                # No suitable solution found but at least mark road ends
+                vertices = [joints_corners[0][0], joints_corners[0][1]]
+                for corners in joints_corners:
+                    vertices.append(corners[0])
+                    vertices.append(corners[1])
+                edges = [[2*idx, 2*idx+1] for idx in range(int(len(vertices)/2))]
+                faces = []
             # Create blender mesh
             mesh = bpy.data.meshes.new('temp')
             mesh.from_pydata(vertices, edges, faces)
             valid = True
             return valid, mesh, matrix_world
 
-def get_junction_hull(corners_joints):
+def get_junction_hull(joints_corners, joints_t_vecs):
     '''
-        Return ordered list of junction hull corners based on joint corners
-        [[left corner 0, right corner 0], ... ].
+        Try to return ordered list of junction hull corners based on joint
+        corners to connect [[left corner 0, right corner 0], ... ]. If no
+        suitable solution is found, the list of corners might be shorter than
+        the input.
     '''
     ordered_indices = [0]
-    vertices = [corners_joints[0][0], corners_joints[0][1]]
-    idx_next = 0
-    for _ in range(len(corners_joints)):
-        vec_right_2_left = corners_joints[idx_next][1] - corners_joints[idx_next][0]
-        vec_right = corners_joints[idx_next][1]
-        angle_next = 0
+    vertices = [joints_corners[0][0], joints_corners[0][1]]
+    idx_current = 0
+    for _ in range(len(joints_corners)):
+        vec_right_2_left = joints_corners[idx_current][1] - joints_corners[idx_current][0]
+        vec_right = joints_corners[idx_current][1]
+        angle_current = 0
+        idx_next = 0
         found = False
-        for idx_j, corners in enumerate(corners_joints):
-            if not idx_j in ordered_indices:
-                vec_right_2_left_next = vec_right - corners[0]
-                angle_check = vec_right_2_left.angle(vec_right_2_left_next)
-                if angle_check > angle_next:
-                    angle_next = angle_check
-                    idx_next = idx_j
-                    found = True
+        # Search for next joint to connect to
+        for idx_i, corners_next in enumerate(joints_corners):
+            if not idx_i in ordered_indices:
+                vec_left_next = corners_next[0]
+                vec_right_2_left_next = vec_right - vec_left_next
+                angle_check = vec_right_2_left.to_2d().angle_signed(vec_right_2_left_next.to_2d())
+                # Convert -pi .. pi to 0 .. 2*pi
+                if angle_check < 0:
+                    angle_check = 2 * pi + angle_check
+                # Check if not self crossing and larger than before (make "as convex as possible")
+                if angle_check < (3/2*pi) and angle_check > angle_current:
+                    # Do not add this connection if it crosses any other road
+                    crossing = False
+                    for idx_j, corners_check in enumerate(joints_corners):
+                        if idx_j != idx_current and idx_j != idx_i:
+                            vec_left_check = corners_check[0]
+                            vec_right_check = corners_check[1]
+                            far_point_left = corners_check[0] - joints_t_vecs[idx_j] * 10000
+                            far_point_right = corners_check[1] - joints_t_vecs[idx_j] * 10000
+                            intersection_left = intersect_line_line_2d(
+                                vec_right, vec_left_next, vec_left_check, far_point_left)
+                            intersection_right = intersect_line_line_2d(
+                                vec_right, vec_left_next, vec_right_check, far_point_right)
+                            if intersection_left != None or intersection_right != None:
+                                crossing = True
+                    if crossing == False:
+                        angle_current = angle_check
+                        idx_next = idx_i
+                        found = True
         if found:
             ordered_indices.append(idx_next)
-            vertices.append(corners_joints[idx_next][0])
-            vertices.append(corners_joints[idx_next][1])
+            vertices.append(joints_corners[idx_next][0])
+            vertices.append(joints_corners[idx_next][1])
+        idx_current = idx_next
     return vertices
-
