@@ -185,11 +185,14 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
-            context.workspace.status_text_set('Place object by clicking, hold CTRL to snap to grid, '
+            context.workspace.status_text_set('Place object by clicking, '
+                                              'hold CTRL to snap to grid, '
                                               'hold SHIFT to change start heading, '
                                               'hold E to adjust elevation, '
                                               'hold S to toggle sideview and adjust elevation, '
-                                              'press RIGHTMOUSE to cancel selection, press ESCAPE to exit.')
+                                              'ALT+MIDDLEMOUSE to move the view center, '
+                                              'RIGHTMOUSE to cancel selection, '
+                                              'ESCAPE to cancel and exit.')
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.reset_modal_state()
