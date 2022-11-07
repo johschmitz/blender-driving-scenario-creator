@@ -12,6 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import bmesh
 from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_line_2d
 
@@ -237,6 +238,17 @@ class junction:
             # Create blender mesh
             mesh = bpy.data.meshes.new('temp')
             mesh.from_pydata(vertices, edges, faces)
+
+            # Set corner vertex crease values to prepare for usage of
+            # subdivision surface modifier
+            bm = bmesh.new()
+            bm.from_mesh(mesh)
+            crease_layer = bm.verts.layers.crease.verify()
+            for vert in bm.verts:
+                vert[crease_layer] = 1.0
+            bm.to_mesh(mesh)
+            bm.free()
+
             valid = True
             return valid, mesh, matrix_world
 
