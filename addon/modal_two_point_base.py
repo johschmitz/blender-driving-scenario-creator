@@ -50,15 +50,15 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         '''
         raise NotImplementedError()
 
-    def create_stencil(self, context, point_start):
+    def create_stencil(self, context):
         '''
             Create a stencil object with fake user or find older one in bpy data and
             relink to scene currently only support OBJECT mode.
         '''
-        stencil = bpy.data.objects.get('dsc_stencil')
-        if stencil is not None:
+        self.stencil = bpy.data.objects.get('dsc_stencil')
+        if self.stencil is not None:
             if context.scene.objects.get('dsc_stencil') is None:
-                context.scene.collection.objects.link(stencil)
+                context.scene.collection.objects.link(self.stencil)
         else:
             # Create object from mesh
             mesh = bpy.data.meshes.new('dsc_stencil')
@@ -66,7 +66,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             mesh.from_pydata(vertices, edges, faces)
             # Rotate in start heading direction
             self.stencil = bpy.data.objects.new('dsc_stencil', mesh)
-            self.stencil.location = point_start
+            self.stencil.location = self.params_input['point_start']
             # Link
             context.scene.collection.objects.link(self.stencil)
             self.stencil.use_fake_user = True
@@ -83,27 +83,31 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             bpy.data.objects.remove(stencil, do_unlink=True)
             self.stencil = None
 
-    def update_stencil(self, context):
+    def update_stencil(self, context, update_start):
         '''
             Transform stencil object to follow the mouse pointer.
         '''
-        if self.params_input['point_end'] == self.params_input['point_start']:
-            # This can happen due to start point snapping -> ignore
-            return
-        # Try getting data for a new mesh
-        valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, wireframe=True)
-        # If we get a valid solution we can update the mesh, otherwise just return
-        if valid:
-            helpers.replace_mesh(self.stencil, mesh)
-            # Set stencil global transform
-            self.stencil.matrix_world = matrix_world
+        if update_start:
+            self.remove_stencil()
+            self.create_stencil(context)
+        else:
+            if self.params_input['point_end'] == self.params_input['point_start']:
+                # This can happen due to start point snapping -> ignore
+                return
+            # Try getting data for a new mesh
+            valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, wireframe=True)
+            # If we get a valid solution we can update the mesh, otherwise just return
+            if valid:
+                helpers.replace_mesh(self.stencil, mesh)
+                # Set stencil global transform
+                self.stencil.matrix_world = matrix_world
 
     def get_initial_vertices_edges_faces(self):
         '''
             Calculate and return the vertices, edges and faces to create the initial stencil mesh.
         '''
-        vertices = [(0.0, 0.0, 0.0)]
-        edges = []
+        vertices = [(0.0, 0.0, -self.params_input['point_start'].z), (0.0, 0.0, 0.0)]
+        edges = [[0,1]]
         faces = []
         return vertices, edges, faces
 
@@ -206,6 +210,8 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             self.selected_slope = 0
             self.state = 'SELECT_START'
             self.params_input['design_speed'] = context.scene.road_properties.design_speed
+            # Create helper stencil mesh
+            self.create_stencil(context)
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
         # Update on move
@@ -261,6 +267,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.params_input['connected_start'] = False
                 self.params_input['curvature_start'] = self.selected_curvature
                 self.params_input['slope_start'] = self.selected_slope
+                self.update_stencil(context, update_start=True)
             if self.state == 'SELECT_END':
                 self.params_input['point_end'] = self.selected_point.copy()
                 self.params_input['heading_start'] = self.selected_heading_start
@@ -275,7 +282,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.params_input['heading_end'] = self.calculate_heading_end(self.params_input['point_start'],
                         self.params_input['heading_start'], self.params_input['point_end'])
                 if self.input_valid(wireframe=True):
-                    self.update_stencil(context)
+                    self.update_stencil(context, update_start=False)
         # Select start and end
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
@@ -286,8 +293,6 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.id_odr_start = self.params_snap['id_obj']
                     self.id_direct_junction_start = self.params_snap['id_junction']
                     self.cp_type_start = self.params_snap['type']
-                    # Create helper stencil mesh
-                    self.create_stencil(context, self.params_input['point_start'])
                     # Set elevation so that end point selection starts on the same level
                     self.selected_elevation = self.selected_point.z
                     self.state = 'SELECT_END'
