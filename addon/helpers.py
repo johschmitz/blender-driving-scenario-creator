@@ -369,7 +369,7 @@ def point_to_junction_joint(obj, point):
         distances.append((Vector(joint['contact_point_vec']) - point).length)
     arg_min_dist = distances.index(min(distances))
     return joints[arg_min_dist]['id_incoming'], joints[arg_min_dist]['contact_point'], \
-        cp_vectors[arg_min_dist], joints[arg_min_dist]['heading']
+        cp_vectors[arg_min_dist], joints[arg_min_dist]['heading'], joints[arg_min_dist]['slope']
 
 def point_to_junction_connector(obj, point):
     '''
@@ -460,7 +460,7 @@ def mouse_to_object_params(context, event, filter):
         if filter == 'OpenDRIVE_junction':
             if obj.name.startswith('junction_area'):
                 hit = True
-                id_incoming, point_type, snapped_point, heading = point_to_junction_joint(obj, raycast_point)
+                id_incoming, point_type, snapped_point, heading, slope = point_to_junction_joint(obj, raycast_point)
                 id_obj = id_incoming
                 id_junction = obj['id_odr']
         elif filter == 'OpenSCENARIO':

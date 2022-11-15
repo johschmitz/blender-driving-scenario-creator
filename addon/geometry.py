@@ -75,20 +75,45 @@ class DSC_geometry():
                 line - parabola
             curve combination inside one geometry.
 
-            Symbols and equations used:
-                Slope of incoming road: m_0
-                Parabola (Curve 0): h_p1 = a_p1 + b_p1 * s + c_p1 * s^2
-                Line (Curve 1): h_l = a_l + b_l * s
-                Parabola (Curve 2): h_p2 = a_p2 + b_p2 * s + c_p2 * s^2
-                Slope of outgoing road: m_3
+
         '''
         if (params_input['point_start'].z == params_input['point_end'].z
             and params_input['slope_start'] == 0
             and params_input['slope_end'] == 0):
             # No elevation
             self.params['elevation'] = [{'s': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}]
+        elif params_input['connected_start'] == False and params_input['connected_end'] == False:
+            # No incoming and outgoing roads connected
+            # Symbols and equations used:
+            #     Slope of road: m_0
+            m_0 = (params_input['point_end'].z - params_input['point_start'].z) / self.params['length']
+            self.params['elevation'] = [{'s': 0, 'a': 0, 'b': m_0, 'c': 0, 'd': 0}]
+        elif params_input['connected_start'] == True and params_input['connected_end'] == True:
+            # Symbols and equations used:
+            #     Height of incoming road: h_0
+            #     Height of outgoing road: h_1
+            #     Slope of incoming road: m_0
+            #     Slope of outgoing road: m_1
+            #     Length of road: s_1
+            # https://en.m.wikipedia.org/wiki/Cubic_Hermite_spline
+            h_0 = 0
+            h_1 = params_input['point_end'].z - params_input['point_start'].z
+            m_0 = params_input['slope_start']
+            m_1 = -1.0 * params_input['slope_end']
+            s_1 = self.params['length']
+            a = h_0
+            # b = s_1 * m_0
+            b = m_0
+            c = (-3 * h_0 - 2 * s_1 * m_0 + 3 * h_1 - s_1 * m_1) / s_1**2
+            d = (2 * h_0 + s_1 * m_0 - 2 * h_1 + s_1 * m_1) / s_1**3
+            self.params['elevation'] = [{'s': 0, 'a': a, 'b': b, 'c': c, 'd': d}]
         else:
-            # TODO: get slope of predecessor and succesor
+            # Symbols and equations used:
+            #     Slope of incoming road: m_0
+            #     Parabola (Curve 0): h_p1 = a_p1 + b_p1 * s + c_p1 * s^2
+            #     Line (Curve 1): h_l = a_l + b_l * s
+            #     Parabola (Curve 2): h_p2 = a_p2 + b_p2 * s + c_p2 * s^2
+            #     Slope of outgoing road: m_3
             m_0 = params_input['slope_start']
             m_3 = params_input['slope_end']
 
@@ -123,7 +148,7 @@ class DSC_geometry():
         '''
             Return slope at beginning of geometry.
         '''
-        return self.params['elevation'][0]['b']
+        return -1.0 * self.params['elevation'][0]['b']
 
     def get_slope_end(self):
         '''
