@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.16.0] - 2022-11-16
+
+### Added
+- Visualization of elevation of start point (also visible and changed when
+  holding <kbd>S</kbd> in road drawing tool and moving the mouse)
+- Make roads which are snapped both at start and end connect smoothly using a
+  cubic Hermite spline segment
+
+### Changed
+- Set vertex crease values of junction area corners to 1.0 to prepare for the
+  usage of a subdivision surface modifier, which will allow modelling of smooth
+  junction surfaces
+
 ## [0.15.0] - 2022-11-04
 
 ### Added
@@ -203,7 +216,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.13.0...v0.14.0
