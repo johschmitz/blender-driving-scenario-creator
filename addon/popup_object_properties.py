@@ -14,8 +14,8 @@
 import bpy
 
 
-class DSC_OT_object_properties_popup(bpy.types.Operator):
-    bl_idname = 'dsc.object_properties_popup'
+class DSC_OT_popup_object_properties(bpy.types.Operator):
+    bl_idname = 'dsc.popup_object_properties'
     bl_label = ''
 
     operators = {'object_car': bpy.ops.dsc.object_car,

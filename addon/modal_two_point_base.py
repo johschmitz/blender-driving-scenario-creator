@@ -43,10 +43,15 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         return context.area.type == 'VIEW_3D'
 
 
-
-    def create_3d_object(self, context):
+    def create_object_model(self, context):
         '''
-            Create a road object
+            Create a model object instance
+        '''
+        pass
+
+    def create_object_3d(self, context):
+        '''
+            Create a 3d object from the model
         '''
         raise NotImplementedError()
 
@@ -175,7 +180,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         }
         self.params_snap = {
             'id_obj': None,
-            'id_junction': None,
+            'id_extra': None,
             'point': Vector((0.0,0.0,0.0)),
             'normal': Vector((0.0,0.0,1.0)),
             'type': 'cp_none',
@@ -202,7 +207,8 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             self.reset_modal_state()
             self.snapped = False
             self.selected_elevation = 0
-            self.selected_point = Vector((0.0,0.0,0.0))
+            self.selected_point = helpers.mouse_to_xy_parallel_plane(context, event,
+                self.selected_elevation)
             self.selected_normal_start = Vector((0.0,0.0,1.0))
             self.selected_heading_start = 0
             self.selected_heading_end = 0
@@ -210,6 +216,8 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             self.selected_slope = 0
             self.state = 'SELECT_START'
             self.params_input['design_speed'] = context.scene.road_properties.design_speed
+            self.params_input['point_start'] = self.selected_point
+            self.params_input['point_end'] = self.selected_point
             # Create helper stencil mesh
             self.create_stencil(context)
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
@@ -291,7 +299,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_START':
                     self.id_odr_start = self.params_snap['id_obj']
-                    self.id_direct_junction_start = self.params_snap['id_junction']
+                    self.id_direct_junction_start = self.params_snap['id_extra']
                     self.cp_type_start = self.params_snap['type']
                     # Set elevation so that end point selection starts on the same level
                     self.selected_elevation = self.selected_point.z
@@ -301,7 +309,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     cp_type_end = self.params_snap['type']
                     # Create the final object
                     if self.input_valid(wireframe=False):
-                        obj = self.create_3d_object(context)
+                        obj = self.create_object_3d(context)
                         if self.params_input['connected_start']:
                             link_type = 'start'
                             if 'id_direct_junction_start' in obj:
@@ -315,14 +323,14 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                                 self.id_odr_start, id_direct_junction)
                         if self.params_input['connected_end']:
                             link_type = 'end'
-                            # FIXME keep it generic, direct junction should not appear at this point!
+                            # TODO keep it generic, direct junction should not appear at this point!
                             if 'id_direct_junction_end' in obj:
                                 id_direct_junction = obj['id_direct_junction_end']
-                                if self.params_snap['id_junction'] != None:
+                                if self.params_snap['id_extra'] != None:
                                     self.report({'WARNING'}, 'Avoid connecting two split road' \
                                         ' ends (direct junctions) to each other!')
                             else:
-                                id_direct_junction = self.params_snap['id_junction']
+                                id_direct_junction = self.params_snap['id_extra']
                             helpers.create_object_xodr_links(obj, link_type, cp_type_end,
                                 self.params_snap['id_obj'], id_direct_junction)
                         # Remove stencil and go back to initial state to draw again
@@ -388,6 +396,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         # For operator state machine
         # possible states: {'INIT','SELECT_START', 'SELECT_END'}
         self.state = 'INIT'
+        self.create_object_model(context)
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}

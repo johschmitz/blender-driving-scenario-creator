@@ -17,7 +17,7 @@ from mathutils import Vector, Matrix
 from math import pi
 
 from . import helpers
-from . junction import junction_joint, junction_connection, junction
+from . junction import junction
 
 
 class DSC_OT_junction_generic(bpy.types.Operator):
@@ -66,7 +66,7 @@ class DSC_OT_junction_generic(bpy.types.Operator):
                 if self.state == 'SELECT_INCOMING':
                     if self.snapped:
                         contact_point_vec = self.params_snap['point'].copy()
-                        joint_added = self.junction.add_joint(self.params_snap['id_obj'],
+                        joint_added = self.junction.add_joint_incoming(self.params_snap['id_obj'],
                             self.params_snap['type'], contact_point_vec,
                             self.params_snap['heading'], self.params_snap['slope'],
                             self.params_snap['width_left'], self.params_snap['width_right'])
@@ -79,7 +79,7 @@ class DSC_OT_junction_generic(bpy.types.Operator):
         elif event.type in {'RET'} or event.type in {'SPACE'}:
             if self.state == 'SELECT_INCOMING':
                 # Create the final object
-                self.junction.create_3d_object()
+                self.junction.create_object_3d()
                 self.clean_up(context)
                 return {'FINISHED'}
         # Cancel step by step

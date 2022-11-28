@@ -26,7 +26,7 @@ from . object_motorbike import DSC_OT_object_motorbike
 from . object_pedestrian import DSC_OT_object_pedestrian
 from . object_truck import DSC_OT_object_truck
 from . road_arc import DSC_OT_road_arc
-from . road_properties_popup import DSC_OT_road_properties_popup
+from . popup_road_properties import DSC_OT_popup_road_properties
 from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
 from . road_properties import DSC_road_properties, DSC_enum_lane
 from . road_clothoid import DSC_OT_road_clothoid
@@ -34,7 +34,7 @@ from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
 from . object_properties import DSC_object_properties
-from . object_properties_popup import DSC_OT_object_properties_popup
+from . popup_object_properties import DSC_OT_popup_object_properties
 
 
 bl_info = {
@@ -71,16 +71,16 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box = layout.box()
         box.label(text='Roads')
         row = box.row(align=True)
-        row.operator('dsc.road_properties_popup', text='Straight',
+        row.operator('dsc.popup_road_properties', text='Straight',
             icon_value=custom_icons['road_straight'].icon_id).operator = 'road_straight'
         row = box.row(align=True)
-        row.operator('dsc.road_properties_popup', text='Arc',
+        row.operator('dsc.popup_road_properties', text='Arc',
             icon_value=custom_icons['road_arc'].icon_id).operator = 'road_arc'
         row = box.row(align=True)
-        row.operator('dsc.road_properties_popup', text='Clothoid (Hermite)',
+        row.operator('dsc.popup_road_properties', text='Clothoid (Hermite)',
             icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_hermite'
         row = box.row(align=True)
-        row.operator('dsc.road_properties_popup', text='Clothoid (Forward)',
+        row.operator('dsc.popup_road_properties', text='Clothoid (Forward)',
             icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_forward'
         row = box.row(align=True)
         row.operator('dsc.road_parametric_polynomial', text='Parametric polynomial',
@@ -88,20 +88,20 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.label(text='Junctions')
         row = box.row(align=True)
-        row.operator('dsc.junction_four_way', text='4-way junction',
-            icon_value=custom_icons['junction_4way'].icon_id)
+        row.operator('dsc.popup_road_properties', text='4-way junction',
+            icon_value=custom_icons['junction_4way'].icon_id).operator = 'junction_four_way'
         row = box.row(align=True)
         row.operator('dsc.junction_generic', text='Generic junction (area)',
             icon_value=custom_icons['junction_area'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.road_properties_popup', text='Junction connection',
+        row.operator('dsc.popup_road_properties', text='Junction connection',
             icon_value=custom_icons['junction_connection'].icon_id).operator = 'junction_connection'
 
         layout.label(text='OpenSCENARIO')
         box = layout.box()
         box.label(text='Objects')
         row = box.row(align=True)
-        row.operator('dsc.object_properties_popup', text='Car').operator = 'object_car'
+        row.operator('dsc.popup_object_properties', text='Car').operator = 'object_car'
         row = box.row(align=True)
         row.operator('dsc.object_truck')
         row = box.row(align=True)
@@ -137,7 +137,7 @@ classes = (
     DSC_OT_object_pedestrian,
     DSC_OT_object_truck,
     DSC_OT_road_arc,
-    DSC_OT_road_properties_popup,
+    DSC_OT_popup_road_properties,
     DSC_OT_road_parametric_polynomial,
     DSC_OT_road_clothoid,
     DSC_OT_road_straight,
@@ -146,7 +146,7 @@ classes = (
     DSC_PT_panel_create,
     DSC_road_properties,
     DSC_object_properties,
-    DSC_OT_object_properties_popup,
+    DSC_OT_popup_object_properties,
 )
 
 def register():

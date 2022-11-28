@@ -14,16 +14,17 @@
 import bpy
 
 
-class DSC_OT_road_properties_popup(bpy.types.Operator):
-    bl_idname = 'dsc.road_properties_popup'
+class DSC_OT_popup_road_properties(bpy.types.Operator):
+    bl_idname = 'dsc.popup_road_properties'
     bl_label = ''
 
     operators = {'road_straight': bpy.ops.dsc.road_straight,
                  'road_arc': bpy.ops.dsc.road_arc,
                  'road_clothoid_hermite': bpy.ops.dsc.road_clothoid,
                  'road_clothoid_forward': bpy.ops.dsc.road_clothoid,
+                 'road_parametric_polynomial': bpy.ops.dsc.road_parametric_polynomial,
                  'junction_connection': bpy.ops.dsc.junction_connection,
-                 'road_parametric_polynomial': bpy.ops.dsc.road_parametric_polynomial,}
+                 'junction_four_way': bpy.ops.dsc.junction_four_way}
 
     operator: bpy.props.StringProperty(
         name='Road operator', description='Type of the road operator to call.', options={'HIDDEN'})
@@ -34,7 +35,7 @@ class DSC_OT_road_properties_popup(bpy.types.Operator):
 
     def cancel(self, context):
         # Popup closed, call operator for the specified road operator
-        if self.operator == 'road_clothoid_hermite':
+        if self.operator == 'road_clothoid_hermite' or self.operator == 'junction_connection':
             geometry_solver = 'hermite'
         elif self.operator == 'road_clothoid_forward':
             geometry_solver = 'forward'

@@ -22,10 +22,11 @@ from math import pi
 
 
 class junction_joint:
-    def __init__(self, id_incoming, contact_point, contact_point_vec,
-                 heading, slope, width_left, width_right):
+    def __init__(self, id_joint, id_incoming, contact_point_type,
+                 contact_point_vec, heading, slope, width_left, width_right):
+        self.id_joint = id_joint
         self.id_incoming = id_incoming
-        self.contact_point = contact_point
+        self.contact_point_type = contact_point_type
         self.contact_point_vec = contact_point_vec
         self.heading = heading
         self.slope = slope
@@ -34,15 +35,16 @@ class junction_joint:
 
 
 class junction_connection:
-    def __init__(self, id_incoming, contact_point, id_linked):
+    def __init__(self, id_incoming, contact_point_type, id_linked):
         self.id_incoming = id_incoming
-        self.contact_point = contact_point
+        self.contact_point_type = contact_point_type
         self.id_linked = id_linked
 
 
 class junction:
 
     def __init__(self, context):
+        self.id_joint_next = 0
         self.context = context
         self.joints = []
         self.connections = []
@@ -58,7 +60,15 @@ class junction:
                 return True
         return False
 
-    def add_joint(self, id_incoming, contact_point, contact_point_vec,
+    def get_new_id_joint(self):
+        '''
+            Generate a new unique ID for a joint.
+        '''
+        id_next = self.id_joint_next
+        self.id_joint_next += 1
+        return id_next
+
+    def add_joint_incoming(self, id_incoming, contact_point_type, contact_point_vec,
                  heading, slope, width_left, width_right):
         '''
             Add a new joint, i.e. an incoming road to the junction if it does
@@ -67,10 +77,21 @@ class junction:
         if self.joint_exists(id_incoming):
             return False
         else:
-            joint = junction_joint(id_incoming, contact_point, contact_point_vec,
-                heading, slope, width_left, width_right)
+            id_joint = self.get_new_id_joint()
+            joint = junction_joint(id_joint, id_incoming, contact_point_type,
+                contact_point_vec, heading, slope, width_left, width_right)
             self.joints.append(joint)
             return True
+
+    def add_joint_open(self, contact_point_vec, heading, slope, width_left, width_right):
+        '''
+            Add a new joint without connecting to an incoming road.
+        '''
+        id_joint = self.get_new_id_joint()
+        joint = junction_joint(id_joint, None, 'junction_joint_open', contact_point_vec,
+            heading, slope, width_left, width_right)
+        self.joints.append(joint)
+        return True
 
     def remove_last_joint(self):
         '''
@@ -78,6 +99,7 @@ class junction:
         '''
         if len(self.joints) > 0:
             self.joints.pop()
+            self.id_joint_next -= 1
 
     def has_joints(self):
         '''
@@ -94,9 +116,9 @@ class junction:
         '''
         pass
 
-    def create_3d_object(self):
+    def create_object_3d(self):
         '''
-            Create a junction blender object
+            Create a 3d junction blender object
         '''
         valid, mesh, matrix_world = self.get_mesh(wireframe=False)
         if not valid:
@@ -125,7 +147,8 @@ class junction:
             # Remember joint (contact) points for snapping
             joints = []
             for joint in self.joints:
-                joints.append(vars(joint))
+                joint_dict = vars(joint)
+                joints.append(joint_dict)
             obj['joints'] = joints
 
             # Set OpenDRIVE custom properties
@@ -273,30 +296,34 @@ def get_junction_hull(joints_corners, joints_t_vecs):
             if not idx_i in ordered_indices:
                 vec_left_next = corners_next[0]
                 vec_right_2_left_next = vec_right - vec_left_next
-                angle_check = vec_right_2_left.to_2d().angle_signed(vec_right_2_left_next.to_2d())
-                # Convert -pi .. pi to 0 .. 2*pi
-                if angle_check < 0:
-                    angle_check = 2 * pi + angle_check
-                # Check if not self crossing and larger than before (make "as convex as possible")
-                if angle_check < (3/2*pi) and angle_check > angle_current:
-                    # Do not add this connection if it crosses any other road
-                    crossing = False
-                    for idx_j, corners_check in enumerate(joints_corners):
-                        if idx_j != idx_current and idx_j != idx_i:
-                            vec_left_check = corners_check[0]
-                            vec_right_check = corners_check[1]
-                            far_point_left = corners_check[0] - joints_t_vecs[idx_j] * 10000
-                            far_point_right = corners_check[1] - joints_t_vecs[idx_j] * 10000
-                            intersection_left = intersect_line_line_2d(
-                                vec_right, vec_left_next, vec_left_check, far_point_left)
-                            intersection_right = intersect_line_line_2d(
-                                vec_right, vec_left_next, vec_right_check, far_point_right)
-                            if intersection_left != None or intersection_right != None:
-                                crossing = True
-                    if crossing == False:
-                        angle_current = angle_check
-                        idx_next = idx_i
-                        found = True
+                if vec_right_2_left_next == Vector((0.0, 0.0, 0.0)):
+                    idx_next = idx_i
+                    found = True
+                else:
+                    angle_check = vec_right_2_left.to_2d().angle_signed(vec_right_2_left_next.to_2d())
+                    # Convert -pi .. pi to 0 .. 2*pi
+                    if angle_check < 0:
+                        angle_check = 2 * pi + angle_check
+                    # Check if not self crossing and larger than before (make "as convex as possible")
+                    if angle_check < (3/2*pi) and angle_check > angle_current:
+                        # Do not add this connection if it crosses any other road
+                        crossing = False
+                        for idx_j, corners_check in enumerate(joints_corners):
+                            if idx_j != idx_current and idx_j != idx_i:
+                                vec_left_check = corners_check[0]
+                                vec_right_check = corners_check[1]
+                                far_point_left = corners_check[0] - joints_t_vecs[idx_j] * 10000
+                                far_point_right = corners_check[1] - joints_t_vecs[idx_j] * 10000
+                                intersection_left = intersect_line_line_2d(
+                                    vec_right, vec_left_next, vec_left_check, far_point_left)
+                                intersection_right = intersect_line_line_2d(
+                                    vec_right, vec_left_next, vec_right_check, far_point_right)
+                                if intersection_left != None or intersection_right != None:
+                                    crossing = True
+                        if crossing == False:
+                            angle_current = angle_check
+                            idx_next = idx_i
+                            found = True
         if found:
             ordered_indices.append(idx_next)
             vertices.append(joints_corners[idx_next][0])

@@ -34,9 +34,9 @@ class DSC_OT_object_car(DSC_OT_modal_two_point_base):
     # TODO snap to road contact points, requires a lot of work
     snap_filter = 'surface'
 
-    def create_3d_object(self, context):
+    def create_object_3d(self, context):
         '''
-            Create a car object
+            Create a 3d car object
         '''
         valid, mesh, matrix_world, materials = self.update_params_get_mesh(context, wireframe=False)
         if not valid:

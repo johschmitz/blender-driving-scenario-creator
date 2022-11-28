@@ -37,9 +37,9 @@ class DSC_OT_road(DSC_OT_modal_two_point_base):
         options={'HIDDEN'},
         default='default')
 
-    def create_3d_object(self, context):
+    def create_object_3d(self, context):
         '''
-            Create the Blender road object
+            Create the 3d Blender road object
         '''
         if self.object_type == 'junction_connecting_road':
             wireframe = True

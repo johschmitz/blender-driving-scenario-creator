@@ -148,7 +148,7 @@ def get_object_xodr_by_id(id_odr):
             if obj['id_odr'] == id_odr:
                 return obj
 
-def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_junction):
+def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
     '''
         Create OpenDRIVE predecessor/successor linkage for current object with
         other object.
@@ -162,31 +162,39 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_junctio
     #      case
 
     # Case: road to junction or junction to junction
-    if id_junction != None:
-        obj_junction = get_object_xodr_by_id(id_junction)
+    obj_other = get_object_xodr_by_id(id_other)
+    obj_junction = None
+    if 'id_direct_junction_start' in obj_other \
+        or 'id_direct_junction_end' in obj_other:
+        if id_extra != None:
+            obj_junction = get_object_xodr_by_id(id_extra)
 
     # 1. Set the link parameters of the object itself
     if 'road' in obj.name:
         if link_type == 'start':
-            obj['link_predecessor_id_l'] = id_other
             obj['link_predecessor_cp_l'] = cp_type_other
-            if id_junction != None:
+            obj['link_predecessor_id_l'] = id_other
+            if id_extra != None:
                 if obj['dsc_type'] == 'junction_connecting_road':
-                    # Case: connecting road to junction + incoming road
-                    obj['id_junction'] = id_junction
-                elif obj_junction['dsc_type'] == 'junction_direct':
-                    # Case: road to direct junction
-                    obj['id_direct_junction_start'] = id_junction
+                    # Case: connecting road (in juction) to incoming road
+                    obj['id_junction'] = id_extra
+                elif obj_junction != None:
+                    if obj_junction['dsc_type'] == 'junction_direct':
+                        # Case: road to direct junction
+                        obj['id_direct_junction_start'] = id_extra
+            else:
+                obj['link_predecessor_id_l'] = id_other
         else:
             obj['link_successor_cp_l'] = cp_type_other
             obj['link_successor_id_l'] = id_other
-            if id_junction != None:
+            if id_extra != None:
                 if obj['dsc_type'] == 'junction_connecting_road':
-                    # Case: connecting road to junction + incoming road
-                    obj['id_junction'] = id_junction
-                elif obj_junction['dsc_type'] == 'junction_direct':
-                    # Case: road to direct junction
-                    obj['id_direct_junction_end'] = id_junction
+                    # Case: connecting road (in juction) to incoming road
+                    obj['id_junction'] = id_extra
+                elif obj_junction != None:
+                    if obj_junction['dsc_type'] == 'junction_direct':
+                        # Case: road to direct junction
+                        obj['id_direct_junction_end'] = id_extra
     elif 'junction' in obj.name:
         # Case: junction to road
         if link_type == 'start':
@@ -195,43 +203,48 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_junctio
             obj['incoming_roads']['cp_right'] = id_other
 
     # 2. Set the link parameters of the other object we are linking with
-    obj_other = get_object_xodr_by_id(id_other)
-    if 'road' in obj_other.name:
-        if 'road' in obj.name:
-            # Case: road to road
+    if obj_other != None:
+        if 'road' in obj_other.name:
+            if 'road' in obj.name:
+                # Case: road to road
+                if link_type == 'start':
+                    cp_type = 'cp_start_l'
+                else:
+                    cp_type = 'cp_end_l'
+            if 'junction' in obj.name:
+                # Case: junction to road
+                if link_type == 'start':
+                    cp_type = 'cp_left'
+                else:
+                    cp_type = 'cp_right'
+            if cp_type_other == 'cp_start_l':
+                obj_other['link_predecessor_id_l'] = obj['id_odr']
+                obj_other['link_predecessor_cp_l'] = cp_type
+                if id_extra != None:
+                    obj_other['id_direct_junction_start'] = id_extra
+            elif cp_type_other == 'cp_start_r':
+                obj_other['link_predecessor_id_r'] = obj['id_odr']
+                obj_other['link_predecessor_cp_r'] = cp_type
+                if id_extra != None:
+                    obj_other['id_direct_junction_start'] = id_extra
+            elif cp_type_other == 'cp_end_l':
+                obj_other['link_successor_id_l'] = obj['id_odr']
+                obj_other['link_successor_cp_l'] = cp_type
+                if id_extra != None:
+                    obj_other['id_direct_junction_end'] = id_extra
+            elif cp_type_other == 'cp_end_r':
+                obj_other['link_successor_id_r'] = obj['id_odr']
+                obj_other['link_successor_cp_r'] = cp_type
+                if id_extra != None:
+                    obj_other['id_direct_junction_end'] = id_extra
+        elif obj_other.name.startswith('junction'):
+            # Case: road to junction or junction to junction
             if link_type == 'start':
                 cp_type = 'cp_start_l'
             else:
                 cp_type = 'cp_end_l'
-        if 'junction' in obj.name:
-            # Case: junction to road
-            if link_type == 'start':
-                cp_type = 'cp_left'
-            else:
-                cp_type = 'cp_right'
-        if cp_type_other == 'cp_start_l':
-            obj_other['link_predecessor_id_l'] = obj['id_odr']
-            obj_other['link_predecessor_cp_l'] = cp_type
-            if id_junction != None:
-                obj_other['id_direct_junction_start'] = id_junction
-        elif cp_type_other == 'cp_start_r':
-            obj_other['link_predecessor_id_r'] = obj['id_odr']
-            obj_other['link_predecessor_cp_r'] = cp_type
-            if id_junction != None:
-                obj_other['id_direct_junction_start'] = id_junction
-        elif cp_type_other == 'cp_end_l':
-            obj_other['link_successor_id_l'] = obj['id_odr']
-            obj_other['link_successor_cp_l'] = cp_type
-            if id_junction != None:
-                obj_other['id_direct_junction_end'] = id_junction
-        elif cp_type_other == 'cp_end_r':
-            obj_other['link_successor_id_r'] = obj['id_odr']
-            obj_other['link_successor_cp_r'] = cp_type
-            if id_junction != None:
-                obj_other['id_direct_junction_end'] = id_junction
-    elif obj_other.name.startswith('junction'):
-        # Case: road to junction or junction to junction
-        obj_other['incoming_roads'][cp_type_other] = obj['id_odr']
+            obj_other['joints'][id_extra]['id_incoming'] = obj['id_odr']
+            obj_other['joints'][id_extra]['contact_point_type'] = cp_type
 
 def get_width_road_sides(obj):
     '''
@@ -355,10 +368,11 @@ def point_to_road_connector(obj, point):
             obj['geometry']['curvature_end'], obj['geometry']['slope_end'], \
             width_left, width_right
 
-def point_to_junction_joint(obj, point):
+def point_to_junction_joint_connecting(obj, point):
     '''
         Get joint parameters from closest joint including incoming road ID,
-        contact point type, vector and heading from an existing junction.
+        contact point type, vector and heading from an existing junction for a
+        connecting road.
     '''
     # Calculate which connecting point is closest to input point
     joints = obj['joints']
@@ -368,24 +382,25 @@ def point_to_junction_joint(obj, point):
         cp_vectors.append(Vector(joint['contact_point_vec']))
         distances.append((Vector(joint['contact_point_vec']) - point).length)
     arg_min_dist = distances.index(min(distances))
-    return joints[arg_min_dist]['id_incoming'], joints[arg_min_dist]['contact_point'], \
+    return joints[arg_min_dist]['id_incoming'], joints[arg_min_dist]['contact_point_type'], \
         cp_vectors[arg_min_dist], joints[arg_min_dist]['heading'], joints[arg_min_dist]['slope']
 
-def point_to_junction_connector(obj, point):
+def point_to_junction_joint_incoming(obj, point):
     '''
-        Get a snapping point and heading from an existing junction.
-        # TODO later remove this path and unify junctions
+        Get joint parameters from closest joint including connecting road ID,
+        contact point type, vector and heading from an existing junction for an
+        incoming road.
     '''
     # Calculate which connecting point is closest to input point
-    cps = ['cp_left', 'cp_down', 'cp_right', 'cp_up']
+    joints = obj['joints']
     distances = []
     cp_vectors = []
-    for cp in cps:
-        distances.append((Vector(obj[cp]) - point).length)
-        cp_vectors.append(Vector(obj[cp]))
-    headings = [obj['hdg_left'], obj['hdg_down'], obj['hdg_right'], obj['hdg_up']]
+    for idx, joint in enumerate(joints):
+        cp_vectors.append(Vector(joint['contact_point_vec']))
+        distances.append((Vector(joint['contact_point_vec']) - point).length)
     arg_min_dist = distances.index(min(distances))
-    return cps[arg_min_dist], cp_vectors[arg_min_dist], headings[arg_min_dist]
+    return joints[arg_min_dist]['id_joint'], joints[arg_min_dist]['contact_point_type'], \
+        cp_vectors[arg_min_dist], joints[arg_min_dist]['heading'] - pi, joints[arg_min_dist]['slope']
 
 def point_to_object_connector(obj, point):
     '''
@@ -415,7 +430,7 @@ def mouse_to_object_params(context, event, filter):
     # Initialize with some defaults in case nothing is hit
     hit = False
     id_obj = None
-    id_junction = None
+    id_extra = None
     point_type = None
     snapped_point = Vector((0.0,0.0,0.0))
     snapped_normal = Vector((0.0,0.0,1.0))
@@ -443,26 +458,26 @@ def mouse_to_object_params(context, event, filter):
                     if obj['road_split_type'] == 'end':
                         if point_type == 'cp_end_l' or point_type == 'cp_end_r':
                             if 'id_direct_junction_end' in obj:
-                                id_junction = obj['id_direct_junction_end']
+                                id_extra = obj['id_direct_junction_end']
                     if obj['road_split_type'] == 'start':
                         if point_type == 'cp_start_l' or point_type == 'cp_start_r':
                             if 'id_direct_junction_start' in obj:
-                                id_junction = obj['id_direct_junction_start']
+                                id_extra = obj['id_direct_junction_start']
         if filter == 'OpenDRIVE':
-            if obj.name.startswith('junction_4way'):
-                # TODO later remove this path and unify junctions
+            if obj.name.startswith('junction_area'):
+                # This path is for incoming road to junction joint snapping
                 hit = True
-                point_type, snapped_point, heading = point_to_junction_connector(obj, raycast_point)
-                # For the legacy junction we do not explicitly model the
-                # connecting roads hence we set both IDs to the junction ID
+                id_joint, point_type, snapped_point, heading, slope = point_to_junction_joint_incoming(obj, raycast_point)
+                # For incoming junction connection set both IDs to the junction ID
                 id_obj = obj['id_odr']
-                id_junction = obj['id_odr']
+                id_extra = id_joint
         if filter == 'OpenDRIVE_junction':
             if obj.name.startswith('junction_area'):
+                # This path is for junction internal connecting road snapping (we snap to joint/incoming road cp)
                 hit = True
-                id_incoming, point_type, snapped_point, heading, slope = point_to_junction_joint(obj, raycast_point)
+                id_incoming, point_type, snapped_point, heading, slope = point_to_junction_joint_connecting(obj, raycast_point)
                 id_obj = id_incoming
-                id_junction = obj['id_odr']
+                id_extra = obj['id_odr']
         elif filter == 'OpenSCENARIO':
             if obj['dsc_category'] == 'OpenSCENARIO':
                 hit = True
@@ -475,7 +490,7 @@ def mouse_to_object_params(context, event, filter):
             snapped_normal = raycast_normal
             id_obj = obj.name
     return hit ,{'id_obj': id_obj,
-                 'id_junction': id_junction,
+                 'id_extra': id_extra,
                  'point': snapped_point,
                  'normal': snapped_normal,
                  'type': point_type,

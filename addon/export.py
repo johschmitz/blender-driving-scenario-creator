@@ -388,36 +388,6 @@ class DSC_OT_export(bpy.types.Operator):
         num_junctions = 0
         if helpers.collection_exists(['OpenDRIVE']):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
-                # Export simple 4-way junctions
-                # TODO later unify with generic junction
-                if obj.name.startswith('junction_4way'):
-                    incoming_roads = []
-                    angles = []
-                    junction_id = obj['id_odr']
-                    # Create junction roads based on incoming road angles (simple 4-way for now)
-                    # 0 angle road must point in 'right' direction
-                    for idx, cp in enumerate(['cp_right','cp_up','cp_left','cp_down']):
-                        if cp in obj['incoming_roads']:
-                            inc_road = xodr.get_road_by_id(roads, obj['incoming_roads'][cp])
-                            if(inc_road != None):
-                                incoming_roads.append(inc_road)
-                                angles.append(idx * pi / 2)
-                        else:
-                            self.report({'WARNING'}, 'Junction with ID {} is missing a connection.'.format(obj['id_odr']))
-                    # Create connecting roads and link them to incoming roads
-                    # TODO use API to calculate junction road parameters
-                    junction_roads = xodr.create_junction_roads_standalone(angles, 3.75, junction_id,
-                        spiral_part=0.01, arc_part=0.99, startnum=1000+6*num_junctions, lane_width=3.75)
-                    self.add_junction_roads_elevation(junction_roads, obj['elevation_level'])
-                    self.add_junction_roads_connections_4way(incoming_roads, junction_roads, junction_id)
-                    # Finally create the junction
-                    junction = xodr.create_junction(
-                        junction_roads, junction_id, incoming_roads, 'junction_' + str(junction_id))
-                    num_junctions += 1
-                    print('Add junction with ID', junction_id)
-                    odr.add_junction(junction)
-                    for road in junction_roads:
-                        odr.add_road(road)
                 # Export generic junctions
                 if obj.name.startswith('junction_area'):
                     incoming_roads = []
