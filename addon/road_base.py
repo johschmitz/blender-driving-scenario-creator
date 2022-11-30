@@ -320,6 +320,10 @@ class DSC_OT_road(DSC_OT_modal_two_point_base):
         '''
         t = self.get_width_road_left(lanes)
         t_values = []
+        # Make sure the road has a non-zero length
+        if self.geometry.params['length'] == 0:
+            return t_values
+        # Build up t values lane by lane
         for idx_lane, lane in enumerate(lanes):
             s_norm = s / self.geometry.params['length']
             if lane.width_change == 'open':
