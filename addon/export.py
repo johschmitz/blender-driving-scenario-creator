@@ -404,30 +404,29 @@ class DSC_OT_export(bpy.types.Operator):
                     for obj_jcr in bpy.data.collections['OpenDRIVE'].objects:
                         if obj_jcr.name.startswith('junction_connecting_road'):
                             if obj_jcr['id_junction'] == junction_id:
-                                # Create a junction connecting road
-                                # TODO for now we use a single spiral, later we should use arc - spiral - arc
-                                planview = xodr.PlanView()
-                                planview.set_start_point(obj_jcr['geometry']['point_start'][0],
-                                    obj_jcr['geometry']['point_start'][1],obj_jcr['geometry']['heading_start'])
-                                geometry = xodr.Spiral(obj_jcr['geometry']['curvature_start'],
-                                    obj_jcr['geometry']['curvature_end'], length=obj_jcr['geometry']['length'])
-                                planview.add_geometry(geometry)
-                                lanes = self.create_lanes(obj_jcr)
-                                road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
-                                self.add_elevation_profiles(obj_jcr, road)
-                                # Connect the junction connecting road to incoming and connecting roads
-                                incoming_road = self.get_road_by_id(roads, obj_jcr['link_predecessor_id_l'])
-                                contact_point = mapping_contact_point[obj_jcr['link_predecessor_cp_l']]
-                                road.add_predecessor(xodr.ElementType.road, incoming_road.id, contact_point)
-                                # FIXME esmini currently requires redundant lane linking (in road and junction)
-                                xodr.create_lane_links(road, incoming_road)
-                                incoming_road = self.get_road_by_id(roads, obj_jcr['link_successor_id_l'])
-                                contact_point = mapping_contact_point[obj_jcr['link_successor_cp_l']]
-                                road.add_successor(xodr.ElementType.road, incoming_road.id, contact_point)
-                                # FIXME esmini currently requires redundant lane linking (in road and junction)
-                                xodr.create_lane_links(road, incoming_road)
-                                junction_roads.append(road)
-                                # Create lane links with incoming roads
+                                if 'link_predecessor_id_l' in obj_jcr and 'link_successor_id_l' in obj_jcr:
+                                    # Create a junction connecting road
+                                    # TODO for now we use a single spiral, later we should use arc - spiral - arc
+                                    planview = xodr.PlanView()
+                                    planview.set_start_point(obj_jcr['geometry']['point_start'][0],
+                                        obj_jcr['geometry']['point_start'][1],obj_jcr['geometry']['heading_start'])
+                                    geometry = xodr.Spiral(obj_jcr['geometry']['curvature_start'],
+                                        obj_jcr['geometry']['curvature_end'], length=obj_jcr['geometry']['length'])
+                                    planview.add_geometry(geometry)
+                                    lanes = self.create_lanes(obj_jcr)
+                                    road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
+                                    self.add_elevation_profiles(obj_jcr, road)
+                                    # Connect the junction connecting road to incoming and connecting roads
+                                    incoming_road = self.get_road_by_id(roads, obj_jcr['link_predecessor_id_l'])
+                                    contact_point = mapping_contact_point[obj_jcr['link_predecessor_cp_l']]
+                                    road.add_predecessor(xodr.ElementType.road, incoming_road.id, contact_point)
+                                    xodr.create_lane_links(road, incoming_road)
+                                    incoming_road = self.get_road_by_id(roads, obj_jcr['link_successor_id_l'])
+                                    contact_point = mapping_contact_point[obj_jcr['link_successor_cp_l']]
+                                    road.add_successor(xodr.ElementType.road, incoming_road.id, contact_point)
+                                    xodr.create_lane_links(road, incoming_road)
+                                    junction_roads.append(road)
+                                    # Create lane links with incoming roads
                     # Finally create the junction
                     junction = xodr.create_junction(
                         junction_roads, junction_id, incoming_roads, 'junction_' + str(junction_id))

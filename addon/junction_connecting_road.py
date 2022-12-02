@@ -11,13 +11,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from . road_base import DSC_OT_road
-from . geometry_clothoid import DSC_geometry_clothoid
+from .road_base import DSC_OT_road
+from .geometry_clothoid import DSC_geometry_clothoid
 
 
-class DSC_OT_junction_connection(DSC_OT_road):
-    bl_idname = 'dsc.junction_connection'
-    bl_label = 'Junction connection'
+class DSC_OT_junction_connecting_road(DSC_OT_road):
+    bl_idname = 'dsc.junction_connecting_road'
+    bl_label = 'Junction connecting road'
     bl_description = 'Create a connecting road inside a junction'
     bl_options = {'REGISTER', 'UNDO'}
 

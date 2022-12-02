@@ -33,21 +33,13 @@ class junction_joint:
         self.width_left = width_left
         self.width_right = width_right
 
-
-class junction_connection:
-    def __init__(self, id_incoming, contact_point_type, id_linked):
-        self.id_incoming = id_incoming
-        self.contact_point_type = contact_point_type
-        self.id_linked = id_linked
-
-
 class junction:
 
     def __init__(self, context):
+        self.id_odr = None
         self.id_joint_next = 0
         self.context = context
         self.joints = []
-        self.connections = []
         self.stencil = None
 
     def joint_exists(self, id_incoming):
@@ -153,6 +145,7 @@ class junction:
 
             # Set OpenDRIVE custom properties
             obj['id_odr'] = id_obj
+            self.id_odr = id_obj
 
             obj['incoming_roads'] = {}
 

@@ -18,6 +18,9 @@ from math import pi
 
 from . modal_two_point_base import DSC_OT_modal_two_point_base
 from . junction import junction
+from . road import road
+from . geometry_clothoid import DSC_geometry_clothoid
+
 from . import helpers
 
 
@@ -52,8 +55,41 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
             return None
         else:
             obj = self.junction.create_object_3d()
+            self.create_connecting_roads(context, obj['id_odr'])
 
             return obj
+
+    def create_connecting_roads(self, context, id_junction):
+        '''
+            Create all six connecting roads for a 4-way junction.
+        '''
+        for idx_i, joint_i in enumerate(self.junction.joints):
+            for idx_j, joint_j in enumerate(self.junction.joints):
+                if idx_j > idx_i:
+                    road_type = 'junction_connecting_road'
+                    geometry = DSC_geometry_clothoid()
+                    geometry_solver = 'hermite'
+                    connecting_road = road(context, road_type, geometry, geometry_solver)
+                    connecting_road
+                    params_input = {
+                        'point_start': joint_i.contact_point_vec,
+                        'point_end': joint_j.contact_point_vec,
+                        'heading_start': joint_i.heading,
+                        'heading_end': joint_j.heading - pi,
+                        'curvature_start': 0,
+                        'curvature_end': 0,
+                        'slope_start': joint_i.slope,
+                        'slope_end': joint_j.slope,
+                        'connected_start': True,
+                        'connected_end': True,
+                        'normal_start': Vector((0.0,0.0,1.0)),
+                        'design_speed': 100.0,
+                    }
+                    obj = connecting_road.create_object_3d(context, params_input)
+                    helpers.create_object_xodr_links(obj, 'start',
+                        'junction_joint_open', id_junction, joint_i.id_joint)
+                    helpers.create_object_xodr_links(obj, 'end',
+                        'junction_joint_open', id_junction, joint_j.id_joint)
 
     def update_params_get_mesh(self, context, wireframe):
         '''

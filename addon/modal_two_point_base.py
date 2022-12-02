@@ -42,7 +42,6 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
     def poll(cls, context):
         return context.area.type == 'VIEW_3D'
 
-
     def create_object_model(self, context):
         '''
             Create a model object instance
@@ -299,7 +298,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_START':
                     self.id_odr_start = self.params_snap['id_obj']
-                    self.id_direct_junction_start = self.params_snap['id_extra']
+                    self.id_extra_start = self.params_snap['id_extra']
                     self.cp_type_start = self.params_snap['type']
                     # Set elevation so that end point selection starts on the same level
                     self.selected_elevation = self.selected_point.z
@@ -313,26 +312,26 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                         if self.params_input['connected_start']:
                             link_type = 'start'
                             if 'id_direct_junction_start' in obj:
-                                id_direct_junction = obj['id_direct_junction_start']
-                                if self.id_direct_junction_start != None:
+                                id_extra = obj['id_direct_junction_start']
+                                if self.id_extra_start != None:
                                     self.report({'WARNING'}, 'Avoid connecting two split road' \
                                         ' ends (direct junctions) to each other!')
                             else:
-                                id_direct_junction = self.id_direct_junction_start
+                                id_extra = self.id_extra_start
                             helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-                                self.id_odr_start, id_direct_junction)
+                                self.id_odr_start, id_extra)
                         if self.params_input['connected_end']:
                             link_type = 'end'
                             # TODO keep it generic, direct junction should not appear at this point!
                             if 'id_direct_junction_end' in obj:
-                                id_direct_junction = obj['id_direct_junction_end']
+                                id_extra = obj['id_direct_junction_end']
                                 if self.params_snap['id_extra'] != None:
                                     self.report({'WARNING'}, 'Avoid connecting two split road' \
                                         ' ends (direct junctions) to each other!')
                             else:
-                                id_direct_junction = self.params_snap['id_extra']
+                                id_extra = self.params_snap['id_extra']
                             helpers.create_object_xodr_links(obj, link_type, cp_type_end,
-                                self.params_snap['id_obj'], id_direct_junction)
+                                self.params_snap['id_obj'], id_extra)
                         # Remove stencil and go back to initial state to draw again
                         self.remove_stencil()
                         self.state = 'INIT'
