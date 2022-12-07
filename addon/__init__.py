@@ -41,7 +41,7 @@ bl_info = {
     'name' : 'Driving Scenario Creator',
     'author' : 'Johannes Schmitz',
     'description' : 'Create OpenDRIVE and OpenSCENARIO based driving scenarios.',
-    'blender' : (2, 93, 0),
+    'blender' : (3, 3, 0),
     'version' : (0, 16, 0),
     'location' : 'View3D > Sidebar > Driving Scenario Creator',
     'warning' : '',
