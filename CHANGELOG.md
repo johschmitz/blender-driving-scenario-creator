@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.17.0] - 2022-12-07
+
+### Added
+- Emit GUI error when direct junction export failed due to missing connection
+
+### Changed
+- Four way junction now based on the generic junction tools with explicitly
+  modelled junction connecting roads
+- Renamed "junction connection" to "junction connecting road" to better match
+  OpenDRIVE standard
+
+### Fixed
+- Division by zero resulting from zero road length edge case
+
 ## [0.16.0] - 2022-11-16
 
 ### Added
@@ -82,8 +96,8 @@
 
 - Opening and closing of (new) lanes to create exit and entry lanes
 - Splitting and merging of roads at the beginning or end to connect on-ramps and
-  off-ramps, exported as OpenDRIVE direct juncions
-- Examplary road cross section templates for building an RQ31 Autobahn exit
+  off-ramps, exported as OpenDRIVE direct junctions
+- Exemplary road cross section templates for building an RQ31 Autobahn exit
 
 ### Fixed
 - Lane ID signs in GUI popup
@@ -216,7 +230,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.14.0...v0.14.1
