@@ -380,7 +380,8 @@ class DSC_OT_export(bpy.types.Operator):
                             dj_creator.add_connection(road_in, road_out_r, lane_ids_road_in_r, lane_ids_road_out_r)
                             odr.add_junction(dj_creator.junction)
                         else:
-                            print('WARNING: Direct junction of road with ID {} not fully connected.'.format(obj['id_odr']))
+                            self.report({'ERROR'}, 'Export of direct junction connected to road with ID {}'
+                                ' failed due to missing connection.'.format(obj['id_odr']))
         # Add lane level linking for all roads
         self.link_lanes(roads)
         # Create OpenDRIVE junctions from object collection
@@ -426,7 +427,8 @@ class DSC_OT_export(bpy.types.Operator):
                         if(inc_road != None):
                             incoming_roads.append(inc_road)
                         else:
-                            self.report({'WARNING'}, 'Junction with ID {} is missing a connection.'.format(obj['id_odr']))
+                            self.report({'WARNING'}, 'Junction with ID {}'
+                            ' is missing a connection.'.format(obj['id_odr']))
                     # Find and export connecting roads of this junction
                     junction_roads = []
                     for obj_jcr in bpy.data.collections['OpenDRIVE'].objects:
