@@ -148,7 +148,7 @@ class DSC_OT_export(bpy.types.Operator):
             catalog_file_created = False
             for obj in bpy.data.collections['OpenSCENARIO'].children['dynamic_objects'].objects:
                 print('Export object model for', obj.name)
-                model_path = pathlib.Path(self.directory) / 'models' / str(obj.name + '.obj')
+                model_path = pathlib.Path(self.directory) / 'models' / str(obj.name)
                 # Create a temporary copy without transform
                 obj_export = obj.copy()
                 helpers.link_object_openscenario(context, obj_export, subcategory=None)
@@ -183,9 +183,10 @@ class DSC_OT_export(bpy.types.Operator):
         '''
         if self.mesh_file_type == 'osgb':
             # Since Blender has no native .osgb support export .obj and then convert
-            file_path = file_path.with_suffix('.obj')
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            bpy.ops.export_scene.obj(filepath=str(file_path), check_existing=True,
+            file_path_obj = file_path.with_suffix('.obj')
+            file_path_mtl = file_path.with_suffix('.mtl')
+            file_path_obj.parent.mkdir(parents=True, exist_ok=True)
+            bpy.ops.export_scene.obj(filepath=str(file_path_obj), check_existing=True,
                                      filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
                                      use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
                                      use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
@@ -193,8 +194,10 @@ class DSC_OT_export(bpy.types.Operator):
                                      use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
                                      group_by_material=False, keep_vertex_order=False, global_scale=1.0,
                                      path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
-            self.convert_to_osgb(file_path)
-            # TODO remove mtl and obj files
+            self.convert_to_osgb(file_path_obj)
+            # Remove mtl and obj files
+            file_path_obj.unlink()
+            file_path_mtl.unlink()
         elif self.mesh_file_type == 'fbx':
             file_path = file_path.with_suffix('.fbx')
             file_path.parent.mkdir(parents=True, exist_ok=True)
