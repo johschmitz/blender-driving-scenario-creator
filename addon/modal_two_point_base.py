@@ -275,19 +275,21 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 self.params_input['curvature_start'] = self.selected_curvature
                 self.params_input['slope_start'] = self.selected_slope
                 self.update_stencil(context, update_start=True)
+            # Always update end parameters to have them set even if mouse is not
+            # moved in SELECT_END state
+            self.params_input['point_end'] = self.selected_point.copy()
+            self.params_input['heading_start'] = self.selected_heading_start
+            if self.params_snap['type'] is not None:
+                if self.params_snap['type'] != 'surface':
+                    self.params_input['connected_end'] = True
+                    self.params_input['heading_end'] = self.selected_heading_end + pi
+                    self.params_input['curvature_end'] = self.selected_curvature
+                    self.params_input['slope_end'] = self.selected_slope
+            else:
+                self.params_input['connected_end'] = False
+                self.params_input['heading_end'] = self.calculate_heading_end(self.params_input['point_start'],
+                    self.params_input['heading_start'], self.params_input['point_end'])
             if self.state == 'SELECT_END':
-                self.params_input['point_end'] = self.selected_point.copy()
-                self.params_input['heading_start'] = self.selected_heading_start
-                if self.params_snap['type'] is not None:
-                    if self.params_snap['type'] != 'surface':
-                        self.params_input['connected_end'] = True
-                        self.params_input['heading_end'] = self.selected_heading_end + pi
-                        self.params_input['curvature_end'] = self.selected_curvature
-                        self.params_input['slope_end'] = self.selected_slope
-                else:
-                    self.params_input['connected_end'] = False
-                    self.params_input['heading_end'] = self.calculate_heading_end(self.params_input['point_start'],
-                        self.params_input['heading_start'], self.params_input['point_end'])
                 if self.input_valid(wireframe=True):
                     self.update_stencil(context, update_start=False)
         # Select start and end

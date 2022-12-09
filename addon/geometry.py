@@ -74,8 +74,6 @@ class DSC_geometry():
                 parablola - line - parablola
                 line - parabola
             curve combination inside one geometry.
-
-
         '''
         if (params_input['point_start'].z == params_input['point_end'].z
             and params_input['slope_start'] == 0
@@ -86,7 +84,10 @@ class DSC_geometry():
             # No incoming and outgoing roads connected
             # Symbols and equations used:
             #     Slope of road: m_0
-            m_0 = (params_input['point_end'].z - params_input['point_start'].z) / self.params['length']
+            if self.params['length'] > 0.0:
+                m_0 = (params_input['point_end'].z - params_input['point_start'].z) / self.params['length']
+            else:
+                m_0 = 0
             self.params['elevation'] = [{'s': 0, 'a': 0, 'b': m_0, 'c': 0, 'd': 0}]
         elif params_input['connected_start'] == True and params_input['connected_end'] == True:
             # Symbols and equations used:
@@ -101,12 +102,15 @@ class DSC_geometry():
             m_0 = params_input['slope_start']
             m_1 = -1.0 * params_input['slope_end']
             s_1 = self.params['length']
-            a = h_0
-            # b = s_1 * m_0
-            b = m_0
-            c = (-3 * h_0 - 2 * s_1 * m_0 + 3 * h_1 - s_1 * m_1) / s_1**2
-            d = (2 * h_0 + s_1 * m_0 - 2 * h_1 + s_1 * m_1) / s_1**3
-            self.params['elevation'] = [{'s': 0, 'a': a, 'b': b, 'c': c, 'd': d}]
+            if s_1 > 0.0:
+                a = h_0
+                # b = s_1 * m_0
+                b = m_0
+                c = (-3 * h_0 - 2 * s_1 * m_0 + 3 * h_1 - s_1 * m_1) / s_1**2
+                d = (2 * h_0 + s_1 * m_0 - 2 * h_1 + s_1 * m_1) / s_1**3
+                self.params['elevation'] = [{'s': 0, 'a': a, 'b': b, 'c': c, 'd': d}]
+            else:
+                self.params['elevation'] = [{'s': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}]
         else:
             # Symbols and equations used:
             #     Slope of incoming road: m_0
@@ -115,6 +119,7 @@ class DSC_geometry():
             #     Parabola (Curve 2): h_p2 = a_p2 + b_p2 * s + c_p2 * s^2
             #     Slope of outgoing road: m_3
             m_0 = params_input['slope_start']
+            # TODO also use slope of the outgoing rope for this constellation
             m_3 = params_input['slope_end']
 
             # Convert to local (s, z) coordinate system [x_1, y_1] = [0, 0]
@@ -123,21 +128,24 @@ class DSC_geometry():
             h_end = params_input['point_end'].z - h_start
 
             # End of parabola/beginning of straight line
-            # TODO: Find correct equation for the parabola length from the literature
-            s_1 = max(abs(m_0)/10, abs(h_end)/s_end) * params_input['design_speed']**2 / 120
-            if s_1 > 0:
-                if s_1 < s_end:
-                    # Case: parobla - line
-                    c_p1 = (h_end - m_0 * s_end) / (2 * s_1 * s_end - s_1**2)
-                    h_1 = m_0 * s_1 + c_p1 * s_1**2
-                    b_l = (h_end - h_1) / (s_end - s_1)
-                    a_l = h_end - b_l * s_end
-                    self.params['elevation'] = [{'s': 0, 'a': 0, 'b': m_0, 'c': c_p1, 'd': 0}]
-                    self.params['elevation'].append({'s': s_1, 'a': a_l, 'b': b_l, 'c': 0, 'd': 0})
+            if s_end > 0.0:
+                # TODO: Find correct equation for the parabola length from the literature
+                s_1 = max(abs(m_0)/10, abs(h_end)/s_end) * params_input['design_speed']**2 / 120
+                if s_1 > 0:
+                    if s_1 < s_end:
+                        # Case: parobla - line
+                        c_p1 = (h_end - m_0 * s_end) / (2 * s_1 * s_end - s_1**2)
+                        h_1 = m_0 * s_1 + c_p1 * s_1**2
+                        b_l = (h_end - h_1) / (s_end - s_1)
+                        a_l = h_end - b_l * s_end
+                        self.params['elevation'] = [{'s': 0, 'a': 0, 'b': m_0, 'c': c_p1, 'd': 0}]
+                        self.params['elevation'].append({'s': s_1, 'a': a_l, 'b': b_l, 'c': 0, 'd': 0})
+                    else:
+                        # Case: parablola
+                        c_p1 = (h_end - m_0 * s_end) / s_end**2
+                        self.params['elevation'] = [{'s': 0, 'a': 0, 'b': m_0, 'c': c_p1, 'd': 0}]
                 else:
-                    # Case: parablola
-                    c_p1 = (h_end - m_0 * s_end) / s_end**2
-                    self.params['elevation'] = [{'s': 0, 'a': 0, 'b': m_0, 'c': c_p1, 'd': 0}]
+                    self.params['elevation'] = [{'s': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}]
             else:
                 self.params['elevation'] = [{'s': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}]
 
