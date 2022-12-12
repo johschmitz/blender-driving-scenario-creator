@@ -14,7 +14,8 @@
 from . geometry import DSC_geometry
 from . import helpers
 
-from mathutils import Vector
+from mathutils import Vector, Matrix
+from mathutils.geometry import distance_point_to_plane
 from math import pi
 
 
@@ -22,19 +23,30 @@ class DSC_geometry_line(DSC_geometry):
 
     def update_plan_view(self, params, geometry_solver):
         if params['connected_start']:
+            heading_start_line = params['heading_start']
             point_end = helpers.project_point_vector(params['point_start'].to_2d(),
-                params['heading_start'], params['point_end'].to_2d())
+                heading_start_line, params['point_end'].to_2d())
             # Add height back to end point
             point_end = point_end.to_3d()
             point_end.z = params['point_end'].z
+            # Avoid negative heading
+            vector_hdg = Vector((1.0, 0.0, 0.0))
+            vector_hdg.rotate(Matrix.Rotation(heading_start_line, 3, 'Z'))
+            distance = distance_point_to_plane(point_end, params['point_start'], vector_hdg)
+            if distance < 0.0:
+                point_end = params['point_start']
+                valid = False
+            else:
+                valid = True
         else:
             point_end = params['point_end']
+            # Note: For the line geometry heading_start and heading_end input is ignored
+            # since the degrees of freedom are to low.
+            # Hence, recalculate start heading
+            heading_start_line = (point_end.to_2d() - \
+                params['point_start'].to_2d()).angle_signed(Vector((1.0, 0.0)))
+            valid = True
 
-        # Note: For the line geometry heading_start and heading_end input is ignored
-        # since the degrees of freedom are to low.
-        # Hence, recalculate start heading
-        heading_start_line = (point_end.to_2d() - \
-            params['point_start'].to_2d()).angle_signed(Vector((1.0, 0.0)))
         # Calculate transform between global and local coordinates
         self.update_local_to_global(params['point_start'], heading_start_line,
             point_end, heading_start_line,)
@@ -50,6 +62,7 @@ class DSC_geometry_line(DSC_geometry):
         self.params['heading_end'] = heading_start_line
         self.params['curvature_end'] = 0
         self.params['length'] = length
+        self.params['valid'] = valid
 
     def sample_plan_view(self, s):
         x_s = s

@@ -311,32 +311,33 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     # Create the final object
                     if self.input_valid(wireframe=False):
                         obj = self.create_object_3d(context)
-                        if self.params_input['connected_start']:
-                            link_type = 'start'
-                            if 'id_direct_junction_start' in obj:
-                                id_extra = obj['id_direct_junction_start']
-                                if self.id_extra_start != None:
-                                    self.report({'WARNING'}, 'Avoid connecting two split road' \
-                                        ' ends (direct junctions) to each other!')
-                            else:
-                                id_extra = self.id_extra_start
-                            helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-                                self.id_odr_start, id_extra)
-                        if self.params_input['connected_end']:
-                            link_type = 'end'
-                            # TODO keep it generic, direct junction should not appear at this point!
-                            if 'id_direct_junction_end' in obj:
-                                id_extra = obj['id_direct_junction_end']
-                                if self.params_snap['id_extra'] != None:
-                                    self.report({'WARNING'}, 'Avoid connecting two split road' \
-                                        ' ends (direct junctions) to each other!')
-                            else:
-                                id_extra = self.params_snap['id_extra']
-                            helpers.create_object_xodr_links(obj, link_type, cp_type_end,
-                                self.params_snap['id_obj'], id_extra)
-                        # Remove stencil and go back to initial state to draw again
-                        self.remove_stencil()
-                        self.state = 'INIT'
+                        if obj != None:
+                            if self.params_input['connected_start']:
+                                link_type = 'start'
+                                if 'id_direct_junction_start' in obj:
+                                    id_extra = obj['id_direct_junction_start']
+                                    if self.id_extra_start != None:
+                                        self.report({'WARNING'}, 'Avoid connecting two split road' \
+                                            ' ends (direct junctions) to each other!')
+                                else:
+                                    id_extra = self.id_extra_start
+                                helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
+                                    self.id_odr_start, id_extra)
+                            if self.params_input['connected_end']:
+                                link_type = 'end'
+                                # TODO keep it generic, direct junction should not appear at this point!
+                                if 'id_direct_junction_end' in obj:
+                                    id_extra = obj['id_direct_junction_end']
+                                    if self.params_snap['id_extra'] != None:
+                                        self.report({'WARNING'}, 'Avoid connecting two split road' \
+                                            ' ends (direct junctions) to each other!')
+                                else:
+                                    id_extra = self.params_snap['id_extra']
+                                helpers.create_object_xodr_links(obj, link_type, cp_type_end,
+                                    self.params_snap['id_obj'], id_extra)
+                            # Remove stencil and go back to initial state to draw again
+                            self.remove_stencil()
+                            self.state = 'INIT'
                     return {'RUNNING_MODAL'}
         # Cancel step by step
         elif event.type == 'RIGHTMOUSE':
