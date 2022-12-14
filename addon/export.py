@@ -241,7 +241,7 @@ class DSC_OT_export(bpy.types.Operator):
                                       export_tangents=False, export_materials='EXPORT',
                                       export_original_specular=False, export_colors=True,
                                       use_mesh_edges=False, use_mesh_vertices=False,
-                                      export_cameras=False, use_selection=False, use_visible=False,
+                                      export_cameras=False, use_selection=True, use_visible=False,
                                       use_renderable=False, use_active_collection=False,
                                       use_active_scene=False, export_extras=False, export_yup=True,
                                       export_apply=False, export_animations=True,
