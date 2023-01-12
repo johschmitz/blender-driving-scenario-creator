@@ -22,7 +22,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.12, 0.12, 0.12, 0.0],
         'road_mark_colors': ['none', 'white', 'white', 'white', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 5,
+        'road_split_lane_idx': 4,
     },
     # Typical German road cross sections
     # See:
@@ -43,7 +43,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.12, 0.12, 0.0, 0.0],
         'road_mark_colors': ['none', 'none', 'white', 'white', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 6,
+        'road_split_lane_idx': 5,
     },
     'ekl3_rq11': {
         'sides': ['left', 'left', 'left', 'center', 'right', 'right', 'right'],
@@ -55,7 +55,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.12, 0.12, 0.12, 0.0, 0.0],
         'road_mark_colors': ['none', 'none', 'white', 'white', 'white', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 7,
+        'road_split_lane_idx': 6,
     },
     'eka1_rq31': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -67,7 +67,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.0, 0.30, 0.15, 0.30, 0.0, 0.0, 0.0, 0.30, 0.15, 0.30, 0.0, 0.0, 0.0],
         'road_mark_colors': ['none', 'none', 'none', 'white', 'white', 'white', 'none', 'none', 'none', 'white', 'white', 'white', 'none', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 15,
+        'road_split_lane_idx': 14,
     },
     'eka1_rq31_exit_lane_right_open': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -79,7 +79,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.0, 0.30, 0.15, 0.30, 0.0, 0.0, 0.0, 0.30, 0.15, 0.30, 0.30, 0.0, 0.0, 0.0],
         'road_mark_colors': ['none', 'none', 'none', 'white', 'white', 'white', 'none', 'none', 'none', 'white', 'white', 'white', 'white', 'none', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 16,
+        'road_split_lane_idx': 15,
     },
     'eka1_rq31_exit_lane_right': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -103,7 +103,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.0, 0.30, 0.15, 0.30, 0.0, 0.0, 0.0, 0.30, 0.15, 0.30],
         'road_mark_colors': ['none', 'none', 'none', 'white', 'white', 'white', 'none', 'none', 'none', 'white', 'white', 'white'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 12,
+        'road_split_lane_idx': 11,
     },
     'eka1_rq31_exit_right_continuation_shoulder_begin': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -151,7 +151,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.0, 0.30, 0.15, 0.30, 0.0, 0.0, 0.0, 0.30, 0.15, 0.30, 0.30, 0.0, 0.0, 0.0],
         'road_mark_colors': ['none', 'none', 'none', 'white', 'white', 'white', 'none', 'none', 'none', 'white', 'white', 'white', 'white', 'none', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 16,
+        'road_split_lane_idx': 15,
     },
     'eka1_rq36': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -163,7 +163,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.0, 0.30, 0.15, 0.15, 0.30, 0.0, 0.0, 0.0, 0.30, 0.15, 0.15, 0.30, 0.0, 0.0, 0.0],
         'road_mark_colors': ['none', 'none', 'none', 'white', 'white', 'white', 'white', 'none', 'none', 'none', 'white', 'white', 'white', 'white', 'none', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 17,
+        'road_split_lane_idx': 16,
     },
     'eka1_rq43_5': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -175,7 +175,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.0, 0.30, 0.15, 0.15, 0.15, 0.30, 0.0, 0.0, 0.0, 0.30, 0.15, 0.15, 0.15, 0.30, 0.0, 0.0, 0.0],
         'road_mark_colors': ['none', 'none', 'none', 'white', 'white', 'white', 'white', 'white', 'none', 'none', 'none', 'white', 'white', 'white', 'white', 'white', 'none', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 19,
+        'road_split_lane_idx': 18,
     },
     'on_ramp_end': {
         'sides': ['left', 'left', 'left', 'center', 'right'],
@@ -187,7 +187,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0, 0.0, 0.30, 0.30],
         'road_mark_colors': ['none', 'none', 'none', 'white', 'white'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 5,
+        'road_split_lane_idx': 4,
     },
     'on_ramp_shoulder_end': {
         'sides': ['left', 'left', 'left', 'center', 'right', 'right', 'right'],
@@ -223,7 +223,7 @@ params_cross_section = {
         'road_mark_widths': [0.30, 0.30, 0.0, 0.0, 0.0],
         'road_mark_colors': ['white', 'white', 'none', 'none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 5,
+        'road_split_lane_idx': 4,
     },
     'off_ramp_shoulder_begin': {
         'sides': ['left', 'left', 'left', 'center', 'right', 'right', 'right'],
@@ -259,7 +259,7 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0],
         'road_mark_colors': ['none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 2,
+        'road_split_lane_idx': 1,
     },
     'shoulder_right': {
         'sides': ['center', 'right'],
@@ -271,6 +271,6 @@ params_cross_section = {
         'road_mark_widths': [0.0, 0.0],
         'road_mark_colors': ['none', 'none'],
         'road_split_type': 'none',
-        'road_split_lane_idx': 2,
+        'road_split_lane_idx': 1,
     },
 }

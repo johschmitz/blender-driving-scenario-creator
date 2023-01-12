@@ -148,6 +148,18 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
         else:
             self.split_right = False
             road_split_lane_idx = self.idx + 1
+        # Handle edge case for lane 0 and split at lane -1
+        num_lanes_left = context.scene.road_properties.num_lanes_left
+        num_lanes_right = context.scene.road_properties.num_lanes_right
+        center_lane_idx = num_lanes_left
+        if road_split_lane_idx == center_lane_idx:
+            if num_lanes_right > 0:
+                road_split_lane_idx += 1
+        # Handle first and last lane edge cases (minimum 1 split lane)
+        if road_split_lane_idx == 0:
+            road_split_lane_idx += 1
+        if road_split_lane_idx > num_lanes_left + num_lanes_right:
+            road_split_lane_idx = num_lanes_left + num_lanes_right
         # Store new split index
         context.scene.road_properties.road_split_lane_idx = road_split_lane_idx
         # Split at the desired lane
@@ -279,7 +291,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                     self.add_lane('right', 'driving', self.width_driving, 'none', 'broken', 'standard', 0.12, 'white')
         self.road_split_type = 'none'
         # Set split index one above maximum to make all lanes go left
-        self.road_split_lane_idx = self.num_lanes_left + self.num_lanes_right + 1
+        self.road_split_lane_idx = self.num_lanes_left + self.num_lanes_right
+        self.lanes[-1].split_right = True
         # Allow callbacks again
         self.lock_lanes = False
 

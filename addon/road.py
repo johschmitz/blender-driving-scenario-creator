@@ -234,8 +234,7 @@ class road:
         '''
             Return the two connection points for a split road.
         '''
-        road_split_lane_idx = self.params['road_split_lane_idx']
-        t_cp_split = self.road_split_lane_idx_to_t(road_split_lane_idx)
+        t_cp_split = self.road_split_lane_idx_to_t()
         if road_split_type == 'start':
             t = 0
             cp_base = self.geometry.params['point_start']
@@ -252,12 +251,13 @@ class road:
         else:
             return cp_split, cp_base
 
-    def road_split_lane_idx_to_t(self, road_split_lane_idx):
+    def road_split_lane_idx_to_t(self):
         '''
             Convert index of first splitting lane to t coordinate of left/right
             side of the split lane border. Return 0 if there is no split.
         '''
         t_cp_split = 0
+        road_split_lane_idx = self.params['road_split_lane_idx']
         # Check if there really is a split
         if self.params['road_split_type'] != 'none':
             # Calculate lane ID from split index
@@ -267,20 +267,20 @@ class road:
                 lane_id_split = -1 * road_split_lane_idx
             # Calculate t coordinate of split connecting point
             for idx in range(abs(lane_id_split)):
-                    if lane_id_split > 0:
-                        # Do not add lanes with 0 width
-                        if not ((self.params['road_split_type'] == 'start' and
-                                 self.params['lanes_left_widths_change'][idx] == 'open') or
-                                (self.params['road_split_type'] == 'end' and \
-                                 self.params['lanes_left_widths_change'][idx] == 'close')):
-                            t_cp_split += self.params['lanes_left_widths'][idx]
-                    else:
-                        # Do not add lanes with 0 width
-                        if not ((self.params['road_split_type'] == 'start' and
-                                 self.params['lanes_right_widths_change'][idx] == 'open') or
-                                (self.params['road_split_type'] == 'end' and \
-                                 self.params['lanes_right_widths_change'][idx] == 'close')):
-                            t_cp_split -= self.params['lanes_right_widths'][idx]
+                if lane_id_split > 0:
+                    # Do not add lanes with 0 width
+                    if not ((self.params['road_split_type'] == 'start' and
+                                self.params['lanes_left_widths_change'][idx] == 'open') or
+                            (self.params['road_split_type'] == 'end' and \
+                                self.params['lanes_left_widths_change'][idx] == 'close')):
+                        t_cp_split += self.params['lanes_left_widths'][idx]
+                else:
+                    # Do not add lanes with 0 width
+                    if not ((self.params['road_split_type'] == 'start' and
+                                self.params['lanes_right_widths_change'][idx] == 'open') or
+                            (self.params['road_split_type'] == 'end' and \
+                                self.params['lanes_right_widths_change'][idx] == 'close')):
+                        t_cp_split -= self.params['lanes_right_widths'][idx]
         return t_cp_split
 
     def get_width_road_left(self, lanes):
