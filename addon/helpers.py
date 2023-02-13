@@ -170,7 +170,15 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
     if 'road' in obj.name:
         if link_type == 'start':
             if obj['dsc_type'] == 'road':
-                obj['link_predecessor_id_l'] = id_other
+                if obj['road_split_type'] == 'none':
+                    obj['link_predecessor_id_l'] = id_other
+                else:
+                    # Check connected to left or right side
+                    if obj['lanes_left_num'] > obj['road_split_lane_idx']:
+                        obj['link_predecessor_id_r'] = id_other
+                        obj['link_predecessor_cp_r'] = cp_type_other
+                    else:
+                        obj['link_predecessor_id_l'] = id_other
                 if id_extra == None:
                     # Case: road to road
                     obj['link_predecessor_cp_l'] = cp_type_other
@@ -180,7 +188,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
                         obj['link_predecessor_cp_l'] = cp_type_other
                         obj['id_direct_junction_start'] = id_extra
                     else:
-                        # Case: conneting incoming road to junction
+                        # Case: connecting incoming road to junction
                         obj['link_predecessor_cp_l'] = 'junction_joint'
             elif obj['dsc_type'] == 'junction_connecting_road':
                 # Case: connecting road (in junction) to incoming road
@@ -192,6 +200,15 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
         else:
             if obj['dsc_type'] == 'road':
                 obj['link_successor_id_l'] = id_other
+                if obj['road_split_type'] == 'none':
+                    obj['link_successor_id_l'] = id_other
+                else:
+                    # Check connected to left or right side
+                    if obj['lanes_left_num'] > obj['road_split_lane_idx']:
+                        obj['link_successor_id_r'] = id_other
+                        obj['link_successor_cp_r'] = cp_type_other
+                    else:
+                        obj['link_successor_id_l'] = id_other
                 if id_extra == None:
                     # Case: road to road
                     obj['link_successor_cp_l'] = cp_type_other
@@ -201,7 +218,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
                         obj['link_successor_cp_l'] = cp_type_other
                         obj['id_direct_junction_end'] = id_extra
                     else:
-                        # Case: conneting incoming road to junction
+                        # Case: connecting incoming road to junction
                         obj['link_successor_cp_l'] = 'junction_joint'
             elif obj['dsc_type'] == 'junction_connecting_road':
                 # Case: connecting road (in junction) to incoming road
