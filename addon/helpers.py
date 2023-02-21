@@ -246,21 +246,33 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
                 obj_other['link_predecessor_cp_l'] = cp_type
                 if id_extra != None:
                     obj_other['id_direct_junction_start'] = id_extra
+                elif 'id_direct_junction_start' in obj_other:
+                    # Clean up old direct junction link
+                    del obj_other['id_direct_junction_start']
             elif cp_type_other == 'cp_start_r':
                 obj_other['link_predecessor_id_r'] = obj['id_odr']
                 obj_other['link_predecessor_cp_r'] = cp_type
                 if id_extra != None:
                     obj_other['id_direct_junction_start'] = id_extra
+                elif 'id_direct_junction_start' in obj_other:
+                    # Clean up old direct junction link
+                    del obj_other['id_direct_junction_start']
             elif cp_type_other == 'cp_end_l':
                 obj_other['link_successor_id_l'] = obj['id_odr']
                 obj_other['link_successor_cp_l'] = cp_type
                 if id_extra != None:
                     obj_other['id_direct_junction_end'] = id_extra
+                elif 'id_direct_junction_end' in obj_other:
+                    # Clean up old direct junction link
+                    del obj_other['id_direct_junction_end']
             elif cp_type_other == 'cp_end_r':
                 obj_other['link_successor_id_r'] = obj['id_odr']
                 obj_other['link_successor_cp_r'] = cp_type
                 if id_extra != None:
                     obj_other['id_direct_junction_end'] = id_extra
+                elif 'id_direct_junction_end' in obj_other:
+                    # Clean up old direct junction link
+                    del obj_other['id_direct_junction_end']
         elif obj_other.name.startswith('junction_area'):
             if obj['dsc_type'] == 'junction_connecting_road':
                 obj_incoming = get_object_xodr_by_id(obj_other['joints'][id_extra]['id_incoming'])
