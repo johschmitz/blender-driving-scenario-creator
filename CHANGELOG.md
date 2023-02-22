@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.18.0] - 2023-02-22
+
+### Added
+- Cross sections for building a closed autobahn exit and entry "wedge" area with
+  3 direct junctions
+
+### Changed
+- Rewrite OpenDRIVE export lane linking to enable non linked lanes and autobahn
+  exit "wedge" area
+
+### Fixed
+- Clean up of old direct junction link when connecting a new road without direct
+  junction
+- Linking of split (direct junction) roads
+
 ## [0.17.2] - 2023-01-25
 
 ### Fixed
@@ -245,7 +260,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.2...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.2...v0.18.0
 [0.17.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.1...v0.17.2
 [0.17.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.16.0...v0.17.0
