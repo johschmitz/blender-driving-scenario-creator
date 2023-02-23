@@ -600,8 +600,18 @@ class road:
                 strip_is_road_mark.append(False)
             elif lane.side == 'center':
                 if lane.road_mark_type != 'none':
-                    strip_to_lane.append(idx_lane)
-                    strip_is_road_mark.append(True)
+                    if lane.road_mark_type == 'solid' or \
+                        lane.road_mark_type == 'broken':
+                        strip_to_lane.append(idx_lane)
+                        strip_is_road_mark.append(True)
+                    else:
+                        # Double line
+                        strip_to_lane.append(idx_lane)
+                        strip_to_lane.append(idx_lane)
+                        strip_to_lane.append(idx_lane)
+                        strip_is_road_mark.append(True)
+                        strip_is_road_mark.append(False)
+                        strip_is_road_mark.append(True)
             else:
                 # lane.side == 'right'
                 strip_to_lane.append(idx_lane)
@@ -660,9 +670,7 @@ class road:
                         idx_face += 1
                     elif lanes[idx_lane].road_mark_type == 'solid_solid':
                         materials[material].append(idx_face)
-                        materials['asphalt'].append(idx_face + 1)
-                        materials[material].append(idx_face + 2)
-                        idx_face += 3
+                        idx_face += 1
             else:
                 if lanes[idx_lane].type == 'median':
                     materials['grass'].append(idx_face)
