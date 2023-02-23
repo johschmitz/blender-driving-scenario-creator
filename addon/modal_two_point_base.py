@@ -248,7 +248,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 else:
                     selected_point_new = helpers.mouse_to_xy_parallel_plane(context, event,
                         self.selected_elevation)
-                    if event.shift:
+                    if event.shift and self.params_input['connected_start'] == False:
                         # Calculate angular change to update start heading
                         heading_difference = self.calculate_heading_start_difference(
                                 self.params_input['point_start'], self.selected_heading_start, selected_point_new)
