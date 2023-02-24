@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.18.1] - 2023-02-24
+
+### Changed
+- Modification of the start heading by holding <kbd>Shift</kbd> is now disabled
+  when the road is snapped at the start point. This prevents the creation of
+  non-compliant OpenDRIVE and side effects with road and lane linking.
+
+### Fixed
+- Double solid road markings
+
 ## [0.18.0] - 2023-02-22
 
 ### Added
@@ -9,8 +19,8 @@
   3 direct junctions
 
 ### Changed
-- Rewrite OpenDRIVE export lane linking to enable non linked lanes and autobahn
-  exit "wedge" area
+- Rewrite of OpenDRIVE export lane linking to enable non linked lanes and
+  autobahn exit "wedge" area
 
 ### Fixed
 - Clean up of old direct junction link when connecting a new road without direct
@@ -112,7 +122,7 @@
   divide by zero exception)
 
 ### Added
-- Enable changing the heading at the road start by holding SHIFT
+- Enable changing the heading at the road start by holding <kbd>Shift</kbd>
 
 ## [0.11.1] - 2022-06-22
 
@@ -260,7 +270,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.1...HEAD
+[0.18.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.2...v0.18.0
 [0.17.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.1...v0.17.2
 [0.17.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.0...v0.17.1
