@@ -23,6 +23,6 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
 
     object_type = 'junction_connecting_road'
     snap_filter = 'OpenDRIVE_junction'
-    snapped_only = True
+    only_snapped_to_object = True
 
     geometry = DSC_geometry_clothoid()
