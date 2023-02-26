@@ -20,11 +20,11 @@ from . export import DSC_OT_export
 from . junction_four_way import DSC_OT_junction_four_way
 from . modal_junction_generic import DSC_OT_junction_generic
 from . junction_connecting_road import DSC_OT_junction_connecting_road
-from . object_bicycle import DSC_OT_object_bicycle
-from . object_car import DSC_OT_object_car
-from . object_motorbike import DSC_OT_object_motorbike
-from . object_pedestrian import DSC_OT_object_pedestrian
-from . object_truck import DSC_OT_object_truck
+from . entity_bicycle import DSC_OT_entity_bicycle
+from . entity_car import DSC_OT_entity_car
+from . entity_motorbike import DSC_OT_entity_motorbike
+from . entity_pedestrian import DSC_OT_entity_pedestrian
+from . entity_truck import DSC_OT_entity_truck
 from . road_arc import DSC_OT_road_arc
 from . popup_road_properties import DSC_OT_popup_road_properties
 from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
@@ -33,8 +33,9 @@ from . road_clothoid import DSC_OT_road_clothoid
 from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
-from . object_properties import DSC_object_properties
-from . popup_object_properties import DSC_OT_popup_object_properties
+from . entity_properties import DSC_entity_properties_vehicle
+from . entity_properties import DSC_entity_properties_pedestrian
+from . popup_entity_properties import DSC_OT_popup_entity_properties
 
 
 bl_info = {
@@ -101,15 +102,11 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box = layout.box()
         box.label(text='Objects')
         row = box.row(align=True)
-        row.operator('dsc.popup_object_properties', text='Car').operator = 'object_car'
+        row.operator('dsc.popup_entity_properties', text='Car').operator = 'entity_vehicle_car'
+        # TODO implement more vehicle types
         row = box.row(align=True)
-        row.operator('dsc.object_truck')
-        row = box.row(align=True)
-        row.operator('dsc.object_motorbike')
-        row = box.row(align=True)
-        row.operator('dsc.object_bicycle')
-        row = box.row(align=True)
-        row.operator('dsc.object_pedestrian')
+        row.operator('dsc.popup_entity_properties', text='Pedestrian').operator = 'entity_pedestrian_pedestrian'
+        # TODO implement more pedestrian types
 
         box.label(text='Trajectories')
         row = box.row(align=True)
@@ -131,11 +128,11 @@ classes = (
     DSC_OT_junction_four_way,
     DSC_OT_junction_generic,
     DSC_OT_junction_connecting_road,
-    DSC_OT_object_bicycle,
-    DSC_OT_object_car,
-    DSC_OT_object_motorbike,
-    DSC_OT_object_pedestrian,
-    DSC_OT_object_truck,
+    DSC_OT_entity_bicycle,
+    DSC_OT_entity_car,
+    DSC_OT_entity_motorbike,
+    DSC_OT_entity_pedestrian,
+    DSC_OT_entity_truck,
     DSC_OT_road_arc,
     DSC_OT_popup_road_properties,
     DSC_OT_road_parametric_polynomial,
@@ -145,8 +142,9 @@ classes = (
     DSC_OT_trajectory_polyline,
     DSC_PT_panel_create,
     DSC_road_properties,
-    DSC_object_properties,
-    DSC_OT_popup_object_properties,
+    DSC_entity_properties_vehicle,
+    DSC_entity_properties_pedestrian,
+    DSC_OT_popup_entity_properties,
 )
 
 def register():
@@ -171,7 +169,8 @@ def register():
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     # Register property groups
     bpy.types.Scene.road_properties = bpy.props.PointerProperty(type=DSC_road_properties)
-    bpy.types.Scene.object_properties = bpy.props.PointerProperty(type=DSC_object_properties)
+    bpy.types.Scene.entity_properties_vehicle = bpy.props.PointerProperty(type=DSC_entity_properties_vehicle)
+    bpy.types.Scene.entity_properties_pedestrian = bpy.props.PointerProperty(type=DSC_entity_properties_pedestrian)
 
 def unregister():
     global custom_icons

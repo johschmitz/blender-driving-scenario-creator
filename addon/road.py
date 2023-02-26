@@ -26,7 +26,6 @@ class road:
         self.geometry = geometry
         self.geometry_solver = geometry_solver
         self.params = {}
-        self.stencil = None
 
     def create_object_3d(self, context, params_input):
         '''

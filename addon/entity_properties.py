@@ -14,8 +14,14 @@
 import bpy
 
 
-class DSC_object_properties(bpy.types.PropertyGroup):
-    name: bpy.props.StringProperty(default='Car', maxlen=0, options={'ANIMATABLE'})
-    speed_initial: bpy.props.FloatProperty(default=50, min=0.1, max=500.0, step=10)
+class DSC_entity_properties_vehicle(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty(default='Entity', maxlen=0, options={'ANIMATABLE'})
+    speed_initial: bpy.props.FloatProperty(default=50, min=0.1, max=500.0, step=100)
+    color : bpy.props.FloatVectorProperty(subtype='COLOR_GAMMA', size=4,
+        default=(0.9,0.1,0.1,1.0), min=0.0, max=1.0)
+
+class DSC_entity_properties_pedestrian(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty(default='Entity', maxlen=0, options={'ANIMATABLE'})
+    speed_initial: bpy.props.FloatProperty(default=4, min=0.1, max=500.0, step=50)
     color : bpy.props.FloatVectorProperty(subtype='COLOR_GAMMA', size=4,
         default=(0.9,0.1,0.1,1.0), min=0.0, max=1.0)

@@ -20,7 +20,7 @@ from . import helpers
 class DSC_OT_trajectory_polyline(DSC_OT_modal_trajectory_base):
     bl_idname = 'dsc.trajectory_polyline'
     bl_label = 'Polyline'
-    bl_description = 'Place a polyline based trajectory'
+    bl_description = 'Create a polyline based trajectory'
     bl_options = {'REGISTER', 'UNDO'}
 
     def create_trajectory_temp(self, context):

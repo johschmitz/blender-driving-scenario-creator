@@ -14,10 +14,10 @@
 import bpy
 
 
-class DSC_OT_object_bicycle(bpy.types.Operator):
-    bl_idname = "dsc.object_bicycle"
-    bl_label = "Bicycle"
-    bl_description = "Place a bicycle object"
+class DSC_OT_entity_truck(bpy.types.Operator):
+    bl_idname = "dsc.entity_truck"
+    bl_label = "Truck"
+    bl_description = "Place a truck entity object"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod

@@ -20,7 +20,7 @@ from . import helpers
 class DSC_OT_trajectory_nurbs(DSC_OT_modal_trajectory_base):
     bl_idname = "dsc.trajectory_nurbs"
     bl_label = "NURBS"
-    bl_description = "Place a NURBS based trajectory"
+    bl_description = "Create a NURBS based trajectory"
     bl_options = {'REGISTER', 'UNDO'}
 
     def create_trajectory_temp(self, context):
