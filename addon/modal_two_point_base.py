@@ -162,7 +162,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         else:
             return True
 
-    def reset_modal_state(self):
+    def reset_params_input(self):
         self.params_input = {
             'point_start': Vector((0.0,0.0,0.0)),
             'point_end': Vector((0.0,0.0,0.0)),
@@ -177,12 +177,14 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             'normal_start': Vector((0.0,0.0,1.0)),
             'design_speed': 130.0,
         }
+
+    def reset_params_snap(self):
         self.params_snap = {
             'id_obj': None,
             'id_extra': None,
             'point': Vector((0.0,0.0,0.0)),
             'normal': Vector((0.0,0.0,1.0)),
-            'type': 'cp_none',
+            'type': None,
             'heading': 0,
             'curvature': 0,
             'slope': 0,
@@ -203,7 +205,8 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                                               'ESCAPE to cancel and exit.')
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
-            self.reset_modal_state()
+            self.reset_params_input()
+            self.reset_params_snap()
             self.snapped_to_grid = False
             self.snapped_to_object = False
             self.selected_elevation = 0
@@ -235,10 +238,11 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 self.selected_point.z = self.selected_elevation
             else:
                 # Snap to existing objects if any, otherwise xy plane
-                hit, self.params_snap = helpers.mouse_to_object_params(
+                hit, params_snap = helpers.mouse_to_object_params(
                     context, event, filter=self.snap_filter)
                 # Snap to object if not snapping to grid (with holding CTRL)
                 if hit and not event.ctrl:
+                    self.params_snap = params_snap
                     self.snapped_to_object = True
                     self.selected_point = self.params_snap['point']
                     if self.state == 'SELECT_START':
@@ -249,6 +253,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.selected_curvature = self.params_snap['curvature']
                     self.selected_slope = self.params_snap['slope']
                 else:
+                    self.reset_params_snap()
                     self.snapped_to_object = False
                     selected_point_new = helpers.mouse_to_xy_parallel_plane(context, event,
                         self.selected_elevation)
