@@ -493,23 +493,21 @@ class DSC_OT_export(bpy.types.Operator):
                         xosc.TeleportAction(
                             xosc.WorldPosition(
                                 x=obj['position'][0], y=obj['position'][1], z=obj['position'][2], h=obj['hdg'])))
-                    # if obj['entity_type'] == 'vehicle':
-                    #     # Get pitch and roll from road
-                    #     init.add_init_action(entity_name,
-                    #         xosc.TeleportAction(
-                    #             xosc.RelativeRoadPosition(0, 0, entity_name,
-                    #                 xosc.Orientation(h=obj['hdg'], p=0, r=0, reference=xosc.ReferenceContext.absolute))))
+                    # Get pitch and roll from road
+                    init.add_init_action(entity_name,
+                        xosc.TeleportAction(
+                            xosc.RelativeRoadPosition(0, 0, entity_name,
+                                xosc.Orientation(h=obj['hdg'], p=0, r=0, reference=xosc.ReferenceContext.absolute))))
                     # Begin driving/walking
                     init.add_init_action(entity_name,
                         xosc.AbsoluteSpeedAction(helpers.kmh_to_ms(obj['speed_initial']),
                             xosc.TransitionDynamics(xosc.DynamicsShapes.step,
                                                     xosc.DynamicsDimension.time, 1)))
-                    # if obj['entity_type'] == 'vehicle':
-                    #     # Center on closest lane
-                    #     init.add_init_action(entity_name,
-                    #         xosc.RelativeLaneChangeAction(0, entity_name,
-                    #             xosc.TransitionDynamics(xosc.DynamicsShapes.cubic,
-                    #                                     xosc.DynamicsDimension.rate, 2.0)))
+                    # Center on closest lane
+                    init.add_init_action(entity_name,
+                        xosc.RelativeLaneChangeAction(0, entity_name,
+                            xosc.TransitionDynamics(xosc.DynamicsShapes.cubic,
+                                                    xosc.DynamicsDimension.rate, 2.0)))
         if helpers.collection_exists(['OpenSCENARIO','trajectories']):
             for obj in bpy.data.collections['OpenSCENARIO'].children['trajectories'].objects:
                 if 'dsc_type' in obj and obj['dsc_type'] == 'trajectory':
