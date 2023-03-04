@@ -539,7 +539,7 @@ class DSC_OT_export(bpy.types.Operator):
                         shape.add_knots(knots)
                     trajectory = xosc.Trajectory(obj.name,False)
                     trajectory.add_shape(shape)
-                    action = xosc.FollowTrajectoryAction(trajectory,xosc.FollowMode.follow,
+                    action = xosc.FollowTrajectoryAction(trajectory,xosc.FollowingMode.follow,
                         None,None,None,None)
                     init.add_init_action(obj['owner_name'], action)
                     # FIXME the following does not seem to work with esmini in
