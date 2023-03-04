@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.19.0] - 2023-03-04
+
+### Added
+- Operator and export of pedestrian OpenSCENARIO entities
+
+### Changed
+- Avoid snapping to roads when grid snapping is active (holding <kbd>Ctrl</kbd>)
+- Connecting roads are not exported to 3D static scene model anymore
+
+### Fixed
+- Scenariogeneration renaming enum xosc.FollowMode.follow to
+  xosc.FollowingMode.follow in scenariogeneration lib version 0.11.0. __Please
+  update the scenariogeneration dependency in your Blender installation,
+  otherwise OpenSCENARIO trajectory export will fail.__
+
 ## [0.18.1] - 2023-02-24
 
 ### Changed
@@ -270,7 +285,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.2...v0.18.0
 [0.17.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.1...v0.17.2
