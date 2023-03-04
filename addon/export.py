@@ -135,6 +135,9 @@ class DSC_OT_export(bpy.types.Operator):
             for child in bpy.data.collections['OpenSCENARIO'].children:
                 for obj in child.objects:
                     obj.select_set(False)
+            for obj in bpy.data.collections['OpenDRIVE'].objects:
+                if 'dsc_type' in obj and obj['dsc_type'] == 'junction_connecting_road':
+                        obj.select_set(False)
         self.export_mesh(file_path)
         bpy.ops.object.select_all(action='DESELECT')
 
