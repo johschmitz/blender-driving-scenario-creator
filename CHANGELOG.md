@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.19.1] - 2023-03-04
+
+### Fixed
+- Init action which broke during initial pedestrian implementation
+- Do not link roads when snapping to grid. This fixes a bug where we would
+  disable the road snapping while snapping to the grid (holding <kbd>Ctrl</kbd>)
+  but the roads would sometimes still be linked when touched with the mouse
+  pointer.
+
 ## [0.19.0] - 2023-03-04
 
 ### Added
@@ -285,7 +294,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.17.2...v0.18.0
