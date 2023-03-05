@@ -427,20 +427,20 @@ def point_to_road_connector(obj, point):
     arg_min_dist = distances.index(min(distances))
     width_left, width_right = get_width_road_sides(obj)
     if arg_min_dist == 0:
-        return 'cp_start_l', Vector(obj['cp_start_l']), obj['geometry']['heading_start'] - pi, \
-            obj['geometry']['curvature_start'], obj['geometry']['slope_start'], \
+        return 'cp_start_l', Vector(obj['cp_start_l']), obj['geometry'][0]['heading_start'] - pi, \
+            obj['geometry'][0]['curvature_start'], obj['geometry'][0]['slope_start'], \
             width_left, width_right
     if arg_min_dist == 1:
-        return 'cp_start_r', Vector(obj['cp_start_r']), obj['geometry']['heading_start'] - pi, \
-            obj['geometry']['curvature_start'], obj['geometry']['slope_start'], \
+        return 'cp_start_r', Vector(obj['cp_start_r']), obj['geometry'][0]['heading_start'] - pi, \
+            obj['geometry'][0]['curvature_start'], obj['geometry'][0]['slope_start'], \
             width_left, width_right
     elif arg_min_dist == 2:
-        return 'cp_end_l', Vector(obj['cp_end_l']), obj['geometry']['heading_end'], \
-            obj['geometry']['curvature_end'], obj['geometry']['slope_end'], \
+        return 'cp_end_l', Vector(obj['cp_end_l']), obj['geometry'][-1]['heading_end'], \
+            obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], \
             width_left, width_right
     else:
-        return 'cp_end_r', Vector(obj['cp_end_r']), obj['geometry']['heading_end'], \
-            obj['geometry']['curvature_end'], obj['geometry']['slope_end'], \
+        return 'cp_end_r', Vector(obj['cp_end_r']), obj['geometry'][-1]['heading_end'], \
+            obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], \
             width_left, width_right
 
 def point_to_junction_joint(obj, point):
@@ -465,7 +465,7 @@ def point_to_object_connector(obj, point):
     '''
     return 'cp_axle_rear', Vector(obj['position']), obj['hdg']
 
-def project_point_vector(point_start, heading_start, point_selected):
+def project_point_vector_2d(point_start, heading_start, point_selected):
     '''
         Project selected point to vector.
     '''

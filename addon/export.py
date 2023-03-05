@@ -302,17 +302,18 @@ class DSC_OT_export(bpy.types.Operator):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
                 if obj.name.startswith('road'):
                     planview = xodr.PlanView()
-                    planview.set_start_point(obj['geometry']['point_start'][0],
-                        obj['geometry']['point_start'][1],obj['geometry']['heading_start'])
-                    if obj['geometry']['curve'] == 'line':
-                        geometry = xodr.Line(obj['geometry']['length'])
-                    if obj['geometry']['curve'] == 'arc':
-                        geometry = xodr.Arc(obj['geometry']['curvature_start'],
-                            length=obj['geometry']['length'])
-                    if obj['geometry']['curve'] == 'spiral':
-                        geometry = xodr.Spiral(obj['geometry']['curvature_start'],
-                            obj['geometry']['curvature_end'], length=obj['geometry']['length'])
-                    planview.add_geometry(geometry)
+                    planview.set_start_point(obj['geometry'][0]['point_start'][0],
+                        obj['geometry'][0]['point_start'][1],obj['geometry'][0]['heading_start'])
+                    for geometry_section in obj['geometry']:
+                        if geometry_section['curve_type'] == 'line':
+                            geometry = xodr.Line(geometry_section['length'])
+                        elif geometry_section['curve_type'] == 'arc':
+                            geometry = xodr.Arc(geometry_section['curvature_start'],
+                                length=geometry_section['length'])
+                        elif geometry_section['curve_type'] == 'spiral':
+                            geometry = xodr.Spiral(geometry_section['curvature_start'],
+                                geometry_section['curvature_end'], length=geometry_section['length'])
+                        planview.add_geometry(geometry)
                     lanes = self.create_lanes(obj)
                     road = xodr.Road(obj['id_odr'],planview,lanes)
                     self.add_elevation_profiles(obj, road)
@@ -440,10 +441,10 @@ class DSC_OT_export(bpy.types.Operator):
                                     # Create a junction connecting road
                                     # TODO for now we use a single spiral, later we should use arc - spiral - arc
                                     planview = xodr.PlanView()
-                                    planview.set_start_point(obj_jcr['geometry']['point_start'][0],
-                                        obj_jcr['geometry']['point_start'][1],obj_jcr['geometry']['heading_start'])
-                                    geometry = xodr.Spiral(obj_jcr['geometry']['curvature_start'],
-                                        obj_jcr['geometry']['curvature_end'], length=obj_jcr['geometry']['length'])
+                                    planview.set_start_point(obj_jcr['geometry'][0]['point_start'][0],
+                                        obj_jcr['geometry'][0]['point_start'][1],obj_jcr['geometry'][0]['heading_start'])
+                                    geometry = xodr.Spiral(obj_jcr['geometry'][0]['curvature_start'],
+                                        obj_jcr['geometry'][0]['curvature_end'], length=obj_jcr['geometry'][0]['length'])
                                     planview.add_geometry(geometry)
                                     lanes = self.create_lanes(obj_jcr)
                                     road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
@@ -619,7 +620,7 @@ class DSC_OT_export(bpy.types.Operator):
         lanesection = xodr.LaneSection(0,lane_center)
         for idx in range(obj['lanes_left_num']):
             a,b,c,d = self.get_lane_width_coefficients(obj['lanes_left_widths'][idx],
-                obj['lanes_left_widths_change'][idx], obj['geometry']['length'])
+                obj['lanes_left_widths_change'][idx], obj['geometry_total_length'])
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_left_types'][idx]],
                 a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_left_road_mark_types'][idx],
@@ -629,7 +630,7 @@ class DSC_OT_export(bpy.types.Operator):
             lanesection.add_left_lane(lane)
         for idx in range(obj['lanes_right_num']):
             a,b,c,d = self.get_lane_width_coefficients(obj['lanes_right_widths'][idx],
-                obj['lanes_right_widths_change'][idx], obj['geometry']['length'])
+                obj['lanes_right_widths_change'][idx], obj['geometry_total_length'])
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_right_types'][idx]],
                 a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_right_road_mark_types'][idx],
@@ -841,23 +842,26 @@ class DSC_OT_export(bpy.types.Operator):
         '''
             Add elevation profiles to road
         '''
-        z_global = obj['geometry']['point_start'][2]
-        for profile in obj['geometry']['elevation']:
-            # Shift each elevation profile to start at s=0 (use substitution)
-            # SageMath code:
-            #   sage: s, a, b, c, d, h, shift = var('s, a, b, c, d, h, shift');
-            #   sage: eq = (a + b * s + c * s^2 + d * s^3 == h);
-            #   sage: eq.substitute(s=s+shift).expand()
-            shift = profile['s']
-            a = profile['a'] + z_global
-            b = profile['b']
-            c = profile['c']
-            d = profile['d']
-            a_shifted = a + b * shift + c * shift**2 + d * shift**3
-            b_shifted = b + 2 * c * shift + 3 * d * shift**2
-            c_shifted = c + 3 * d * shift
-            d_shifted = d
-            road.add_elevation(profile['s'], a_shifted, b_shifted, c_shifted, d_shifted)
+        z_global = obj['geometry'][0]['point_start'][2]
+        length_previous = 0
+        for geometry_section in obj['geometry']:
+            for profile in geometry_section['elevation']:
+                # Shift each elevation profile to start at s=0 (use substitution)
+                # SageMath code:
+                #   sage: s, a, b, c, d, h, shift = var('s, a, b, c, d, h, shift');
+                #   sage: eq = (a + b * s + c * s^2 + d * s^3 == h);
+                #   sage: eq.substitute(s=s+shift).expand()
+                shift = profile['s_section']
+                a = profile['a'] + z_global
+                b = profile['b']
+                c = profile['c']
+                d = profile['d']
+                a_shifted = a + b * shift + c * shift**2 + d * shift**3
+                b_shifted = b + 2 * c * shift + 3 * d * shift**2
+                c_shifted = c + 3 * d * shift
+                d_shifted = d
+                road.add_elevation(shift + length_previous, a_shifted, b_shifted, c_shifted, d_shifted)
+            length_previous += geometry_section['length']
 
     def add_junction_roads_elevation(self, junction_roads, elevation_level):
         for road in junction_roads:

@@ -23,5 +23,10 @@ class DSC_OT_road_straight(DSC_OT_road):
 
     object_type = 'road_straight'
 
-    geometry = DSC_geometry_line()
     params = {}
+
+    always_adjust_heading = True
+    linear_selection = True
+
+    def __init__(self):
+        self.geometry = DSC_geometry_line()

@@ -66,8 +66,12 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
         # Display help text
         if self.state == 'INIT':
             context.workspace.status_text_set(
-                'Select object then place points. Press RIGHTMOUSE to go back. '
-                'Press RETURN or SPACE to finish, ESCAPE to exit.')
+                'LEFTMOUSE: select entity then place points, '
+                'RIGHTMOUSE: go back, '
+                'ALT+MIDDLEMOUSE: move view center, '
+                'RETURN/SPACE: finish, '
+                'ESCAPE: exit'
+            )
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.state = 'SELECT_OBJECT'
@@ -168,7 +172,8 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
         elif event.type in {'MIDDLEMOUSE'}:
             if event.alt:
-                bpy.ops.view3d.view_center_cursor()
+                if event.value == 'RELEASE':
+                    bpy.ops.view3d.view_center_cursor()
 
         # Catch everything else arriving here
         return {'RUNNING_MODAL'}

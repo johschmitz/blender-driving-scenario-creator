@@ -72,8 +72,7 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
                     connecting_road = road(context, road_type, geometry, geometry_solver)
                     connecting_road
                     params_input = {
-                        'point_start': joint_i.contact_point_vec,
-                        'point_end': joint_j.contact_point_vec,
+                        'points': [joint_i.contact_point_vec, joint_j.contact_point_vec],
                         'heading_start': joint_i.heading,
                         'heading_end': joint_j.heading - pi,
                         'curvature_start': 0,
@@ -98,7 +97,7 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
         '''
         if self.params_input['connected_start']:
             # Constrain point end
-            point_end = helpers.project_point_vector(self.params_input['point_start'],
+            point_end = helpers.project_point_vector_2d(self.params_input['point_start'],
                 self.params_input['heading_start'], self.params_input['point_end'])
         else:
             point_end = self.params_input['point_end']

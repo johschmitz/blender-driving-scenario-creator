@@ -14,11 +14,11 @@
 import bpy
 from mathutils import Vector
 
-from . modal_two_point_base import DSC_OT_modal_two_point_base
+from . modal_road_base import DSC_OT_modal_road_base
 from . road import road
 
 
-class DSC_OT_road(DSC_OT_modal_two_point_base):
+class DSC_OT_road(DSC_OT_modal_road_base):
     bl_idname = 'dsc.road'
     bl_label = 'Road'
     bl_description = 'Create road mesh'

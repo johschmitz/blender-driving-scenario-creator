@@ -10,19 +10,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-from . road_base import DSC_OT_road
-from . geometry_clothoid import DSC_geometry_clothoid
-
-
-class DSC_OT_road_clothoid(DSC_OT_road):
-    bl_idname = "dsc.road_clothoid"
-    bl_label = "Clothoid"
-    bl_description = "Create a clothoid (Euler spiral) road"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    object_type = 'road_clothoid'
-    snap_filter = 'OpenDRIVE'
-
-    def __init__(self):
-        self.geometry = DSC_geometry_clothoid()

@@ -38,11 +38,12 @@ class DSC_OT_junction_generic(bpy.types.Operator):
         # Display help text
         if self.state == 'INIT':
             context.workspace.status_text_set(
-                'To build a junction select road ends of incoming roads, '
-                'RIGHTMOUSE to go back one step, '
-                'ALT+MIDDLEMOUSe to move the view center, '
-                'SPACE or RETURN to finish, '
-                'ESCAPE to cancel and exit.')
+                'LEFTMOUSE: select road ends of incoming roads, '
+                'RIGHTMOUSE: go back one step, '
+                'ALT+MIDDLEMOUSE: move view center, '
+                'SPACE/RETURN: finish, '
+                'ESCAPE: cancel and exit.'
+            )
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.reset_state(context)
