@@ -84,49 +84,58 @@ class Arc():
 
 class DSC_geometry_arc(DSC_geometry):
 
-    def update_plan_view(self, params, geometry_solver):
-        # Calculate transform between global and local coordinates
-        self.update_local_to_global(params['point_start'], params['heading_start'],
-            params['point_end'], params['heading_end'])
-
-        # Transform end point to local coordinates, constrain and transform back
-        if self.point_end_local.x < 0:
-            self.point_end_local.x = 0
-        point_end_global = self.matrix_world @ self.point_end_local
+    def update_plan_view(self, params, geometry_solver='default'):
+        # Transform to section coordinates since we calculate the arc always from (0,0)
+        point_end_section = self.sections[-1]['matrix_local'].inverted() \
+            @ self.point_end_local
+        # Constrain in section coordinate system and transform back to global
+        if point_end_section.x < 0:
+            point_end_section.x = 0
+        # Transform back to global
+        point_end_global = self.matrix_world \
+            @ self.sections[-1]['matrix_local'] @ point_end_section
 
         # Calculate geometry
-        self.geometry_base = Arc(self.point_end_local)
+        self.sections[-1]['curve'] = Arc(point_end_section)
 
         # Remember geometry parameters
-        self.params['curve'] = 'arc'
-        self.params['point_start'] = params['point_start']
-        self.params['heading_start'] = params['heading_start']
-        self.params['point_end'] = point_end_global
-        self.params['heading_end'] = params['heading_start'] + self.geometry_base.heading_end
-        self.params['curvature_start'] = self.geometry_base.curvature
-        self.params['curvature_end'] = self.geometry_base.curvature
-        self.params['length'] = self.geometry_base.length
+        self.sections[-1]['params']['curve_type'] = 'arc'
+        self.sections[-1]['params']['point_start'] = params['points'][-2]
+        self.sections[-1]['params']['heading_start'] = params['heading_start'] \
+            + self.heading_start_local
+        self.sections[-1]['params']['point_end'] = point_end_global
+        self.sections[-1]['params']['heading_end'] = params['heading_start'] \
+            + self.sections[-1]['curve'].heading_end + self.heading_start_local
+        self.sections[-1]['params']['curvature_start'] = self.sections[-1]['curve'].curvature
+        self.sections[-1]['params']['curvature_end'] = self.sections[-1]['curve'].curvature
+        self.sections[-1]['params']['length'] = self.sections[-1]['curve'].length
 
     def sample_plan_view(self, s):
-        if self.geometry_base.radius == inf:
+        idx_section, s_section = self.get_section_idx_and_s(s)
+        hdg_t_local = self.sections[idx_section]['params']['heading_start'] \
+                    - self.sections[0]['params']['heading_start']
+        if self.sections[idx_section]['curve'].radius == inf:
             # Circle degenerates into a straight line
-            x_s = s
+            x_s = s_section
             y_s = 0
-            hdg_t = pi/2
+            hdg_t = hdg_t_local + pi/2
         else:
             # We have a circle
-            angle_s = s / self.geometry_base.radius
-            if self.geometry_base.determinant > 0:
-                x_s = cos(angle_s + self.geometry_base.offset_angle - pi/2) \
-                        * self.geometry_base.radius
-                y_s = sin(angle_s + self.geometry_base.offset_angle - pi/2) \
-                        * self.geometry_base.radius + self.geometry_base.offset_y
-                hdg_t = angle_s + pi/2
+            angle_s = s_section / self.sections[idx_section]['curve'].radius
+            if self.sections[idx_section]['curve'].determinant > 0:
+                x_s = cos(angle_s + self.sections[idx_section]['curve'].offset_angle - pi/2) \
+                        * self.sections[idx_section]['curve'].radius
+                y_s = sin(angle_s + self.sections[idx_section]['curve'].offset_angle - pi/2) \
+                        * self.sections[idx_section]['curve'].radius \
+                        + self.sections[idx_section]['curve'].offset_y
+                hdg_t = hdg_t_local + angle_s + pi/2
             else:
-                x_s = cos(-angle_s + self.geometry_base.offset_angle - pi/2) \
-                        * self.geometry_base.radius
-                y_s = sin(-angle_s + self.geometry_base.offset_angle - pi/2) \
-                        * self.geometry_base.radius + self.geometry_base.offset_y
-                hdg_t = -angle_s + pi/2
-        curvature = self.geometry_base.curvature
-        return x_s, y_s, curvature, hdg_t
+                x_s = cos(-angle_s + self.sections[idx_section]['curve'].offset_angle - pi/2) \
+                        * self.sections[idx_section]['curve'].radius
+                y_s = sin(-angle_s + self.sections[idx_section]['curve'].offset_angle - pi/2) \
+                        * self.sections[idx_section]['curve'].radius \
+                        + self.sections[idx_section]['curve'].offset_y
+                hdg_t = hdg_t_local - angle_s + pi/2
+        xyz_s_local = self.sections[idx_section]['matrix_local'] @ Vector((x_s, y_s, 0.0))
+        curvature = self.sections[idx_section]['curve'].curvature
+        return xyz_s_local[0], xyz_s_local[1], curvature, hdg_t

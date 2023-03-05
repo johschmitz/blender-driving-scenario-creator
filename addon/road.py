@@ -83,13 +83,17 @@ class road:
             # Remember connecting points for road snapping
             if self.params['road_split_type'] == 'start':
                 obj['cp_start_l'], obj['cp_start_r'] = self.get_split_cps('start')
-                obj['cp_end_l'], obj['cp_end_r']= self.geometry.params['point_end'], self.geometry.params['point_end']
+                obj['cp_end_l'] = self.geometry.section[-1].params['point_end']
+                obj['cp_end_r'] = self.geometry.section[-1].params['point_end']
             elif self.params['road_split_type'] == 'end':
-                obj['cp_start_l'], obj['cp_start_r'] = self.geometry.params['point_start'], self.geometry.params['point_start']
+                obj['cp_start_l'] = self.geometry.sections[0]['params']['point_start']
+                obj['cp_start_r'] = self.geometry.sections[0]['params']['point_start']
                 obj['cp_end_l'], obj['cp_end_r']= self.get_split_cps('end')
             else:
-                obj['cp_start_l'], obj['cp_start_r'] = self.geometry.params['point_start'], self.geometry.params['point_start']
-                obj['cp_end_l'], obj['cp_end_r']= self.geometry.params['point_end'], self.geometry.params['point_end']
+                obj['cp_start_l'] = self.geometry.sections[0]['params']['point_start']
+                obj['cp_start_r'] = self.geometry.sections[0]['params']['point_start']
+                obj['cp_end_l'] = self.geometry.sections[-1]['params']['point_end']
+                obj['cp_end_r'] = self.geometry.sections[-1]['params']['point_end']
 
             # A road split needs to create an OpenDRIVE direct junction
             obj['road_split_type'] = self.params['road_split_type']
@@ -121,7 +125,8 @@ class road:
             # Set OpenDRIVE custom properties
             obj['id_odr'] = id_obj
 
-            obj['geometry'] = self.geometry.params
+            obj['geometry'] = [ section['params'] for section in self.geometry.sections ]
+            obj['geometry_total_length'] = self.geometry.total_length
 
             obj['lanes_left_num'] = self.params['lanes_left_num']
             obj['lanes_right_num'] = self.params['lanes_right_num']
@@ -149,7 +154,7 @@ class road:
         '''
         # Update parameters based on selected points
         self.geometry.update(params_input, self.geometry_solver)
-        if self.geometry.params['valid'] == False:
+        if self.geometry.sections[-1]['params']['valid'] == False:
             valid = False
             return valid, None, None, []
         length_broken_line = context.scene.road_properties.length_broken_line
@@ -166,10 +171,10 @@ class road:
             # Transform start and end point to local coordinate system then add
             # a vertical edge down to the xy-plane to make elevation profile
             # more easily visible
-            point_start = (self.geometry.params['point_start'])
+            point_start = (self.geometry.sections[0]['params']['point_start'])
             point_start_local = (0.0, 0.0, 0.0)
             point_start_bottom = (0.0, 0.0, -point_start.z)
-            point_end = self.geometry.params['point_end']
+            point_end = self.geometry.sections[-1]['params']['point_end']
             point_end_local = self.geometry.matrix_world.inverted() @ point_end
             point_end_local.z = point_end.z - point_start.z
             point_end_bottom = (point_end_local.x, point_end_local.y, -point_start.z)
@@ -236,10 +241,10 @@ class road:
         t_cp_split = self.road_split_lane_idx_to_t()
         if road_split_type == 'start':
             t = 0
-            cp_base = self.geometry.params['point_start']
+            cp_base = self.geometry.sections[0]['params']['point_start']
         else:
-            t = self.geometry.params['length']
-            cp_base = self.geometry.params['point_end']
+            t = self.geometry.total_length
+            cp_base = self.geometry.sections[-1]['params']['point_end']
         # Split
         cp_split = self.geometry.matrix_world @ Vector(self.geometry.sample_cross_section(
             t, [t_cp_split])[0][0])
@@ -313,11 +318,11 @@ class road:
         t = self.get_width_road_left(lanes)
         t_values = []
         # Make sure the road has a non-zero length
-        if self.geometry.params['length'] == 0:
+        if self.geometry.total_length == 0:
             return t_values
         # Build up t values lane by lane
         for idx_lane, lane in enumerate(lanes):
-            s_norm = s / self.geometry.params['length']
+            s_norm = s / self.geometry.total_length
             if lane.width_change == 'open':
                 lane_width_s = (3.0 * s_norm**2 - 2.0 * s_norm**3) * lane.width
             elif lane.width_change == 'close':
@@ -392,7 +397,7 @@ class road:
         '''
         # Calculate line parameters
         # TODO offset must be provided by predecessor road for each marking
-        length = self.geometry.params['length']
+        length = self.geometry.total_length
         offset = 0.5
         if offset < length_broken_line:
             offset_first = offset
@@ -453,7 +458,7 @@ class road:
         '''
             Adaptively sample road in s direction based on local curvature.
         '''
-        length = self.geometry.params['length']
+        length = self.geometry.total_length
         s = 0
         strips_t_values = self.get_strips_t_values(lanes, s)
         # Obtain first curvature value

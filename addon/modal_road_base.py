@@ -13,6 +13,7 @@
 
 import bpy
 from mathutils import Vector, Matrix, Euler
+from mathutils.geometry import distance_point_to_plane
 
 from math import pi
 
@@ -20,13 +21,15 @@ from . import helpers
 from . import view_memory_helper
 
 
-class DSC_OT_modal_two_point_base(bpy.types.Operator):
-    bl_idname = 'dsc.modal_two_point_base'
-    bl_label = 'DSC snap draw two points modal operator'
+class DSC_OT_modal_road_base(bpy.types.Operator):
+    bl_idname = 'dsc.modal_road_base'
+    bl_label = 'DSC snap draw road modal operator'
     bl_options = {'REGISTER', 'UNDO'}
 
     snap_filter = None
     only_snapped_to_object = False
+    always_adjust_heading = False
+    linear_selection = False
 
     # Elevation adjustment can be 'DISABLED', 'SIDEVIEW', 'GENERIC'
     adjust_elevation = 'DISABLED'
@@ -35,6 +38,8 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
 
     params_input = {}
     params_snap = {}
+
+    geometry = None
 
     view_memory = view_memory_helper.view_memory_helper()
 
@@ -46,7 +51,25 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         '''
             Create a model object instance
         '''
-        pass
+        raise NotImplementedError()
+
+    def reset_geometry(self):
+        '''
+            Reset geometry.
+        '''
+        self.geometry.reset()
+
+    def add_geometry_section(self):
+        '''
+            Add a piece of geometry to the road.
+        '''
+        self.geometry.add_section()
+
+    def remove_last_geometry_section(self):
+        '''
+            Remove last piece of geometry from the road.
+        '''
+        self.geometry.remove_last_section()
 
     def create_object_3d(self, context):
         '''
@@ -70,7 +93,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             mesh.from_pydata(vertices, edges, faces)
             # Rotate in start heading direction
             self.stencil = bpy.data.objects.new('dsc_stencil', mesh)
-            self.stencil.location = self.params_input['point_start']
+            self.stencil.location = self.params_input['points'][-2]
             # Link
             context.scene.collection.objects.link(self.stencil)
             self.stencil.use_fake_user = True
@@ -95,7 +118,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             self.remove_stencil()
             self.create_stencil(context)
         else:
-            if self.params_input['point_end'] == self.params_input['point_start']:
+            if self.params_input['points'][-1] == self.params_input['points'][-2]:
                 # This can happen due to start point snapping -> ignore
                 return
             # Try getting data for a new mesh
@@ -110,7 +133,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         '''
             Calculate and return the vertices, edges and faces to create the initial stencil mesh.
         '''
-        vertices = [(0.0, 0.0, -self.params_input['point_start'].z), (0.0, 0.0, 0.0)]
+        vertices = [(0.0, 0.0, -self.params_input['points'][-2].z), (0.0, 0.0, 0.0)]
         edges = [[0,1]]
         faces = []
         return vertices, edges, faces
@@ -121,15 +144,52 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         '''
         raise NotImplementedError()
 
+    def calculate_heading_end(self, point_start, heading_start, point_end):
+        '''
+            Calcuate the end angle based on heading ratio.
+        '''
+        vector_start_end = (point_end - point_start).to_2d()
+        if vector_start_end.length == 0:
+            return 0
+        else:
+            vector_hdg = Vector((1.0, 0.0))
+            vector_hdg.rotate(Matrix.Rotation(heading_start, 2))
+            angle_base = vector_start_end.angle_signed(Vector((1.0, 0.0)))
+            if angle_base >= 0:
+                return angle_base + self.heading_end_extra
+            else:
+                return angle_base - self.heading_end_extra
+
+    def update_stencil_heading_end(self, context):
+        '''
+            Update the stencil when the heading end is changed.
+        '''
+        self.params_input['heading_end'] = self.calculate_heading_end(self.params_input['points'][-2],
+            self.params_input['heading_start'], self.params_input['points'][-1])
+        self.update_stencil(context, update_start=False)
+
+    def calculate_heading_start_difference(self, point_start, heading_start_old, point_end_new):
+        '''
+            Return angle between vector in (old) heading start direction and
+            (new) start-end vector
+        '''
+        vector_hdg = Vector((1.0, 0.0))
+        vector_hdg.rotate(Matrix.Rotation(heading_start_old, 2))
+        vector_start_end = (point_end_new - point_start).to_2d()
+        if vector_start_end.length == 0:
+            return 0
+        else:
+            return vector_hdg.angle_signed(vector_start_end)
+
     def input_valid(self, wireframe):
         '''
             Return False if start and end point are identical, otherwise True.
         '''
-        if self.params_input['point_start'].to_2d() == self.params_input['point_end'].to_2d():
+        if self.params_input['points'][-2].to_2d() == self.params_input['points'][-1].to_2d():
             if not wireframe:
                 self.report({'WARNING'}, 'Start and end point can not be the same!')
             return False
-        elif (self.params_input['point_end'].to_2d()-self.params_input['point_start'].to_2d()).length > 10000:
+        elif (self.params_input['points'][-1].to_2d()-self.params_input['points'][-2].to_2d()).length > 10000:
             # Limit length of objects to 10km
             self.report({'WARNING'}, 'Start and end point can not be more than 10km apart!')
             return False
@@ -138,14 +198,13 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
 
     def reset_params_input(self):
         self.params_input = {
-            'point_start': Vector((0.0,0.0,0.0)),
-            'point_end': Vector((0.0,0.0,0.0)),
-            'heading_start': 0,
-            'heading_end': 0,
-            'curvature_start': 0,
-            'curvature_end': 0,
-            'slope_start': 0,
-            'slope_end': 0,
+            'points': [Vector((0.0, 0.0, 0.0)), Vector((0.0, 0.0, 0.0))],
+            'heading_start': 0.0,
+            'heading_end': 0.0,
+            'curvature_start': 0.0,
+            'curvature_end': 0.0,
+            'slope_start': 0.0,
+            'slope_end': 0.0,
             'connected_start': False,
             'connected_end': False,
             'normal_start': Vector((0.0,0.0,1.0)),
@@ -159,43 +218,79 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             'point': Vector((0.0,0.0,0.0)),
             'normal': Vector((0.0,0.0,1.0)),
             'type': None,
-            'heading': 0,
-            'curvature': 0,
-            'slope': 0,
-            'width_left': 0,
-            'width_right': 0,
+            'heading': 0.0,
+            'curvature': 0.0,
+            'slope': 0.0,
+            'width_left': 0.0,
+            'width_right': 0.0,
         }
+
+    def create_object_modal(self, context):
+        '''
+            Helper function to create the object in the modal operator
+        '''
+        obj = self.create_object_3d(context)
+        if obj != None:
+            if self.params_input['connected_start']:
+                link_type = 'start'
+                # TODO do not get the direct junction information from the object
+                if 'id_direct_junction_start' in obj:
+                    id_extra = obj['id_direct_junction_start']
+                    if self.id_extra_start != None:
+                        self.report({'WARNING'}, 'Avoid connecting two split road' \
+                            ' ends (direct junctions) to each other!')
+                else:
+                    id_extra = self.id_extra_start
+                helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
+                    self.id_odr_start, id_extra)
+            if self.params_input['connected_end']:
+                link_type = 'end'
+                # TODO keep it generic, direct junction should not appear at this point!
+                if 'id_direct_junction_end' in obj:
+                    id_extra = obj['id_direct_junction_end']
+                    if self.params_snap['id_extra'] != None:
+                        self.report({'WARNING'}, 'Avoid connecting two split road' \
+                            ' ends (direct junctions) to each other!')
+                else:
+                    id_extra = self.params_snap['id_extra']
+                helpers.create_object_xodr_links(obj, link_type, self.cp_type_end,
+                    self.params_snap['id_obj'], id_extra)
 
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
             context.workspace.status_text_set(
                 'LEFTMOUSE: place, '
+                'hold SHIFT: place more points, '
                 'hold CTRL: snap to grid, '
+                'hold ALT: change start heading, '
                 'hold E: adjust elevation, '
                 'hold S: sideview adjust elevation, '
+                'SHIFT+MIDDLEMOUSE: adjust heading end, '
                 'ALT+MIDDLEMOUSE: move view center, '
                 'RIGHTMOUSE: cancel selection, '
+                'RETURN/SPACE: finish, '
                 'ESCAPE: cancel and exit'
             )
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
+            self.reset_geometry()
             self.reset_params_input()
             self.reset_params_snap()
             self.snapped_to_grid = False
             self.snapped_to_object = False
-            self.selected_elevation = 0
+            self.selected_elevation = 0.0
+            self.heading_end_extra = 0.0
             self.selected_point = helpers.mouse_to_xy_parallel_plane(context, event,
                 self.selected_elevation)
+            self.params_input['points'][-2] = self.selected_point
             self.selected_normal_start = Vector((0.0,0.0,1.0))
-            self.selected_heading_start = 0
-            self.selected_heading_end = 0
-            self.selected_curvature = 0
-            self.selected_slope = 0
+            self.selected_heading_start = 0.0
+            self.selected_heading_end = 0.0
+            self.selected_curvature = 0.0
+            self.selected_slope = 0.0
             self.state = 'SELECT_START'
             self.params_input['design_speed'] = context.scene.road_properties.design_speed
-            self.params_input['point_start'] = self.selected_point
-            self.params_input['point_end'] = self.selected_point
             # Create helper stencil mesh
             self.create_stencil(context)
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
@@ -207,43 +302,67 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 self.selected_elevation = helpers.mouse_to_elevation(context, event,
                     self.selected_point)
                 if self.state == 'SELECT_START':
-                    self.selected_point = self.params_input['point_start']
-                elif self.state == 'SELECT_END':
-                    self.selected_point = self.params_input['point_end']
+                    self.selected_point = self.params_input['points'][-2]
+                elif self.state == 'SELECT_POINT':
+                    self.selected_point = self.params_input['points'][-1]
                 self.selected_point.z = self.selected_elevation
+                context.scene.cursor.location = self.selected_point
             else:
                 # Snap to existing objects if any, otherwise xy plane
                 hit, params_snap = helpers.mouse_to_object_params(
                     context, event, filter=self.snap_filter)
-                # Snap to object if not snapping to grid (with holding CTRL)
+                # Snap to object if not snapping to grid (by holding CTRL)
                 if hit and not event.ctrl:
                     self.params_snap = params_snap
                     self.snapped_to_object = True
-                    self.selected_point = self.params_snap['point']
+                    selected_point_new = self.params_snap['point']
                     if self.state == 'SELECT_START':
                         self.selected_heading_start = self.params_snap['heading']
                         self.selected_normal_start = self.params_snap['normal']
-                    elif self.state == 'SELECT_END':
+                    elif self.state == 'SELECT_POINT':
                         self.selected_heading_end = self.params_snap['heading']
                     self.selected_curvature = self.params_snap['curvature']
                     self.selected_slope = self.params_snap['slope']
+                    context.scene.cursor.location = selected_point_new
                 else:
                     self.reset_params_snap()
                     self.snapped_to_object = False
                     selected_point_new = helpers.mouse_to_xy_parallel_plane(context, event,
                         self.selected_elevation)
+                    if (self.params_input['connected_start'] == True or \
+                        self.state == 'SELECT_POINT' and len(self.params_input['points']) > 2) \
+                        and self.linear_selection:
+                        # Constrain point for linear case
+                        selected_point_new = helpers.project_point_vector_2d(self.params_input['points'][-2],
+                            self.params_input['heading_start'], selected_point_new)
+                        selected_point_new.z = self.selected_elevation
+                        # Check if road section direction is positive
+                        vector_hdg = Vector((1.0, 0.0, 0.0))
+                        vector_hdg.rotate(Matrix.Rotation(self.params_input['heading_start'], 3, 'Z'))
+                        distance = distance_point_to_plane(
+                            selected_point_new, self.params_input['points'][-2], vector_hdg)
+                        if distance < 0.0:
+                            selected_point_new = self.params_input['points'][-1]
+                    context.scene.cursor.location = selected_point_new
+                    # Activate grid snapping when holding CTRL
+                    if not self.only_snapped_to_object and event.ctrl:
+                        bpy.ops.view3d.snap_cursor_to_grid()
+                        selected_point_new = context.scene.cursor.location
                     self.selected_curvature = 0
                     self.selected_slope = 0
-                    self.selected_point = selected_point_new
                     self.selected_normal_start = Vector((0.0,0.0,1.0))
-            context.scene.cursor.location = self.selected_point.copy()
-            # Activate grid snapping when holding CTRL
-            if not self.only_snapped_to_object and event.ctrl:
-                bpy.ops.view3d.snap_cursor_to_grid()
-                self.selected_point = context.scene.cursor.location
+                    if (event.alt or self.always_adjust_heading) \
+                        and self.params_input['connected_start'] == False \
+                        and len(self.params_input['points']) == 2:
+                        # Calculate angular change to update start heading
+                        heading_difference = self.calculate_heading_start_difference(
+                                self.params_input['points'][-2], self.selected_heading_start,
+                                selected_point_new)
+                        self.selected_heading_start = self.selected_heading_start - heading_difference
+                self.selected_point = selected_point_new
             # Process and remember plan view (floor) points according to modal state machine
             if self.state == 'SELECT_START':
-                self.params_input['point_start'] = self.selected_point.copy()
+                self.params_input['points'][-2] = self.selected_point.copy()
                 self.params_input['heading_start'] = self.selected_heading_start
                 self.params_input['normal_start'] = self.selected_normal_start.copy()
                 if self.params_snap['type'] is not None:
@@ -255,21 +374,23 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 self.params_input['slope_start'] = self.selected_slope
                 self.update_stencil(context, update_start=True)
             # Always update end parameters to have them set even if mouse is not
-            # moved in SELECT_END state
-            self.params_input['point_end'] = self.selected_point.copy()
+            # moved in SELECT_POINT state
+            self.params_input['points'][-1] = self.selected_point.copy()
             self.params_input['heading_start'] = self.selected_heading_start
-            self.params_input['heading_end'] = self.selected_heading_end + pi
-            if self.params_snap['type'] == None:
-                self.params_input['connected_end'] = False
-            else:
+            if self.params_snap['type'] is not None:
                 if self.params_snap['type'] != 'surface':
                     self.params_input['connected_end'] = True
+                    self.params_input['heading_end'] = self.selected_heading_end + pi
                     self.params_input['curvature_end'] = self.selected_curvature
                     self.params_input['slope_end'] = self.selected_slope
-            if self.state == 'SELECT_END':
+            else:
+                self.params_input['connected_end'] = False
+                self.params_input['heading_end'] = self.calculate_heading_end(self.params_input['points'][-2],
+                    self.params_input['heading_start'], self.params_input['points'][-1])
+            if self.state == 'SELECT_POINT':
                 if self.input_valid(wireframe=True):
                     self.update_stencil(context, update_start=False)
-        # Select start and end
+        # Select start, intermediate/end points
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 # For junction connecting roads we may only proceed snapped to the junction joints
@@ -280,38 +401,22 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.id_extra_start = self.params_snap['id_extra']
                     self.cp_type_start = self.params_snap['type']
                     # Set elevation so that end point selection starts on the same level
-                    self.selected_elevation = self.selected_point.z
-                    self.state = 'SELECT_END'
+                    self.selected_elevation = self.params_input['points'][-1].z
+                    self.state = 'SELECT_POINT'
                     return {'RUNNING_MODAL'}
-                if self.state == 'SELECT_END':
-                    cp_type_end = self.params_snap['type']
-                    # Create the final object
+                if self.state == 'SELECT_POINT':
+                    self.cp_type_end = self.params_snap['type']
                     if self.input_valid(wireframe=False):
-                        obj = self.create_object_3d(context)
-                        if obj != None:
-                            if self.params_input['connected_start']:
-                                link_type = 'start'
-                                if 'id_direct_junction_start' in obj:
-                                    id_extra = obj['id_direct_junction_start']
-                                    if self.id_extra_start != None:
-                                        self.report({'WARNING'}, 'Avoid connecting two split road' \
-                                            ' ends (direct junctions) to each other!')
-                                else:
-                                    id_extra = self.id_extra_start
-                                helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-                                    self.id_odr_start, id_extra)
-                            if self.params_input['connected_end']:
-                                link_type = 'end'
-                                # TODO keep it generic, direct junction should not appear at this point!
-                                if 'id_direct_junction_end' in obj:
-                                    id_extra = obj['id_direct_junction_end']
-                                    if self.params_snap['id_extra'] != None:
-                                        self.report({'WARNING'}, 'Avoid connecting two split road' \
-                                            ' ends (direct junctions) to each other!')
-                                else:
-                                    id_extra = self.params_snap['id_extra']
-                                helpers.create_object_xodr_links(obj, link_type, cp_type_end,
-                                    self.params_snap['id_obj'], id_extra)
+                        if event.shift and self.params_input['connected_end'] == False:
+                            # Make sure not to work with identical points
+                            if self.params_input['points'][-1] != self.params_input['points'][-2]:
+                                # Add another section based on the last selected point
+                                self.add_geometry_section()
+                                # Add new point for potential next selection
+                                self.params_input['points'].append(self.selected_point)
+                        else:
+                            # Create the final object
+                            self.create_object_modal(context)
                             # Remove stencil and go back to initial state to draw again
                             self.remove_stencil()
                             self.state = 'INIT'
@@ -320,9 +425,14 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         elif event.type == 'RIGHTMOUSE':
             if event.value == 'RELEASE':
                 # Back to beginning
-                if self.state == 'SELECT_END':
-                    self.remove_stencil()
-                    self.state = 'INIT'
+                if self.state == 'SELECT_POINT':
+                    if len(self.params_input['points']) > 2:
+                        self.remove_last_geometry_section()
+                        self.params_input['points'].pop()
+                        self.state = 'SELECT_POINT'
+                    else:
+                        self.remove_stencil()
+                        self.state = 'INIT'
                     return {'RUNNING_MODAL'}
                 # Exit
                 if self.state == 'SELECT_START':
@@ -353,16 +463,43 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     # Restore previous view
                     self.view_memory.restore_view(context)
                 self.adjust_elevation = 'DISABLED'
+        # Zoom / End heading adjustment
+        elif event.type == 'WHEELUPMOUSE':
+            if event.shift:
+                # Adjust end heading
+                if self.heading_end_extra < 1.0:
+                    self.heading_end_extra += 0.2
+                else:
+                    self.heading_end_extra = 1.0
+                self.update_stencil_heading_end(context)
+            else:
+                # Zoom out
+                bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
+        elif event.type == 'WHEELDOWNMOUSE':
+            if event.shift:
+                # Adjust end heading
+                if self.heading_end_extra > -1.0:
+                    self.heading_end_extra -= 0.2
+                else:
+                    self.heading_end_extra = -1.0
+                self.update_stencil_heading_end(context)
+            else:
+                # Zoom in
+                bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
+        # Finish
+        elif event.type in {'RET'} or event.type in {'SPACE'}:
+            if self.state == 'SELECT_POINT':
+                self.create_object_modal(context)
+                # Remove stencil and go back to initial state to draw again
+                self.remove_stencil()
+                self.state = 'INIT'
+                return {'RUNNING_MODAL'}
         # Exit immediately
         elif event.type == 'ESC':
             if event.value == 'RELEASE':
                 self.clean_up(context)
                 return {'FINISHED'}
-        # Zoom
-        elif event.type == 'WHEELUPMOUSE':
-            bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
-        elif event.type == 'WHEELDOWNMOUSE':
-            bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
+        # View centering
         elif event.type == 'MIDDLEMOUSE':
             if event.alt:
                 if event.value == 'RELEASE':
@@ -373,7 +510,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
 
     def invoke(self, context, event):
         # For operator state machine
-        # possible states: {'INIT','SELECT_START', 'SELECT_END'}
+        # possible states: {'INIT','SELECT_START', 'SELECT_POINT'}
         self.state = 'INIT'
         self.create_object_model(context)
         bpy.ops.object.select_all(action='DESELECT')
