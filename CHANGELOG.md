@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.20.0] - 2023-05-18
+
+### Added
+- Possibility to create roads with multiple geometry sections (in this version
+  the type of the curve for each section will be identical)
+- Holding <kbd>Shift</kbd> and click to add an additional section to the road you
+  are currently editing
+- Adjusting end heading of clothoid geometries (only for Hermite solver) by
+  holding <kdb>Shift</kdb> and <kbd>Mousewheel Up/Down</kbd>
+
+### Changed
+- __Adjusting start heading of road is now done by holding <kbd>Alt</kbd>
+  instead of <kbd>Shift</kbd> since <kbd>Shift</kbd> is now being used for
+  adding new geometry sections__
+
 ## [0.19.1] - 2023-03-04
 
 ### Fixed
@@ -294,7 +309,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.0...v0.18.1
