@@ -24,7 +24,7 @@ Then we first need to install the
 the Blender Python environment since the add-on uses the library as a backend to
 write OpenDRIVE and OpenSCENARIO files. Additionally,
 [pyclothoids](https://github.com/phillipd94/pyclothoids) is needed which is used
-by the addon and the scenarigeneration lib as well. Navigate to your Blender
+by the add-on and the scenarigeneration lib as well. Navigate to your Blender
 included Python installation
 
     cd /opt/blender/<blender_version>/python/bin
@@ -36,11 +36,13 @@ owner)
 
 now install the lib(s)
 
-    sudo -E ./pip3 install scenariogeneration
+    sudo -E ./python<python_version> -m pip install scenariogeneration
 
 where the `-E` makes sudo preserve the exported environment variable. Note again
 that `sudo` is not required in case Blender is installed to the user home
-directory. Also make sure not to mix up `pip3` and `./pip3`.
+directory or the user has write access to the directory. Also make sure not to
+not forget the `./` at the beginning such that the Python executable from within
+the directory is used and not another instance on your system.
 
 For the esmini export functionality we also need to install
 [OpenSceneGraph](http://www.openscenegraph.org/) to have the `osgconv` tool
@@ -115,15 +117,15 @@ elevation can be changed by holding <kbd>E</kbd>(3D view) or
 <kbd>S</kbd>(sideview) keys and moving the mouse. See a summary of the keyboard
 shortcuts in the table below.
 
-| Keyboard Shortcut                                     | Function                            |
-| ----------------------------------------------------- | ----------------------------------- |
-| <kbd>N</kbd> (vanilla Blender)                        | Toggle sidebar with addon main menu |
-| Hold <kbd>Ctrl</kbd>                                  | Activate grid snapping              |
-| Hold <kbd>Shift</kbd> + <kbd>Mouseleft</kbd>          | Add additional geometry section     |
-| Hold <kbd>Alt</kbd>                                   | Change start heading of a road      |
-| Hold <kbd>Shift</kbd> + <kbd>Mousewheel Up/Down</kbd> | Change end heading of a road        |
-| Hold <kbd>E</kbd>                                     | Change road elevation (3D view)     |
-| Hold <kbd>S</kbd>                                     | Change road elevation (sideview)    |
+| Keyboard Shortcut                                     | Function                             |
+| ----------------------------------------------------- | ------------------------------------ |
+| <kbd>N</kbd> (vanilla Blender)                        | Toggle sidebar with add-on main menu |
+| Hold <kbd>Ctrl</kbd>                                  | Activate grid snapping               |
+| Hold <kbd>Shift</kbd> + <kbd>Mouseleft</kbd>          | Add additional geometry section      |
+| Hold <kbd>Alt</kbd>                                   | Change start heading of a road       |
+| Hold <kbd>Shift</kbd> + <kbd>Mousewheel Up/Down</kbd> | Change end heading of a road         |
+| Hold <kbd>E</kbd>                                     | Change road elevation (3D view)      |
+| Hold <kbd>S</kbd>                                     | Change road elevation (sideview)     |
 
 Before or after adding roads add additional Blender objects as desired. When
 done modelling, export everything together by clicking <kbd>Export driving
@@ -139,7 +141,7 @@ With esmini available the exported scenario can be run with
 
 # How to develop
 
-For development of the addon the [Blender VS Code
+For development of the add-on the [Blender VS Code
 extension](https://github.com/JacquesLucke/blender_vscode) is very
 recommendable. It allows hot reloading and rapid iterations.
 
