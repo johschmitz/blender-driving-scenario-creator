@@ -25,8 +25,6 @@ class DSC_geometry_line(DSC_geometry):
 
     def update_plan_view(self, params, geometry_solver='default'):
 
-        #     self.point_start_local.to_2d()).angle_signed(Vector((1.0, 0.0)))
-
         # Local starting point is 0 vector so length becomes length of end point vector
         length = (self.point_end_local - self.point_start_local).to_2d().length
 

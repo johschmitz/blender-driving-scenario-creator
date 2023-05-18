@@ -58,6 +58,8 @@ class DSC_geometry():
                 'heading_end': 0,
                 'curvature_end': 0,
                 'slope_end': 0,
+                'coefficients_u': {'a': 0, 'b': 0, 'c': 0, 'd': 0},
+                'coefficients_v': {'a': 0, 'b': 0, 'c': 0, 'd': 0},
                 'elevation': [{'s_section': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}],
                 'valid': True,
             },

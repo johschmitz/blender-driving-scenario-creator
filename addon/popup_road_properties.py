@@ -17,7 +17,7 @@ import bpy
 class DSC_OT_popup_road_properties(bpy.types.Operator):
     bl_idname = 'dsc.popup_road_properties'
     bl_label = 'Road'
-    bl_description = 'Create an OpenDRIVE road'
+    bl_description = 'Construct a piece of road'
 
     operators = {'road_straight': bpy.ops.dsc.road_straight,
                  'road_arc': bpy.ops.dsc.road_arc,

@@ -304,6 +304,7 @@ class DSC_OT_export(bpy.types.Operator):
                     planview = xodr.PlanView()
                     planview.set_start_point(obj['geometry'][0]['point_start'][0],
                         obj['geometry'][0]['point_start'][1],obj['geometry'][0]['heading_start'])
+                    length = 0
                     for geometry_section in obj['geometry']:
                         if geometry_section['curve_type'] == 'line':
                             geometry = xodr.Line(geometry_section['length'])
@@ -313,9 +314,25 @@ class DSC_OT_export(bpy.types.Operator):
                         elif geometry_section['curve_type'] == 'spiral':
                             geometry = xodr.Spiral(geometry_section['curvature_start'],
                                 geometry_section['curvature_end'], length=geometry_section['length'])
-                        planview.add_geometry(geometry)
+                        elif geometry_section['curve_type'] == 'parampoly3':
+                            geometry = xodr.ParamPoly3(au=0,
+                                                       bu=geometry_section['coefficients_u']['b'],
+                                                       cu=geometry_section['coefficients_u']['c'],
+                                                       du=geometry_section['coefficients_u']['d'],
+                                                       av=0,
+                                                       bv=geometry_section['coefficients_v']['b'],
+                                                       cv=geometry_section['coefficients_v']['c'],
+                                                       dv=geometry_section['coefficients_v']['d'],
+                                                       prange="normalized",
+                                                       length=geometry_section['length'])
+                        planview.add_fixed_geometry(geom=geometry,
+                                                    x_start=geometry_section['point_start'][0],
+                                                    y_start=geometry_section['point_start'][1],
+                                                    h_start=geometry_section['heading_start'],
+                                                    s=length)
+                        length += geometry_section['length']
                     lanes = self.create_lanes(obj)
-                    road = xodr.Road(obj['id_odr'],planview,lanes)
+                    road = xodr.Road(obj['id_odr'], planview, lanes)
                     self.add_elevation_profiles(obj, road)
                     # Add road level linking
                     if 'link_predecessor_id_l' in obj:

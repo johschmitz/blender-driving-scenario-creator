@@ -11,20 +11,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
+from . road_base import DSC_OT_road
+from . geometry_parampoly3 import DSC_geometry_parampoly3
 
 
-class DSC_OT_road_parametric_polynomial(bpy.types.Operator):
+class DSC_OT_road_parametric_polynomial(DSC_OT_road):
     bl_idname = "dsc.road_parametric_polynomial"
     bl_label = "Parametric polynomial"
     bl_description = "Create a cubic parametric polynomial road"
     bl_options = {'REGISTER', 'UNDO'}
 
-    @classmethod
-    def poll(cls, context):
-        return False
+    object_type = 'road_parampoly3'
+    snap_filter = 'OpenDRIVE'
 
-    def execute(self, context):
-        self.report({'INFO'}, "Not implemented.")
-
-        return {'FINISHED'}
+    def __init__(self):
+        self.geometry = DSC_geometry_parampoly3()

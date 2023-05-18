@@ -84,8 +84,8 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.popup_road_properties', text='Clothoid (Forward)',
             icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_forward'
         row = box.row(align=True)
-        row.operator('dsc.road_parametric_polynomial', text='Parametric polynomial',
-            icon_value=custom_icons['road_parametric_polynomial'].icon_id)
+        row.operator('dsc.popup_road_properties', text='Parametric polynomial',
+            icon_value=custom_icons['road_parametric_polynomial'].icon_id).operator = 'road_parametric_polynomial'
         row = box.row(align=True)
         row.label(text='Junctions')
         row = box.row(align=True)
