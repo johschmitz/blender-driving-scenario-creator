@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.21.0] - 2023-06-27
+
+### Added
+- Operator for multi geometry ParamPoly3 geometry roads
+
+### Fixed
+- Heading issue with multi geometry clothoid roads resulting in broken OpenDRIVE
+  export
+
 ## [0.20.0] - 2023-05-18
 
 ### Added
@@ -309,7 +318,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.18.1...v0.19.0
