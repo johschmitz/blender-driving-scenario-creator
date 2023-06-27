@@ -66,7 +66,7 @@ class DSC_geometry_clothoid(DSC_geometry):
         if self.sections[-1]['params']['valid']:
             self.sections[-1]['params']['curve_type'] = 'spiral'
             self.sections[-1]['params']['point_start'] = params['points'][-2]
-            self.sections[-1]['params']['heading_start'] = params['heading_start']
+            self.sections[-1]['params']['heading_start'] = params['heading_start'] + self.heading_start_local
             self.sections[-1]['params']['point_end'] = params['points'][-1]
             self.sections[-1]['params']['heading_end'] = params['heading_start'] + self.sections[-1]['curve'].ThetaEnd
             self.sections[-1]['params']['length'] = self.sections[-1]['curve'].length
