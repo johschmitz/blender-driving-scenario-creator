@@ -12,7 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-from mathutils import Vector, Matrix, Euler
+from mathutils import Vector, Euler
 
 from math import pi
 
@@ -156,14 +156,13 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         self.params_snap = {
             'id_obj': None,
             'id_extra': None,
+            'id_lane': None,
             'point': Vector((0.0,0.0,0.0)),
             'normal': Vector((0.0,0.0,1.0)),
-            'type': None,
+            'point_type': None,
             'heading': 0,
             'curvature': 0,
             'slope': 0,
-            'width_left': 0,
-            'width_right': 0,
         }
 
     def modal(self, context, event):
@@ -193,7 +192,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             self.selected_curvature = 0
             self.selected_slope = 0
             self.state = 'SELECT_START'
-            self.params_input['design_speed'] = context.scene.road_properties.design_speed
+            self.params_input['design_speed'] = context.scene.dsc_properties.road_properties.design_speed
             self.params_input['point_start'] = self.selected_point
             self.params_input['point_end'] = self.selected_point
             # Create helper stencil mesh
@@ -213,8 +212,12 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 self.selected_point.z = self.selected_elevation
             else:
                 # Snap to existing objects if any, otherwise xy plane
-                hit, params_snap = helpers.mouse_to_object_params(
-                    context, event, filter=self.snap_filter)
+                if self.snap_filter == 'OpenDRIVE':
+                    hit, params_snap = helpers.mouse_to_road_params(
+                        context, event, road_type='road')
+                else:
+                    hit, params_snap = helpers.mouse_to_road_surface_params(
+                        context, event)
                 # Snap to object if not snapping to grid (with holding CTRL)
                 if hit and not event.ctrl:
                     self.params_snap = params_snap
@@ -246,8 +249,8 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 self.params_input['point_start'] = self.selected_point.copy()
                 self.params_input['heading_start'] = self.selected_heading_start
                 self.params_input['normal_start'] = self.selected_normal_start.copy()
-                if self.params_snap['type'] is not None:
-                    if self.params_snap['type'] != 'surface':
+                if self.params_snap['point_type'] is not None:
+                    if self.params_snap['point_type'] != 'surface':
                         self.params_input['connected_start'] = True
                 else:
                     self.params_input['connected_start'] = False
@@ -259,10 +262,10 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             self.params_input['point_end'] = self.selected_point.copy()
             self.params_input['heading_start'] = self.selected_heading_start
             self.params_input['heading_end'] = self.selected_heading_end + pi
-            if self.params_snap['type'] == None:
+            if self.params_snap['point_type'] == None:
                 self.params_input['connected_end'] = False
             else:
-                if self.params_snap['type'] != 'surface':
+                if self.params_snap['point_type'] != 'surface':
                     self.params_input['connected_end'] = True
                     self.params_input['curvature_end'] = self.selected_curvature
                     self.params_input['slope_end'] = self.selected_slope
@@ -278,13 +281,14 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 if self.state == 'SELECT_START':
                     self.id_odr_start = self.params_snap['id_obj']
                     self.id_extra_start = self.params_snap['id_extra']
-                    self.cp_type_start = self.params_snap['type']
+                    self.id_lane_start = self.params_snap['id_lane']
+                    self.cp_type_start = self.params_snap['point_type']
                     # Set elevation so that end point selection starts on the same level
                     self.selected_elevation = self.selected_point.z
                     self.state = 'SELECT_END'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_END':
-                    cp_type_end = self.params_snap['type']
+                    cp_type_end = self.params_snap['point_type']
                     # Create the final object
                     if self.input_valid(wireframe=False):
                         obj = self.create_object_3d(context)
@@ -299,7 +303,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                                 else:
                                     id_extra = self.id_extra_start
                                 helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-                                    self.id_odr_start, id_extra)
+                                    self.id_odr_start, id_extra, self.id_lane_start)
                             if self.params_input['connected_end']:
                                 link_type = 'end'
                                 # TODO keep it generic, direct junction should not appear at this point!
@@ -310,6 +314,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                                             ' ends (direct junctions) to each other!')
                                 else:
                                     id_extra = self.params_snap['id_extra']
+                                    id_lane = self.params_snap['id_lane']
                                 helpers.create_object_xodr_links(obj, link_type, cp_type_end,
                                     self.params_snap['id_obj'], id_extra)
                             # Remove stencil and go back to initial state to draw again

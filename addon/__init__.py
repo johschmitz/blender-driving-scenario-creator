@@ -95,8 +95,8 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.junction_generic', text='Generic junction (area)',
             icon_value=custom_icons['junction_area'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.popup_road_properties', text='Junction connecting road',
-            icon_value=custom_icons['junction_connecting_road'].icon_id).operator = 'junction_connecting_road'
+        row.operator('dsc.junction_connecting_road', text='Junction connecting road',
+            icon_value=custom_icons['junction_connecting_road'].icon_id)
 
         layout.label(text='OpenSCENARIO')
         box = layout.box()
@@ -122,6 +122,16 @@ class DSC_PT_panel_create(bpy.types.Panel):
 def menu_func_export(self, context):
     self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xosc, .xodr, .fbx/.gltf/.osgb)')
 
+class DSC_Properties(bpy.types.PropertyGroup):
+    road_properties: bpy.props.PointerProperty(
+        name='road_properties', type=DSC_road_properties)
+    connecting_road_properties: bpy.props.PointerProperty(
+        name='connecting_road_properties', type=DSC_road_properties)
+    entity_properties_vehicle: bpy.props.PointerProperty(
+        name='entity_properties_vehicle', type=DSC_entity_properties_vehicle)
+    entity_properties_pedestrian: bpy.props.PointerProperty(
+        name='entity_properties_pedestrian', type=DSC_entity_properties_pedestrian)
+
 classes = (
     DSC_enum_lane,
     DSC_OT_export,
@@ -145,6 +155,7 @@ classes = (
     DSC_entity_properties_vehicle,
     DSC_entity_properties_pedestrian,
     DSC_OT_popup_entity_properties,
+    DSC_Properties,
 )
 
 def register():
@@ -167,10 +178,8 @@ def register():
         bpy.utils.register_class(c)
     # Register export menu
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-    # Register property groups
-    bpy.types.Scene.road_properties = bpy.props.PointerProperty(type=DSC_road_properties)
-    bpy.types.Scene.entity_properties_vehicle = bpy.props.PointerProperty(type=DSC_entity_properties_vehicle)
-    bpy.types.Scene.entity_properties_pedestrian = bpy.props.PointerProperty(type=DSC_entity_properties_pedestrian)
+    # Register addon property group
+    bpy.types.Scene.dsc_properties = bpy.props.PointerProperty(type=DSC_Properties)
 
 def unregister():
     global custom_icons
@@ -181,8 +190,8 @@ def unregister():
         bpy.utils.unregister_class(c)
     # Get rid of custom icons
     bpy.utils.previews.remove(custom_icons)
-    # Get rid of property groups
-    del bpy.types.Scene.road_properties
+    # Get rid of addon property group
+    del bpy.types.Scene.dsc_properties
 
 if __name__ == '__main__':
     register()

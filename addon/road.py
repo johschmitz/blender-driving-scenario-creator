@@ -82,13 +82,13 @@ class road:
 
             # Remember connecting points for road snapping
             if self.params['road_split_type'] == 'start':
-                obj['cp_start_l'], obj['cp_start_r'] = self.get_split_cps('start')
+                obj['cp_start_l'], obj['cp_start_r'] = self.get_split_cps()
                 obj['cp_end_l'] = self.geometry.section[-1].params['point_end']
                 obj['cp_end_r'] = self.geometry.section[-1].params['point_end']
             elif self.params['road_split_type'] == 'end':
                 obj['cp_start_l'] = self.geometry.sections[0]['params']['point_start']
                 obj['cp_start_r'] = self.geometry.sections[0]['params']['point_start']
-                obj['cp_end_l'], obj['cp_end_r']= self.get_split_cps('end')
+                obj['cp_end_l'], obj['cp_end_r']= self.get_split_cps()
             else:
                 obj['cp_start_l'] = self.geometry.sections[0]['params']['point_start']
                 obj['cp_start_r'] = self.geometry.sections[0]['params']['point_start']
@@ -132,10 +132,10 @@ class road:
             obj['lanes_right_num'] = self.params['lanes_right_num']
             obj['lanes_left_types'] = self.params['lanes_left_types']
             obj['lanes_right_types'] = self.params['lanes_right_types']
-            obj['lanes_left_widths'] = self.params['lanes_left_widths']
-            obj['lanes_left_widths_change'] = self.params['lanes_left_widths_change']
-            obj['lanes_right_widths'] = self.params['lanes_right_widths']
-            obj['lanes_right_widths_change'] = self.params['lanes_right_widths_change']
+            obj['lanes_left_widths_start'] = self.params['lanes_left_widths_start']
+            obj['lanes_left_widths_end'] = self.params['lanes_left_widths_end']
+            obj['lanes_right_widths_start'] = self.params['lanes_right_widths_start']
+            obj['lanes_right_widths_end'] = self.params['lanes_right_widths_end']
             obj['lanes_left_road_mark_types'] = self.params['lanes_left_road_mark_types']
             obj['lanes_left_road_mark_weights'] = self.params['lanes_left_road_mark_weights']
             obj['lanes_left_road_mark_colors'] = self.params['lanes_left_road_mark_colors']
@@ -157,9 +157,14 @@ class road:
         if self.geometry.sections[-1]['params']['valid'] == False:
             valid = False
             return valid, None, None, []
-        length_broken_line = context.scene.road_properties.length_broken_line
-        self.set_lane_params(context.scene.road_properties)
-        lanes = context.scene.road_properties.lanes
+        if self.road_type == 'junction_connecting_road':
+            length_broken_line = context.scene.dsc_properties.connecting_road_properties.length_broken_line
+            self.set_lane_params(context.scene.dsc_properties.connecting_road_properties)
+            lanes = context.scene.dsc_properties.connecting_road_properties.lanes
+        else:
+            length_broken_line = context.scene.dsc_properties.road_properties.length_broken_line
+            self.set_lane_params(context.scene.dsc_properties.road_properties)
+            lanes = context.scene.dsc_properties.road_properties.lanes
         # Get values in t and s direction where the faces of the road start and end
         strips_s_boundaries = self.get_strips_s_boundaries(lanes, length_broken_line)
         # Calculate meshes for Blender
@@ -196,10 +201,10 @@ class road:
         '''
         self.params = {'lanes_left_num': road_properties.num_lanes_left,
                        'lanes_right_num': road_properties.num_lanes_right,
-                       'lanes_left_widths': [],
-                       'lanes_left_widths_change': [],
-                       'lanes_right_widths': [],
-                       'lanes_right_widths_change': [],
+                       'lanes_left_widths_start': [],
+                       'lanes_left_widths_end': [],
+                       'lanes_right_widths_start': [],
+                       'lanes_right_widths_end': [],
                        'lanes_left_types': [],
                        'lanes_right_types': [],
                        'lanes_left_road_mark_types': [],
@@ -215,15 +220,15 @@ class road:
                        'road_split_lane_idx': road_properties.road_split_lane_idx}
         for idx, lane in enumerate(road_properties.lanes):
             if lane.side == 'left':
-                self.params['lanes_left_widths'].insert(0, lane.width)
-                self.params['lanes_left_widths_change'].insert(0, lane.width_change)
+                self.params['lanes_left_widths_start'].insert(0, lane.width_start)
+                self.params['lanes_left_widths_end'].insert(0, lane.width_end)
                 self.params['lanes_left_types'].insert(0, lane.type)
                 self.params['lanes_left_road_mark_types'].insert(0, lane.road_mark_type)
                 self.params['lanes_left_road_mark_weights'].insert(0, lane.road_mark_weight)
                 self.params['lanes_left_road_mark_colors'].insert(0, lane.road_mark_color)
             elif lane.side == 'right':
-                self.params['lanes_right_widths'].append(lane.width)
-                self.params['lanes_right_widths_change'].append(lane.width_change)
+                self.params['lanes_right_widths_start'].append(lane.width_start)
+                self.params['lanes_right_widths_end'].append(lane.width_end)
                 self.params['lanes_right_types'].append(lane.type)
                 self.params['lanes_right_road_mark_types'].append(lane.road_mark_type)
                 self.params['lanes_right_road_mark_weights'].append(lane.road_mark_weight)
@@ -234,12 +239,12 @@ class road:
                 self.params['lane_center_road_mark_weight'] = lane.road_mark_weight
                 self.params['lane_center_road_mark_color'] = lane.road_mark_color
 
-    def get_split_cps(self, road_split_type):
+    def get_split_cps(self):
         '''
             Return the two connection points for a split road.
         '''
         t_cp_split = self.road_split_lane_idx_to_t()
-        if road_split_type == 'start':
+        if self.params['road_split_type'] == 'start':
             t = 0
             cp_base = self.geometry.sections[0]['params']['point_start']
         else:
@@ -273,49 +278,28 @@ class road:
             for idx in range(abs(lane_id_split)):
                 if lane_id_split > 0:
                     # Do not add lanes with 0 width
-                    if not ((self.params['road_split_type'] == 'start' and
-                                self.params['lanes_left_widths_change'][idx] == 'open') or
-                            (self.params['road_split_type'] == 'end' and \
-                                self.params['lanes_left_widths_change'][idx] == 'close')):
-                        t_cp_split += self.params['lanes_left_widths'][idx]
+                    if self.params['road_split_type'] == 'start' and \
+                            self.params['lanes_left_widths_start'][idx] > 0.0:
+                        t_cp_split += self.params['lanes_left_widths_start'][idx]
+                    elif self.params['road_split_type'] == 'end' and \
+                            self.params['lanes_left_widths_end'][idx] > 0.0:
+                        t_cp_split += self.params['lanes_left_widths_end'][idx]
                 else:
                     # Do not add lanes with 0 width
-                    if not ((self.params['road_split_type'] == 'start' and
-                                self.params['lanes_right_widths_change'][idx] == 'open') or
-                            (self.params['road_split_type'] == 'end' and \
-                                self.params['lanes_right_widths_change'][idx] == 'close')):
-                        t_cp_split -= self.params['lanes_right_widths'][idx]
+                    if self.params['road_split_type'] == 'start' and \
+                            self.params['lanes_right_widths_start'][idx] > 0.0:
+                        t_cp_split -= self.params['lanes_right_widths_start'][idx]
+                    elif self.params['road_split_type'] == 'end' and \
+                            self.params['lanes_right_widths_end'][idx] > 0.0:
+                        t_cp_split -= self.params['lanes_right_widths_end'][idx]
         return t_cp_split
-
-    def get_width_road_left(self, lanes):
-        '''
-            Return the width of the left road side calculated by suming up all
-            lane widths.
-        '''
-        width_road_left = 0
-        for idx, lane in enumerate(lanes):
-            if idx == 0:
-                if lane.road_mark_type != 'none':
-                    # If first lane has a line we need to add half its width
-                    width_line = lane.road_mark_width
-                    if lane.road_mark_type == 'solid_solid' or \
-                        lane.road_mark_type == 'solid_broken' or \
-                        lane.road_mark_type == 'broken_solid':
-                            width_road_left += width_line * 3.0 / 2.0
-                    else:
-                        width_road_left += width_line / 2.0
-            # Stop when reaching the right side
-            if lane.side == 'right':
-                break
-            if lane.side == 'left':
-                width_road_left += lane.width
-        return width_road_left
 
     def get_strips_t_values(self, lanes, s):
         '''
             Return list of t values of strip borders.
         '''
-        t = self.get_width_road_left(lanes)
+        t = 0
+        t_left_width_total = 0
         t_values = []
         # Make sure the road has a non-zero length
         if self.geometry.total_length == 0:
@@ -323,12 +307,10 @@ class road:
         # Build up t values lane by lane
         for idx_lane, lane in enumerate(lanes):
             s_norm = s / self.geometry.total_length
-            if lane.width_change == 'open':
-                lane_width_s = (3.0 * s_norm**2 - 2.0 * s_norm**3) * lane.width
-            elif lane.width_change == 'close':
-                lane_width_s = (1.0 - 3.0 * s_norm**2 + 2.0 * s_norm**3) * lane.width
+            if lane.width_start == lane.width_end:
+                lane_width_s = lane.width_start
             else:
-                lane_width_s = lane.width
+                lane_width_s = lane.width_start + (3.0 * s_norm**2 - 2.0 * s_norm**3) * (lane.width_end - lane.width_start)
             # Add lane width for right side of road BEFORE (in t-direction) road mark lines
             if lane.side == 'right':
                 width_left_lines_on_lane = 0.0
@@ -360,11 +342,20 @@ class road:
                     t_values.append(t -       width_line)
                     t_values.append(t - 2.0 * width_line)
                     t_values.append(t - 3.0 * width_line)
-                    t = t - 3.0 * width_line
+                    width_double_line = 3.0 * width_line
+                    t -= width_double_line
+                    if lane.side == 'left':
+                        t_left_width_total += width_double_line
+                    if lane.side == 'center':
+                        t_left_width_total += width_double_line/2
                 else:
                     t_values.append(t)
                     t_values.append(t - width_line)
                     t -= width_line
+                    if lane.side == 'left':
+                        t_left_width_total += width_line
+                    if lane.side == 'center':
+                        t_left_width_total += width_line/2
             else:
                 t_values.append(t)
             # Add lane width for left side of road AFTER (in t-direction) road mark lines
@@ -387,7 +378,11 @@ class road:
                         width_right_lines_on_lane = width_line * 3.0 / 2.0
                     else:
                         width_right_lines_on_lane = width_line / 2.0
-                t -= lane_width_s - width_left_lines_on_lane - width_right_lines_on_lane
+                t_lane = lane_width_s - width_left_lines_on_lane - width_right_lines_on_lane
+                t -= t_lane
+                t_left_width_total += t_lane
+        for idx in range(len(t_values)):
+            t_values[idx] += t_left_width_total
         return t_values
 
     def get_strips_s_boundaries(self, lanes, length_broken_line):

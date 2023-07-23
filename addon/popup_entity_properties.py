@@ -47,17 +47,17 @@ class DSC_OT_popup_entity_properties(bpy.types.Operator):
 
     def invoke(self, context, event):
         if self.operator.startswith('entity_vehicle'):
-            entity_properties = context.scene.entity_properties_vehicle
+            entity_properties = context.scene.dsc_properties.entity_properties_vehicle
         else:
-            entity_properties = context.scene.entity_properties_pedestrian
+            entity_properties = context.scene.dsc_properties.entity_properties_pedestrian
         entity_properties.name = self.names[self.operator]
         return context.window_manager.invoke_popup(self)
 
     def draw(self, context):
         if self.operator.startswith('entity_vehicle'):
-            entity_properties = context.scene.entity_properties_vehicle
+            entity_properties = context.scene.dsc_properties.entity_properties_vehicle
         else:
-            entity_properties = context.scene.entity_properties_pedestrian
+            entity_properties = context.scene.dsc_properties.entity_properties_pedestrian
 
         box = self.layout.box()
 

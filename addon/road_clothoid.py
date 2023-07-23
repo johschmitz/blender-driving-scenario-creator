@@ -22,7 +22,6 @@ class DSC_OT_road_clothoid(DSC_OT_road):
     bl_options = {'REGISTER', 'UNDO'}
 
     object_type = 'road_clothoid'
-    snap_filter = 'OpenDRIVE'
 
     def __init__(self):
         self.geometry = DSC_geometry_clothoid()

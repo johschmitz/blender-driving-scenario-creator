@@ -22,16 +22,18 @@ from math import pi
 
 
 class junction_joint:
-    def __init__(self, id_joint, id_incoming, contact_point_type,
-                 contact_point_vec, heading, slope, width_left, width_right):
+    def __init__(self, id_joint, id_incoming, contact_point_type, contact_point_vec,
+                 heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
         self.id_joint = id_joint
         self.id_incoming = id_incoming
         self.contact_point_type = contact_point_type
         self.contact_point_vec = contact_point_vec
         self.heading = heading
         self.slope = slope
-        self.width_left = width_left
-        self.width_right = width_right
+        self.lane_widths_left = lane_widths_left
+        self.lane_widths_right = lane_widths_right
+        self.lane_types_left = lane_types_left
+        self.lane_types_right = lane_types_right
 
 class junction:
 
@@ -61,7 +63,7 @@ class junction:
         return id_next
 
     def add_joint_incoming(self, id_incoming, contact_point_type, contact_point_vec,
-                 heading, slope, width_left, width_right):
+                 heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
         '''
             Add a new joint, i.e. an incoming road to the junction if it does
             not exist yet.
@@ -70,18 +72,19 @@ class junction:
             return False
         else:
             id_joint = self.get_new_id_joint()
-            joint = junction_joint(id_joint, id_incoming, contact_point_type,
-                contact_point_vec, heading, slope, width_left, width_right)
+            joint = junction_joint(id_joint, id_incoming, contact_point_type, contact_point_vec,
+                                   heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
             self.joints.append(joint)
             return True
 
-    def add_joint_open(self, contact_point_vec, heading, slope, width_left, width_right):
+    def add_joint_open(self, contact_point_vec, heading, slope,
+                       lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
         '''
             Add a new joint without connecting to an incoming road.
         '''
         id_joint = self.get_new_id_joint()
         joint = junction_joint(id_joint, None, 'junction_joint_open', contact_point_vec,
-            heading, slope, width_left, width_right)
+            heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
         self.joints.append(joint)
         return True
 
@@ -222,9 +225,9 @@ class junction:
                 vector_s = Vector((1.0, 0.0, 0.0))
                 vector_s.rotate(Matrix.Rotation(joint.heading + pi/2, 3, 'Z'))
                 point_local_left = matrix_world.inverted() \
-                    @ (joint.contact_point_vec + vector_s * joint.width_left)
+                    @ (joint.contact_point_vec + vector_s * sum(joint.lane_widths_left))
                 point_local_right = matrix_world.inverted() \
-                    @ (joint.contact_point_vec - vector_s * joint.width_right)
+                    @ (joint.contact_point_vec - vector_s * sum(joint.lane_widths_right))
                 # Get heading vector of incoming road joint (t-direction)
                 vector_t = Vector((1.0, 0.0, 0.0))
                 vector_t.rotate(Matrix.Rotation(joint.heading, 3, 'Z'))

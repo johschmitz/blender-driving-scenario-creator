@@ -54,8 +54,8 @@ class DSC_OT_junction_generic(bpy.types.Operator):
         # Update on move
         if event.type == 'MOUSEMOVE':
             # Snap to existing objects if any, otherwise xy plane
-            self.snapped, self.params_snap = helpers.mouse_to_object_params(
-                context, event, filter=self.snap_filter)
+            self.snapped, self.params_snap = helpers.mouse_to_road_params(
+                context, event, road_type='road')
             if self.snapped:
                 context.scene.cursor.location = self.params_snap['point']
             else:
@@ -67,10 +67,22 @@ class DSC_OT_junction_generic(bpy.types.Operator):
                 if self.state == 'SELECT_INCOMING':
                     if self.snapped:
                         contact_point_vec = self.params_snap['point'].copy()
+                        # Calculate width of junction joints based on road direction
+                        if self.params_snap['point_type'].startswith('cp_end'):
+                            joint_widths_left = self.params_snap['lane_widths_left']
+                            joint_widths_right = self.params_snap['lane_widths_right']
+                            joint_lane_types_left = self.params_snap['lane_types_left']
+                            joint_lane_types_right = self.params_snap['lane_types_right']
+                        else:
+                            # Switch direction if road points away from junction joint
+                            joint_widths_left = self.params_snap['lane_widths_right']
+                            joint_widths_right = self.params_snap['lane_widths_left']
+                            joint_lane_types_left = self.params_snap['lane_types_right']
+                            joint_lane_types_right = self.params_snap['lane_types_left']
                         joint_added = self.junction.add_joint_incoming(self.params_snap['id_obj'],
-                            self.params_snap['type'], contact_point_vec,
+                            self.params_snap['point_type'], contact_point_vec,
                             self.params_snap['heading'], self.params_snap['slope'],
-                            self.params_snap['width_left'], self.params_snap['width_right'])
+                            joint_widths_left, joint_widths_right, joint_lane_types_left, joint_lane_types_right)
                         if joint_added:
                             self.junction.update_stencil()
                         else:

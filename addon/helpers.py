@@ -18,7 +18,7 @@ from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_
 from mathutils.geometry import intersect_line_plane
 from mathutils import Vector, Matrix
 
-from math import pi
+from math import pi, inf
 
 
 def get_new_id_opendrive(context):
@@ -148,7 +148,7 @@ def get_object_xodr_by_id(id_odr):
             if obj['id_odr'] == id_odr:
                 return obj
 
-def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
+def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra, id_lane):
     '''
         Create OpenDRIVE predecessor/successor linkage for current object with
         other object.
@@ -194,6 +194,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
                 # Case: connecting road (in junction) to incoming road
                 obj['id_junction'] = id_other
                 obj['id_joint_start'] = id_extra
+                obj['id_lane_joint_start'] = id_lane
                 if obj_other['joints'][id_extra]['id_incoming'] != None:
                     obj['link_predecessor_id_l'] = obj_other['joints'][id_extra]['id_incoming']
                     obj['link_predecessor_cp_l'] = obj_other['joints'][id_extra]['contact_point_type']
@@ -224,6 +225,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
                 # Case: connecting road (in junction) to incoming road
                 obj['id_junction'] = id_other
                 obj['id_joint_end'] = id_extra
+                obj['id_lane_joint_end'] = id_lane
                 if obj_other['joints'][id_extra]['id_incoming'] != None:
                     obj['link_successor_id_l'] = obj_other['joints'][id_extra]['id_incoming']
                     obj['link_successor_cp_l'] = obj_other['joints'][id_extra]['contact_point_type']
@@ -234,6 +236,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
         else:
             id_joint = 2
         obj['joints'][id_joint]['id_incoming'] = id_other
+        obj['joints'][id_joint]['contact_point_type'] = cp_type_other
         # Connect connecting roads of this junction
         for obj_jcr in bpy.data.collections['OpenDRIVE'].objects:
             if obj_jcr.name.startswith('junction_connecting_road'):
@@ -257,7 +260,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
                     cp_type = 'cp_end_l'
             if 'junction' in obj.name:
                 # Case: junction to road
-                cp_type = None
+                cp_type = 'junction_joint'
             if cp_type_other == 'cp_start_l':
                 obj_other['link_predecessor_id_l'] = obj['id_odr']
                 obj_other['link_predecessor_cp_l'] = cp_type
@@ -320,20 +323,45 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra):
                                 obj_jcr['link_successor_id_l'] = obj['id_odr']
                                 obj_jcr['link_successor_cp_l'] = cp_type
 
+def set_connecting_road_properties(context, joint_side_start, road_contact_point, width_lane_incoming):
+    '''
+        Set the properties for construction of a connecting road.
+    '''
+    context.scene.dsc_properties.connecting_road_properties.junction_connecting_road = True
+    if joint_side_start == 'left':
+        context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 1
+        context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 0
+        if road_contact_point == 'start':
+            # We add lanes from left to right so first left has index 0, center lane index 1
+            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_start = width_lane_incoming
+        else:
+            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_end = width_lane_incoming
+    else:
+        context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 0
+        context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 1
+        if road_contact_point == 'start':
+            # We add lanes from left to right so center lane has index 0, first right index 1
+            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_start = width_lane_incoming
+        else:
+            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_end = width_lane_incoming
+    # Remove lane markings for connecting roads
+    context.scene.dsc_properties.connecting_road_properties.lanes[0].road_mark_type = 'none'
+    context.scene.dsc_properties.connecting_road_properties.lanes[1].road_mark_type = 'none'
 
-def get_width_road_sides(obj):
+def get_lane_widths_road_joint(obj, contact_point):
     '''
-        Return the width of the left and right road sid e calculated by suming up
-        all lane widths.
+        Return the widths of the left and right road side of the road end
+        touching a junction joint.
     '''
-    # TODO take edge lines and opening/closing lanes into account
-    width_left = 0
-    width_right = 0
-    for width_lane_left in obj['lanes_left_widths']:
-        width_left += width_lane_left
-    for width_lane_right in obj['lanes_right_widths']:
-        width_right += width_lane_right
-    return width_left, width_right
+    lane_widths_left = []
+    lane_widths_right = []
+    if contact_point == 'start':
+        lane_widths_left = obj['lanes_left_widths_start']
+        lane_widths_right = obj['lanes_right_widths_start']
+    else:
+        lane_widths_left = obj['lanes_left_widths_end']
+        lane_widths_right = obj['lanes_right_widths_end']
+    return lane_widths_left, lane_widths_right
 
 def select_activate_object(context, obj):
     '''
@@ -391,7 +419,7 @@ def mouse_to_elevation(context, event, point):
     else:
         return point_elevation.z
 
-def raycast_mouse_to_object(context, event, filter=None):
+def raycast_mouse_to_dsc_object(context, event):
     '''
         Convert mouse pointer position to hit obj of DSC type.
     '''
@@ -402,15 +430,11 @@ def raycast_mouse_to_object(context, event, filter=None):
         direction=view_vector_mouse)
     # Filter object type
     if hit:
-        if filter is not None:
-            # Return hit only if not filtered out
-            if filter in obj:
-                return True, point, normal, obj
-            else:
-                return False, point, normal, None
-        else:
-            # No filter, return any hit
+        # Return hit only if not filtered out
+        if 'dsc_category' in obj:
             return True, point, normal, obj
+        else:
+            return False, point, normal, None
     else:
         # No hit
         return False, point, normal, None
@@ -425,28 +449,30 @@ def point_to_road_connector(obj, point):
     dist_end_r = (Vector(obj['cp_end_r']) - point).length
     distances = [dist_start_l, dist_start_r, dist_end_l, dist_end_r]
     arg_min_dist = distances.index(min(distances))
-    width_left, width_right = get_width_road_sides(obj)
+    width_left_start, width_right_start = get_lane_widths_road_joint(obj, contact_point='start')
+    width_left_end, width_right_end = get_lane_widths_road_joint(obj, contact_point='end')
     if arg_min_dist == 0:
         return 'cp_start_l', Vector(obj['cp_start_l']), obj['geometry'][0]['heading_start'] - pi, \
             obj['geometry'][0]['curvature_start'], obj['geometry'][0]['slope_start'], \
-            width_left, width_right
+            width_left_start, width_right_start, obj['lanes_left_types'], obj['lanes_right_types']
     if arg_min_dist == 1:
         return 'cp_start_r', Vector(obj['cp_start_r']), obj['geometry'][0]['heading_start'] - pi, \
             obj['geometry'][0]['curvature_start'], obj['geometry'][0]['slope_start'], \
-            width_left, width_right
+            width_left_start, width_right_start, obj['lanes_left_types'], obj['lanes_right_types']
     elif arg_min_dist == 2:
         return 'cp_end_l', Vector(obj['cp_end_l']), obj['geometry'][-1]['heading_end'], \
             obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], \
-            width_left, width_right
+            width_left_end, width_right_end, obj['lanes_left_types'], obj['lanes_right_types']
     else:
         return 'cp_end_r', Vector(obj['cp_end_r']), obj['geometry'][-1]['heading_end'], \
             obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], \
-            width_left, width_right
+            width_left_end, width_right_end, obj['lanes_left_types'], obj['lanes_right_types']
 
-def point_to_junction_joint(obj, point):
+def point_to_junction_joint_exterior(obj, point):
     '''
-        Get joint parameters from closest joint including connecting road ID,
-        contact point type, vector and heading from an existing junction.
+        Get joint parameters for the exterior side from closest joint including
+        connecting road ID, contact point type, vector and heading from an
+        existing junction.
     '''
     # Calculate which connecting point is closest to input point
     joints = obj['joints']
@@ -458,6 +484,115 @@ def point_to_junction_joint(obj, point):
     arg_min_dist = distances.index(min(distances))
     return joints[arg_min_dist]['id_joint'], joints[arg_min_dist]['contact_point_type'], \
         cp_vectors[arg_min_dist], joints[arg_min_dist]['heading'] - pi, joints[arg_min_dist]['slope']
+
+def get_closest_joint_lane_contact_point(joint, point, joint_side):
+    '''
+        Return the contact points for the closest lane of a junction joint.
+    '''
+    lane_center_points_left = []
+    lane_center_points_right = []
+    lane_contact_points_left = []
+    lane_contact_points_right = []
+    lane_ids_left = []
+    lane_ids_right = []
+
+    if joint_side == 'left' or joint_side == 'both':
+        # Find all left side lane contact points
+        t = 0
+        lane_id = 0
+        for width_left in joint['lane_widths_left']:
+            t_contact_point = t
+            t += width_left
+            t_lane_center = t - width_left/2
+            lane_id += 1
+            lane_ids_left.append(lane_id)
+            vec_hdg = Vector((1.0, 0.0, 0.0))
+            vec_hdg.rotate(Matrix.Rotation(joint['heading'] + pi/2, 4, 'Z'))
+            lane_center_points_left.append(Vector(joint['contact_point_vec']) + t_lane_center * vec_hdg)
+            lane_contact_points_left.append(Vector(joint['contact_point_vec']) + t_contact_point * vec_hdg)
+
+    if joint_side == 'right' or joint_side == 'both':
+        # Find all right side lane contact points
+        t = 0
+        lane_id = 0
+        for width_right in joint['lane_widths_right']:
+            t_contact_point = t
+            t -= width_right
+            t_lane_center = t + width_right/2
+            lane_id -= 1
+            lane_ids_right.append(lane_id)
+            vec_hdg = Vector((1.0, 0.0, 0.0))
+            vec_hdg.rotate(Matrix.Rotation(joint['heading'] + pi/2, 4, 'Z'))
+            lane_center_points_right.append(Vector(joint['contact_point_vec']) + t_lane_center * vec_hdg)
+            lane_contact_points_right.append(Vector(joint['contact_point_vec']) + t_contact_point * vec_hdg)
+
+    # Find the closest contact point, ignore all non-driving lanes
+    d_min = inf
+    id_lane_cp = None
+    lane_width = None
+    lane_type = None
+    contact_point_vec = None
+    lane_center_vec = None
+    # Left lanes
+    for idx_lane, lane_center_point in enumerate(lane_center_points_left):
+        lane_type = joint['lane_types_left'][idx_lane]
+        if lane_type == 'driving' or lane_type == 'stop' or lane_type == 'onRamp' or lane_type == 'offRamp':
+            distance = (lane_center_point - point).length
+            # Take the contact point for the lane with the closest center point
+            if distance < d_min:
+                d_min = distance
+                id_lane_cp = lane_ids_left[idx_lane]
+                lane_width = joint['lane_widths_left'][idx_lane]
+                contact_point_vec = lane_contact_points_left[idx_lane]
+                lane_center_vec = lane_center_point
+    # Right lanes
+    for idx_lane, lane_center_point in enumerate(lane_center_points_right):
+        lane_type = joint['lane_types_right'][idx_lane]
+        if lane_type == 'driving' or lane_type == 'stop' or lane_type == 'onRamp' or lane_type == 'offRamp':
+            distance = (lane_center_point - point).length
+            # Take the contact point for the lane with the closest center point
+            if distance < d_min:
+                d_min = distance
+                id_lane_cp = lane_ids_right[idx_lane]
+                lane_width = joint['lane_widths_right'][idx_lane]
+                contact_point_vec = lane_contact_points_right[idx_lane]
+                lane_center_vec = lane_center_point
+
+    return [joint, id_lane_cp, lane_width, lane_type, contact_point_vec, lane_center_vec]
+
+def get_closest_lane_contact_point(lane_contact_points, point):
+    '''
+        Return closest lane contact point from a list of lane contact points.
+    '''
+    d_min = inf
+    for lane_contact_point in lane_contact_points:
+        # Find the closest lane center point
+        lane_center_point = lane_contact_point[4]
+        distance = (lane_center_point - point).length
+        if distance < d_min:
+            d_min = distance
+            joint, id_lane_cp, lane_width, lane_type, contact_point_vec = lane_contact_point[:-1]
+
+    return joint, id_lane_cp, lane_width, lane_type, contact_point_vec
+
+def point_to_junction_joint_interior(obj, point, joint_side):
+    '''
+        Get joint parameters for the interior side from closest joint including
+        connecting road ID, lane ID, contact point type, vector and heading from
+        an existing junction.
+    '''
+    joints = obj['joints']
+    lane_contact_points = []
+    for joint in joints:
+        closest_cp = get_closest_joint_lane_contact_point(joint, point, joint_side=joint_side)
+        if closest_cp[1] != None:
+            lane_contact_points.append(closest_cp)
+
+    joint_cp, id_lane_cp, lane_width, lane_type, contact_point_vec = get_closest_lane_contact_point(
+        lane_contact_points, point)
+
+    return joint_cp['id_joint'], joint_cp['contact_point_type'], \
+        contact_point_vec, joint_cp['heading'] - pi, joint_cp['slope'], id_lane_cp, lane_width, lane_type
 
 def point_to_object_connector(obj, point):
     '''
@@ -477,12 +612,100 @@ def project_point_vector_2d(point_start, heading_start, point_selected):
     else:
         return point_selected
 
-def mouse_to_object_params(context, event, filter):
+def mouse_to_road_params(context, event, road_type, joint_side='both'):
     '''
-        Check if an object is hit and return a connection (snapping) point. In
-        case of OpenDRIVE objects including heading, curvature and slope. Filter
-        may be used to distinguish between OpenDRIVE, OpenSCENARIO and any
-        object (set filter to None).
+        Check if a road is hit and return snapping parameters. The road side
+        parameter determines which side to snap to (left|right|both) for
+        junction connecting roads. Sides are determined based on incoming
+        direction towards the junction interior.
+    '''
+    # Initialize with some defaults in case nothing is hit
+    hit = False
+    id_obj = None
+    id_extra = None
+    id_lane = None
+    point_type = None
+    hit_joint_side = None
+    snapped_point = Vector((0.0,0.0,0.0))
+    snapped_normal = Vector((0.0,0.0,1.0))
+    heading = 0
+    curvature = 0
+    slope = 0
+    lane_widths_left = []
+    lane_widths_right = []
+    lane_types_left = []
+    lane_types_right = []
+    dsc_hit, raycast_point, raycast_normal, obj \
+        = raycast_mouse_to_dsc_object(context, event)
+    if dsc_hit:
+        # DSC mesh hit
+        if road_type == 'road':
+            if obj['dsc_category'] == 'OpenDRIVE':
+                if obj['dsc_type'] == 'road':
+                    hit = True
+                    point_type, snapped_point, heading, curvature, \
+                    slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right \
+                        = point_to_road_connector(obj, raycast_point)
+                    id_obj = obj['id_odr']
+                    if obj['road_split_type'] == 'end':
+                        if point_type == 'cp_end_l' or point_type == 'cp_end_r':
+                            if 'id_direct_junction_end' in obj:
+                                id_extra = obj['id_direct_junction_end']
+                    elif obj['road_split_type'] == 'start':
+                        if point_type == 'cp_start_l' or point_type == 'cp_start_r':
+                            if 'id_direct_junction_start' in obj:
+                                id_extra = obj['id_direct_junction_start']
+            if obj.name.startswith('junction_area'):
+                # This path is for incoming road to junction joint snapping
+                hit = True
+                id_joint, point_type, snapped_point, heading, slope = \
+                    point_to_junction_joint_exterior(obj, raycast_point)
+                # Set both IDs to the junction ID
+                id_obj = obj['id_odr']
+                id_extra = id_joint
+        if road_type == 'junction_connecting_road':
+            if obj.name.startswith('junction_area'):
+                # This path is for junction connecting roads
+                hit = True
+                id_joint, point_type, snapped_point, heading, slope, id_lane, lane_width, lane_type = \
+                    point_to_junction_joint_interior(obj, raycast_point, joint_side=joint_side)
+                heading = heading - pi
+                # Set both IDs to the junction ID
+                id_obj = obj['id_odr']
+                id_extra = id_joint
+            if id_lane != None:
+                # Determine road side based on lane ID and reference line direction
+                if id_lane > 0:
+                    hit_joint_side = 'left'
+                    lane_widths_left = [lane_width]
+                    lane_widths_right = []
+                    lane_types_left = [lane_type]
+                    lane_types_right = []
+                elif id_lane < 0:
+                    hit_joint_side = 'right'
+                    lane_widths_left = []
+                    lane_widths_right = [lane_width]
+                    lane_types_left = []
+                    lane_types_right = [lane_type]
+    return hit ,{'id_obj': id_obj,
+                 'id_extra': id_extra,
+                 'id_lane': id_lane,
+                 'joint_side': hit_joint_side,
+                 'point': snapped_point,
+                 'normal': snapped_normal,
+                 'point_type': point_type,
+                 'heading': heading,
+                 'curvature': curvature,
+                 'slope': slope,
+                 'lane_widths_left': lane_widths_left,
+                 'lane_widths_right': lane_widths_right,
+                 'lane_types_left': lane_types_left,
+                 'lane_types_right': lane_types_right,
+                 }
+
+def mouse_to_scenario_entity_params(context, event):
+    '''
+        Check if an entity is hit and return snapping parameters.
     '''
     # Initialize with some defaults in case nothing is hit
     hit = False
@@ -494,48 +717,46 @@ def mouse_to_object_params(context, event, filter):
     heading = 0
     curvature = 0
     slope = 0
-    width_left = 0
-    width_right = 0
     # Do the raycasting
-    if filter is None:
-        dsc_hit, raycast_point, raycast_normal, obj \
-            = raycast_mouse_to_object(context, event, filter=None)
-    else:
-        dsc_hit, raycast_point, raycast_normal, obj \
-        = raycast_mouse_to_object(context, event, filter='dsc_category')
+    dsc_hit, raycast_point, raycast_normal, obj \
+        = raycast_mouse_to_dsc_object(context, event)
     if dsc_hit:
         # DSC mesh hit
-        if filter == 'OpenDRIVE':
-            if obj['dsc_category'] == 'OpenDRIVE':
-                if obj['dsc_type'] == 'road':
-                    hit = True
-                    point_type, snapped_point, heading, curvature, \
-                    slope, width_left, width_right = point_to_road_connector(obj, raycast_point)
-                    id_obj = obj['id_odr']
-                    if obj['road_split_type'] == 'end':
-                        if point_type == 'cp_end_l' or point_type == 'cp_end_r':
-                            if 'id_direct_junction_end' in obj:
-                                id_extra = obj['id_direct_junction_end']
-                    elif obj['road_split_type'] == 'start':
-                        if point_type == 'cp_start_l' or point_type == 'cp_start_r':
-                            if 'id_direct_junction_start' in obj:
-                                id_extra = obj['id_direct_junction_start']
-        if filter == 'OpenDRIVE' or filter == 'OpenDRIVE_junction':
-            if obj.name.startswith('junction_area'):
-                # This path is for incoming road to junction joint snapping
-                hit = True
-                id_joint, point_type, snapped_point, heading, slope = point_to_junction_joint(obj, raycast_point)
-                if filter == 'OpenDRIVE_junction':
-                    heading = heading - pi
-                # For incoming junction connection set both IDs to the junction ID
-                id_obj = obj['id_odr']
-                id_extra = id_joint
-        elif filter == 'OpenSCENARIO':
-            if obj['dsc_category'] == 'OpenSCENARIO':
-                hit = True
-                point_type, snapped_point, heading = point_to_object_connector(obj, raycast_point)
-                id_obj = obj.name
-        elif filter == 'surface':
+        if obj['dsc_category'] == 'OpenSCENARIO':
+            hit = True
+            point_type, snapped_point, heading = point_to_object_connector(obj, raycast_point)
+            id_obj = obj.name
+    return hit ,{'id_obj': id_obj,
+                 'id_extra': id_extra,
+                 'point': snapped_point,
+                 'normal': snapped_normal,
+                 'point_type': point_type,
+                 'heading': heading,
+                 'curvature': curvature,
+                 'slope': slope,
+                 }
+
+def mouse_to_road_surface_params(context, event):
+    '''
+        Check if a road surface is hit and return a snapping parameters.
+    '''
+    # Initialize with some defaults in case nothing is hit
+    hit = False
+    id_obj = None
+    id_extra = None
+    id_lane = None
+    point_type = None
+    snapped_point = Vector((0.0,0.0,0.0))
+    snapped_normal = Vector((0.0,0.0,1.0))
+    heading = 0
+    curvature = 0
+    slope = 0
+    # Do the raycasting
+    dsc_hit, raycast_point, raycast_normal, obj \
+        = raycast_mouse_to_dsc_object(context, event)
+    if dsc_hit:
+        # DSC mesh hit
+        if obj['dsc_category'] == 'OpenDRIVE':
             hit = True
             point_type = 'surface'
             snapped_point = raycast_point
@@ -543,14 +764,14 @@ def mouse_to_object_params(context, event, filter):
             id_obj = obj.name
     return hit ,{'id_obj': id_obj,
                  'id_extra': id_extra,
+                 'id_lane': id_lane,
                  'point': snapped_point,
                  'normal': snapped_normal,
-                 'type': point_type,
+                 'point_type': point_type,
                  'heading': heading,
                  'curvature': curvature,
                  'slope': slope,
-                 'width_left': width_left,
-                 'width_right': width_right,}
+                 }
 
 def assign_road_materials(obj):
     '''

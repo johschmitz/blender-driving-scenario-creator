@@ -18,7 +18,7 @@ from scenariogeneration import xosc
 from scenariogeneration import xodr
 
 from mathutils import Vector
-from math import pi
+from math import pi, copysign
 
 import pathlib
 import subprocess
@@ -442,6 +442,9 @@ class DSC_OT_export(bpy.types.Operator):
                 if obj.name.startswith('junction_area'):
                     incoming_roads = []
                     junction_id = obj['id_odr']
+                    # First create the basic junction
+                    junction = xodr.Junction('junction_' + str(junction_id), junction_id)
+                    # Second get all incoming roads
                     for joint in obj['joints']:
                         inc_road = xodr.get_road_by_id(roads, joint['id_incoming'])
                         if(inc_road != None):
@@ -449,14 +452,13 @@ class DSC_OT_export(bpy.types.Operator):
                         else:
                             self.report({'WARNING'}, 'Junction with ID {}'
                             ' is missing a connection.'.format(obj['id_odr']))
-                    # Find and export connecting roads of this junction
-                    junction_roads = []
+                    # Third find and export connecting roads
                     for obj_jcr in bpy.data.collections['OpenDRIVE'].objects:
                         if obj_jcr.name.startswith('junction_connecting_road'):
                             if obj_jcr['id_junction'] == junction_id:
                                 if 'link_predecessor_id_l' in obj_jcr and 'link_successor_id_l' in obj_jcr:
                                     # Create a junction connecting road
-                                    # TODO for now we use a single spiral, later we should use arc - spiral - arc
+                                    # TODO for now we use a single spiral, later we should use spiral - arc - spiral
                                     planview = xodr.PlanView()
                                     planview.set_start_point(obj_jcr['geometry'][0]['point_start'][0],
                                         obj_jcr['geometry'][0]['point_start'][1],obj_jcr['geometry'][0]['heading_start'])
@@ -464,28 +466,57 @@ class DSC_OT_export(bpy.types.Operator):
                                         obj_jcr['geometry'][0]['curvature_end'], length=obj_jcr['geometry'][0]['length'])
                                     planview.add_geometry(geometry)
                                     lanes = self.create_lanes(obj_jcr)
-                                    road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
-                                    self.add_elevation_profiles(obj_jcr, road)
-                                    # Connect the junction connecting road to incoming and connecting roads
+                                    connecting_road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
+                                    self.add_elevation_profiles(obj_jcr, connecting_road)
+
                                     incoming_road = self.get_road_by_id(roads, obj_jcr['link_predecessor_id_l'])
-                                    contact_point = mapping_contact_point[obj_jcr['link_predecessor_cp_l']]
-                                    road.add_predecessor(xodr.ElementType.road, incoming_road.id, contact_point)
-                                    xodr.create_lane_links(road, incoming_road)
-                                    incoming_road = self.get_road_by_id(roads, obj_jcr['link_successor_id_l'])
-                                    contact_point = mapping_contact_point[obj_jcr['link_successor_cp_l']]
-                                    road.add_successor(xodr.ElementType.road, incoming_road.id, contact_point)
-                                    xodr.create_lane_links(road, incoming_road)
-                                    junction_roads.append(road)
-                                    # Create lane links with incoming roads
-                    # Finally create the junction
-                    junction = xodr.create_junction(
-                        junction_roads, junction_id, incoming_roads, 'junction_' + str(junction_id))
-                    num_junctions += 1
+                                    outgoing_road = self.get_road_by_id(roads, obj_jcr['link_successor_id_l'])
+
+                                    if incoming_road != None and outgoing_road != None:
+                                        # Incoming road
+                                        contact_point = mapping_contact_point[obj_jcr['link_predecessor_cp_l']]
+                                        if obj['joints'][obj_jcr['id_joint_start']]['contact_point_type'].startswith('cp_end'):
+                                            lane_id_incoming = obj_jcr['id_lane_joint_start']
+                                        else:
+                                            lane_id_incoming = -obj_jcr['id_lane_joint_start']
+                                        lane_offset_incoming = copysign(abs(lane_id_incoming) - 1, lane_id_incoming)
+                                        connecting_road.add_predecessor(xodr.ElementType.road, incoming_road.id, contact_point, lane_offset_incoming)
+                                        # Lane linking for the junction connection elements
+                                        if obj_jcr['lanes_left_num'] == 1:
+                                            lane_id_connecting = 1
+                                        elif obj_jcr['lanes_right_num'] == 1:
+                                            lane_id_connecting = -1
+                                        else:
+                                            self.report({'ERROR'}, 'Only single lane connecting roads are supported!')
+                                        connection_in = xodr.Connection(incoming_road.id, connecting_road.id, xodr.ContactPoint.start)
+                                        connection_in.add_lanelink(lane_id_incoming, lane_id_connecting)
+                                        junction.add_connection(connection_in)
+                                        # Create the lane linking in the road lane level
+                                        xodr.create_lane_links(connecting_road, incoming_road)
+
+                                        # Outgoing road
+                                        contact_point = mapping_contact_point[obj_jcr['link_successor_cp_l']]
+                                        if obj['joints'][obj_jcr['id_joint_end']]['contact_point_type'].startswith('cp_end'):
+                                            lane_id_outgoing = obj_jcr['id_lane_joint_end']
+                                        else:
+                                            lane_id_outgoing = -obj_jcr['id_lane_joint_end']
+                                        lane_offset_outgoing = copysign(abs(lane_id_outgoing) - 1, lane_id_outgoing)
+                                        connecting_road.add_successor(xodr.ElementType.road, outgoing_road.id, contact_point, lane_offset_outgoing)
+                                        ####
+                                        # (Unfortunately) outgoing connection links should not be created
+                                        # according to OpenDRIVE 1.7/1.8 standard so we don't do that here.
+                                        ####
+                                        # Create the lane linking in the road lane level
+                                        xodr.create_lane_links(connecting_road, outgoing_road)
+
+                                    # Junction connecting roads also need to be registered as "normal" roads
+                                    odr.add_road(connecting_road)
+
+                    # Finally add the junction
                     print('Add junction with ID', junction_id)
                     odr.add_junction(junction)
-                    # Junction connecting roads also need to be registered as "normal" roads
-                    for road in junction_roads:
-                        odr.add_road(road)
+
+        # Create the OpenDRIVE XML file
         odr.adjust_startpoints()
         odr.write_xml(str(xodr_path))
 
@@ -636,8 +667,8 @@ class DSC_OT_export(bpy.types.Operator):
         lane_center.add_roadmark
         lanesection = xodr.LaneSection(0,lane_center)
         for idx in range(obj['lanes_left_num']):
-            a,b,c,d = self.get_lane_width_coefficients(obj['lanes_left_widths'][idx],
-                obj['lanes_left_widths_change'][idx], obj['geometry_total_length'])
+            a,b,c,d = self.get_lane_width_coefficients(obj['lanes_left_widths_start'][idx],
+                obj['lanes_left_widths_end'][idx], obj['geometry_total_length'])
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_left_types'][idx]],
                 a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_left_road_mark_types'][idx],
@@ -646,8 +677,8 @@ class DSC_OT_export(bpy.types.Operator):
             lane.add_roadmark(road_mark)
             lanesection.add_left_lane(lane)
         for idx in range(obj['lanes_right_num']):
-            a,b,c,d = self.get_lane_width_coefficients(obj['lanes_right_widths'][idx],
-                obj['lanes_right_widths_change'][idx], obj['geometry_total_length'])
+            a,b,c,d = self.get_lane_width_coefficients(obj['lanes_right_widths_start'][idx],
+                obj['lanes_right_widths_end'][idx], obj['geometry_total_length'])
             lane = xodr.Lane(lane_type=mapping_lane_type[obj['lanes_right_types'][idx]],
                 a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_right_road_mark_types'][idx],
@@ -659,25 +690,20 @@ class DSC_OT_export(bpy.types.Operator):
 
         return lanes
 
-    def get_lane_width_coefficients(self, lane_width, width_change, length_road):
+    def get_lane_width_coefficients(self, width_start, width_end, length_road):
         '''
             Return coefficients a, b, c, d for lane width polynomial
         '''
-        if width_change == 'open':
-            a=0.0
-            b=0.0
-            c=3.0 / length_road**2 * lane_width
-            d=-2.0 / length_road**3 * lane_width
-        elif width_change == 'close':
-            a=lane_width
-            b=0.0
-            c=-3.0 / length_road**2 * lane_width
-            d=2.0 / length_road**3 * lane_width
+        if width_start == width_end:
+            a = width_start
+            b = 0.0
+            c = 0.0
+            d = 0.0
         else:
-            a=lane_width
-            b=0.0
-            c=0.0
-            d=0.0
+            a = width_start
+            b = 0.0
+            c = 3.0 / length_road**2 * (width_end - width_start)
+            d = -2.0 / length_road**3 * (width_end - width_start)
         return a, b, c, d
 
     def link_lanes(self, roads):
@@ -720,18 +746,18 @@ class DSC_OT_export(bpy.types.Operator):
         # Go through left lanes
         for lane_idx in range(road_obj['lanes_left_num']):
             if cp_type == 'cp_end_l' or cp_type == 'cp_end_r':
-                if road_obj['lanes_left_widths_change'][lane_idx] != 'close':
+                if road_obj['lanes_left_widths_end'][lane_idx] != 0.0:
                     non_zero_lane_idxs.append(road_obj['lanes_left_num']-lane_idx)
             if cp_type == 'cp_start_l' or cp_type == 'cp_start_r':
-                if road_obj['lanes_left_widths_change'][lane_idx] != 'open':
+                if road_obj['lanes_left_widths_start'][lane_idx] != 0.0:
                     non_zero_lane_idxs.append(road_obj['lanes_left_num']-lane_idx)
         # Go through right lanes
         for lane_idx in range(road_obj['lanes_right_num']):
             if cp_type == 'cp_end_l' or cp_type == 'cp_end_r':
-                if road_obj['lanes_right_widths_change'][lane_idx] != 'close':
+                if road_obj['lanes_right_widths_end'][lane_idx] != 0.0:
                     non_zero_lane_idxs.append(-lane_idx-1)
             if cp_type == 'cp_start_l' or cp_type == 'cp_start_r':
-                if road_obj['lanes_right_widths_change'][lane_idx] != 'open':
+                if road_obj['lanes_right_widths_start'][lane_idx] != 0.0:
                     non_zero_lane_idxs.append(-lane_idx-1)
         return non_zero_lane_idxs
 

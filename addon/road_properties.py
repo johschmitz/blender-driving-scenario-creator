@@ -19,12 +19,12 @@ from . params_cross_section import params_cross_section
 # We need global wrapper callbacks due to Blender update callback implementation
 def callback_cross_section(self, context):
     self.update_cross_section()
+def callback_num_lanes(self, context):
+    self.update_num_lanes()
 def callback_lane_width(self, context):
     self.update_lane_width(context)
 def callback_road_mark_weight(self, context):
     self.update_road_mark_weight(context)
-def callback_num_lanes(self, context):
-    self.update_num_lanes()
 def callback_road_split(self, context):
     self.update_road_split(context)
 
@@ -37,18 +37,13 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
               ),
         default='right',
     )
-    width: bpy.props.FloatProperty(
-        name='Width',
-        default=4.0, min=0.01, max=10.0, step=1
+    width_start: bpy.props.FloatProperty(
+        name='Width start',
+        default=3.5, min=0.01, max=10.0, step=1
     )
-    # Used to open up a new lane or end a lane
-    width_change: bpy.props.EnumProperty(
-        name = 'Width change',
-        items=(('none', 'None', '', 0),
-               ('open', 'Open', '', 1),
-               ('close', 'Close', '', 2),
-              ),
-        default='none',
+    width_end: bpy.props.FloatProperty(
+        name='Width end',
+        default=3.5, min=0.01, max=10.0, step=1
     )
     type: bpy.props.EnumProperty(
         name = 'Type',
@@ -114,33 +109,34 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
 
     def update_lane_width(self, context):
         mapping_width_type_lane = {
-            'driving' : context.scene.road_properties.width_driving,
-            'entry' : context.scene.road_properties.width_driving,
-            'exit' : context.scene.road_properties.width_driving,
-            'onRamp' : context.scene.road_properties.width_driving,
-            'offRamp' : context.scene.road_properties.width_driving,
-            'stop' : context.scene.road_properties.width_stop,
-            'border' : context.scene.road_properties.width_border,
-            'shoulder' : context.scene.road_properties.width_shoulder,
-            'median' : context.scene.road_properties.width_median,
-            'none' : context.scene.road_properties.width_none,
+            'driving' : context.scene.dsc_properties.road_properties.width_driving,
+            'entry' : context.scene.dsc_properties.road_properties.width_driving,
+            'exit' : context.scene.dsc_properties.road_properties.width_driving,
+            'onRamp' : context.scene.dsc_properties.road_properties.width_driving,
+            'offRamp' : context.scene.dsc_properties.road_properties.width_driving,
+            'stop' : context.scene.dsc_properties.road_properties.width_stop,
+            'border' : context.scene.dsc_properties.road_properties.width_border,
+            'shoulder' : context.scene.dsc_properties.road_properties.width_shoulder,
+            'median' : context.scene.dsc_properties.road_properties.width_median,
+            'none' : context.scene.dsc_properties.road_properties.width_none,
             'center': 0,
         }
-        self.width = mapping_width_type_lane[self.type]
+        self.width_start = mapping_width_type_lane[self.type]
+        self.width_end = mapping_width_type_lane[self.type]
 
     def update_road_mark_weight(self, context):
         mapping_width_type_road_mark = {
             'none' : 0,
-            'standard' : context.scene.road_properties.width_line_standard,
-            'bold' : context.scene.road_properties.width_line_bold,
+            'standard' : context.scene.dsc_properties.road_properties.width_line_standard,
+            'bold' : context.scene.dsc_properties.road_properties.width_line_bold,
         }
         self.road_mark_width = mapping_width_type_road_mark[self.road_mark_weight]
 
     def update_road_split(self, context):
         # Avoid updating recursively
-        if context.scene.road_properties.lock_lanes:
+        if context.scene.dsc_properties.road_properties.lock_lanes:
             return
-        context.scene.road_properties.lock_lanes = True
+        context.scene.dsc_properties.road_properties.lock_lanes = True
         # Toggle
         if self.split_right == True:
             self.split_right = True
@@ -149,8 +145,8 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
             self.split_right = False
             road_split_lane_idx = self.idx + 1
         # Handle edge case for lane 0 and split at lane -1
-        num_lanes_left = context.scene.road_properties.num_lanes_left
-        num_lanes_right = context.scene.road_properties.num_lanes_right
+        num_lanes_left = context.scene.dsc_properties.road_properties.num_lanes_left
+        num_lanes_right = context.scene.dsc_properties.road_properties.num_lanes_right
         center_lane_idx = num_lanes_left
         if road_split_lane_idx == center_lane_idx:
             if num_lanes_right > 0:
@@ -161,15 +157,15 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
         if road_split_lane_idx > num_lanes_left + num_lanes_right:
             road_split_lane_idx = num_lanes_left + num_lanes_right
         # Store new split index
-        context.scene.road_properties.road_split_lane_idx = road_split_lane_idx
+        context.scene.dsc_properties.road_properties.road_split_lane_idx = road_split_lane_idx
         # Split at the desired lane
-        for idx, lane in enumerate(context.scene.road_properties.lanes):
+        for idx, lane in enumerate(context.scene.dsc_properties.road_properties.lanes):
             if idx < road_split_lane_idx:
                 lane.split_right = False
             else:
                 lane.split_right = True
         # Unlock updating
-        context.scene.road_properties.lock_lanes = False
+        context.scene.dsc_properties.road_properties.lock_lanes = False
 
 
 class DSC_road_properties(bpy.types.PropertyGroup):
@@ -186,6 +182,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     width_none: bpy.props.FloatProperty(default=2.5, min=0.01, max=10.0, step=1)
 
     design_speed: bpy.props.FloatProperty(default=130.0, min=1.00, max=400.0, step=1)
+
+    junction_connectiong_road: bpy.props.BoolProperty(default=False)
 
     num_lanes_left: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
     num_lanes_right: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
@@ -234,6 +232,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 ('off_ramp', 'Off ramp', 'Off ramp'),
                 ('shoulder_left', 'Shoulder left', 'Shoulder left'),
                 ('shoulder_right', 'Shoulder right', 'Shoulder right'),
+                ('junction_connecting_road', 'Connecting road (for junctions)', 'Connecting road (for junctions)'),
             ),
             name='cross_section',
             description='Road cross section presets',
@@ -263,32 +262,32 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         # Left lanes
         for idx in range(self.num_lanes_left - 1,-1,-1):
             if self.num_lanes_left == 1:
-                self.add_lane('left', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
+                self.add_lane('left', 'driving', self.width_driving, self.width_driving, 'solid', 'standard', 0.12, 'white')
             else:
                 if idx == self.num_lanes_left - 1:
-                    self.add_lane('left', 'border', self.width_border, 'none', 'none', 'none', 0.0, 'none')
+                    self.add_lane('left', 'border', self.width_border, self.width_border, 'none', 'none', 0.0, 'none')
                 elif idx == self.num_lanes_left - 2:
-                    self.add_lane('left', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
+                    self.add_lane('left', 'driving', self.width_driving, self.width_driving, 'solid', 'standard', 0.12, 'white')
                 else:
-                    self.add_lane('left', 'driving', self.width_driving, 'none', 'broken', 'standard', 0.12, 'white')
+                    self.add_lane('left', 'driving', self.width_driving, self.width_driving, 'broken', 'standard', 0.12, 'white')
         # Center line
         if self.num_lanes_left == 0:
-            self.add_lane('center', 'driving', 0.0, 'none', 'solid', 'standard', 0.12, 'white')
+            self.add_lane('center', 'driving', 0.0, 0.0, 'solid', 'standard', 0.12, 'white')
         elif self.num_lanes_right == 0:
-            self.add_lane('center', 'driving', 0.0, 'none', 'solid', 'standard', 0.12, 'white')
+            self.add_lane('center', 'driving', 0.0, 0.0, 'solid', 'standard', 0.12, 'white')
         else:
-            self.add_lane('center', 'driving', 0.0, 'none', 'broken', 'standard', 0.12, 'white')
+            self.add_lane('center', 'driving', 0.0, 0.0, 'broken', 'standard', 0.12, 'white')
         # Right lanes
         for idx in range(self.num_lanes_right):
             if self.num_lanes_right == 1:
-                self.add_lane('right', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
+                self.add_lane('right', 'driving', self.width_driving, self.width_driving, 'solid', 'standard', 0.12, 'white')
             else:
                 if idx == self.num_lanes_right - 1:
-                    self.add_lane('right', 'border', self.width_border, 'none', 'none', 'none', 0.0, 'none')
+                    self.add_lane('right', 'border', self.width_border, self.width_border, 'none', 'none', 0.0, 'none')
                 elif idx == self.num_lanes_right - 2:
-                    self.add_lane('right', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
+                    self.add_lane('right', 'driving', self.width_driving, self.width_driving, 'solid', 'standard', 0.12, 'white')
                 else:
-                    self.add_lane('right', 'driving', self.width_driving, 'none', 'broken', 'standard', 0.12, 'white')
+                    self.add_lane('right', 'driving', self.width_driving, self.width_driving, 'broken', 'standard', 0.12, 'white')
         self.road_split_type = 'none'
         # Set split index one above maximum to make all lanes go left
         self.road_split_lane_idx = self.num_lanes_left + self.num_lanes_right
@@ -296,7 +295,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         # Allow callbacks again
         self.lock_lanes = False
 
-    def add_lane(self, side, type, width, width_change,
+    def add_lane(self, side, type, width_start, width_end,
                  road_mark_type, road_mark_weight, road_mark_width, road_mark_color,
                  split_right=False):
         lane = self.lanes.add()
@@ -304,8 +303,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.lane_idx_current += 1
         lane.side = side
         lane.type = type
-        lane.width = width
-        lane.width_change = width_change
+        lane.width_start = width_start
+        lane.width_end = width_end
         lane.road_mark_type = road_mark_type
         lane.road_mark_weight = road_mark_weight
         lane.road_mark_width = road_mark_width
@@ -326,7 +325,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         params = params_cross_section[self.cross_section_preset]
         for idx in range(len(params['sides'])):
             self.add_lane(params['sides'][idx], params['types'][idx],
-                params['widths'][idx], params['widths_change'][idx], params['road_mark_types'][idx],
+                params['widths_start'][idx], params['widths_end'][idx], params['road_mark_types'][idx],
                 params['road_mark_weights'][idx], params['road_mark_widths'][idx],
                 params['road_mark_colors'][idx])
             if params['sides'][idx] == 'left':
@@ -350,11 +349,13 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     def print_cross_section(self):
         print('New cross section:', self.cross_section_preset)
         sides = []
-        widths = []
+        widths_start = []
+        widths_end = []
         types = []
         road_mark_types = []
         for lane in self.lanes:
             sides.append(lane.side)
-            widths.append(lane.width)
+            widths_start.append(lane.width_start)
+            widths_end.append(lane.width_end)
             types.append(lane.type)
             road_mark_types.append(lane.road_mark_type)

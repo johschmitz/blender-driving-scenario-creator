@@ -63,32 +63,57 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
         '''
             Create all six connecting roads for a 4-way junction.
         '''
-        for idx_i, joint_i in enumerate(self.junction.joints):
-            for idx_j, joint_j in enumerate(self.junction.joints):
-                if idx_j > idx_i:
-                    road_type = 'junction_connecting_road'
-                    geometry = DSC_geometry_clothoid()
-                    geometry_solver = 'hermite'
-                    connecting_road = road(context, road_type, geometry, geometry_solver)
-                    connecting_road
-                    params_input = {
-                        'points': [joint_i.contact_point_vec, joint_j.contact_point_vec],
-                        'heading_start': joint_i.heading,
-                        'heading_end': joint_j.heading - pi,
-                        'curvature_start': 0,
-                        'curvature_end': 0,
-                        'slope_start': joint_i.slope,
-                        'slope_end': joint_j.slope,
-                        'connected_start': True,
-                        'connected_end': True,
-                        'normal_start': Vector((0.0,0.0,1.0)),
-                        'design_speed': 100.0,
-                    }
-                    obj = connecting_road.create_object_3d(context, params_input)
-                    helpers.create_object_xodr_links(obj, 'start',
-                        'junction_joint_open', id_junction, joint_i.id_joint)
-                    helpers.create_object_xodr_links(obj, 'end',
-                        'junction_joint_open', id_junction, joint_j.id_joint)
+        # TODO: Get the widths from the selected road cross section
+        width_lane_incoming = 3.5
+        road_contact_point = 'end'
+        helpers.set_connecting_road_properties(context, 'right', road_contact_point, width_lane_incoming)
+        road_type = 'junction_connecting_road'
+        geometry = DSC_geometry_clothoid()
+        geometry_solver = 'hermite'
+        connecting_road = road(context, road_type, geometry, geometry_solver)
+
+        for idx_joint_i, joint_i in enumerate(self.junction.joints):
+            for idx_joint_j, joint_j in enumerate(self.junction.joints):
+                if idx_joint_j != idx_joint_i:
+                    t_contact_point_start = 0
+                    for idx_lane_i in range(len(joint_i.lane_widths_right)):
+                        t_contact_point_end = 0
+                        for idx_lane_j in range(len(joint_j.lane_widths_left[::-1])):
+                            if (    joint_i.lane_types_right[idx_lane_i] == 'driving'
+                                and joint_j.lane_types_left[::-1][idx_lane_j] == 'driving'
+                            ):
+                                # Calculate contact point
+                                vec_hdg_start = Vector((1.0, 0.0, 0.0))
+                                vec_hdg_start.rotate(Matrix.Rotation(joint_i.heading + pi/2, 4, 'Z'))
+                                vec_hdg_end = Vector((1.0, 0.0, 0.0))
+                                vec_hdg_end.rotate(Matrix.Rotation(joint_j.heading + pi/2, 4, 'Z'))
+                                lane_contact_points_start = Vector(joint_i.contact_point_vec) + t_contact_point_start * vec_hdg_start
+                                lane_contact_points_end = Vector(joint_j.contact_point_vec) + t_contact_point_end * vec_hdg_end
+
+                                params_input = {
+                                    'points': [lane_contact_points_start, lane_contact_points_end],
+                                    'heading_start': joint_i.heading,
+                                    'heading_end': joint_j.heading - pi,
+                                    'curvature_start': 0,
+                                    'curvature_end': 0,
+                                    'slope_start': joint_i.slope,
+                                    'slope_end': joint_j.slope,
+                                    'connected_start': True,
+                                    'connected_end': True,
+                                    'normal_start': Vector((0.0,0.0,1.0)),
+                                    'design_speed': 100.0,
+                                }
+                                obj = connecting_road.create_object_3d(context, params_input)
+                                id_lane_i = -idx_lane_i - 1
+                                id_lane_j = idx_lane_j + 1
+                                helpers.create_object_xodr_links(obj, 'start',
+                                    'junction_joint_open', id_junction, joint_i.id_joint, id_lane_i)
+                                helpers.create_object_xodr_links(obj, 'end',
+                                    'junction_joint_open', id_junction, joint_j.id_joint, id_lane_j)
+
+                            # Update contact point t values
+                            t_contact_point_end += joint_j.lane_widths_left[::-1][idx_lane_j]
+                        t_contact_point_start -= joint_i.lane_widths_right[idx_lane_i]
 
     def update_params_get_mesh(self, context, wireframe):
         '''
@@ -107,8 +132,10 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
             valid = False
             return valid, None, None, None
         # Parameters
-        lanes = context.scene.road_properties.lanes
-        width_left, width_right = self.get_width_left_right(lanes)
+        lanes = context.scene.dsc_properties.road_properties.lanes
+        lane_widths_left, lane_widths_right, types_left, types_right = self.get_lanes_left_right(lanes)
+        width_right = sum(lane_widths_right)
+        width_left = sum(lane_widths_left)
         vector_start_end = point_end - self.params_input['point_start']
         vector_1_0 = Vector((1.0, 0.0))
         heading = vector_start_end.to_2d().angle_signed(vector_1_0)
@@ -141,8 +168,10 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
         hdg_down = vector_hdg_down.angle_signed(vector_1_0)
         hdg_right = vector_hdg_right.angle_signed(vector_1_0)
         hdg_up = vector_hdg_up.angle_signed(vector_1_0)
-        self.params = {'width_left': width_left,
-                       'width_right': width_right,
+        self.params = {'lane_widths_left': lane_widths_left,
+                       'lane_widths_right': lane_widths_right,
+                       'types_left': types_left,
+                       'types_right': types_right,
                        'cp_left': vector_left,
                        'cp_down': vector_down,
                        'cp_right': vector_right,
@@ -162,13 +191,17 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
 
         # Add 4 new joints, 1 for each direction
         self.junction.add_joint_open(self.params['cp_left'],
-            self.params['hdg_left'], 0, self.params['width_left'], self.params['width_right'])
+            self.params['hdg_left'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['types_left'], self.params['types_right'])
         self.junction.add_joint_open(self.params['cp_down'],
-            self.params['hdg_down'], 0, self.params['width_left'], self.params['width_right'])
+            self.params['hdg_down'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['types_left'], self.params['types_right'])
         self.junction.add_joint_open(self.params['cp_right'],
-            self.params['hdg_right'], 0, self.params['width_left'], self.params['width_right'])
+            self.params['hdg_right'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['types_left'], self.params['types_right'])
         self.junction.add_joint_open(self.params['cp_up'],
-            self.params['hdg_up'], 0, self.params['width_left'], self.params['width_right'])
+            self.params['hdg_up'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['types_left'], self.params['types_right'])
 
         valid, mesh, matrix_world = self.junction.get_mesh(wireframe=True)
         # TODO implement material dictionary for the faces
@@ -176,37 +209,20 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
 
         return valid, mesh, matrix_world, materials
 
-    def get_width_left_right(self, lanes):
+    def get_lanes_left_right(self, lanes):
         '''
             Return the width of the left and right road sides calculated by
-            suming up all lane widths.
+            summing up all lane widths.
         '''
-        width_road_left = 0
-        width_road_right = 0
+        widths_left = []
+        widths_right = []
+        types_left = []
+        types_right = []
         for idx, lane in enumerate(lanes):
-            if idx == 0:
-                if lane.road_mark_type != 'none':
-                    # If first lane has a line we need to add half its width
-                    width_line = lane.road_mark_width
-                    if lane.road_mark_type == 'solid_solid' or \
-                        lane.road_mark_type == 'solid_broken' or \
-                        lane.road_mark_type == 'broken_solid':
-                            width_road_left += width_line * 3.0 / 2.0
-                    else:
-                        width_road_left += width_line / 2.0
-            if idx == len(lanes):
-                if lane.road_mark_type != 'none':
-                    # If last lane has a line we need to add half its width
-                    width_line = lane.road_mark_width
-                    if lane.road_mark_type == 'solid_solid' or \
-                        lane.road_mark_type == 'solid_broken' or \
-                        lane.road_mark_type == 'broken_solid':
-                            width_road_right += width_line * 3.0 / 2.0
-                    else:
-                        width_road_right += width_line / 2.0
-            # Sum up both sides separately
             if lane.side == 'left':
-                width_road_left += lane.width
+                widths_left.append(lane.width_start)
+                types_left.append(lane.type)
             if lane.side == 'right':
-                width_road_right += lane.width
-        return width_road_left, width_road_right
+                widths_right.append(lane.width_start)
+                types_right.append(lane.type)
+        return widths_left, widths_right, types_left, types_right

@@ -26,7 +26,6 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
     bl_label = 'DSC snap draw road modal operator'
     bl_options = {'REGISTER', 'UNDO'}
 
-    snap_filter = None
     only_snapped_to_object = False
     always_adjust_heading = False
     linear_selection = False
@@ -74,6 +73,13 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
     def create_object_3d(self, context):
         '''
             Create a 3d object from the model
+        '''
+        raise NotImplementedError()
+
+    def update_road_properties(self, context):
+        '''
+            Dynamically update the road properties based on the user input if
+            necessary.
         '''
         raise NotImplementedError()
 
@@ -133,8 +139,12 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
         '''
             Calculate and return the vertices, edges and faces to create the initial stencil mesh.
         '''
-        vertices = [(0.0, 0.0, -self.params_input['points'][-2].z), (0.0, 0.0, 0.0)]
-        edges = [[0,1]]
+        vector_hdg = Vector((1.0, 0.0))
+        vector_hdg.rotate(Matrix.Rotation(self.params_input['heading_start'] + pi/2, 2))
+        vector_left = (vector_hdg * sum(self.params_snap['lane_widths_left'])).to_3d().to_tuple()
+        vector_right = (vector_hdg * -sum(self.params_snap['lane_widths_right'])).to_3d().to_tuple()
+        vertices = [vector_left, vector_right, (0.0, 0.0, 0.0), (0.0, 0.0, -self.params_input['points'][-2].z)]
+        edges = [[0,1],[2,3]]
         faces = []
         return vertices, edges, faces
 
@@ -215,14 +225,16 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
         self.params_snap = {
             'id_obj': None,
             'id_extra': None,
+            'id_lane': None,
+            'joint_side': None,
             'point': Vector((0.0,0.0,0.0)),
             'normal': Vector((0.0,0.0,1.0)),
-            'type': None,
+            'point_type': None,
             'heading': 0.0,
             'curvature': 0.0,
             'slope': 0.0,
-            'width_left': 0.0,
-            'width_right': 0.0,
+            'lane_widths_left': [],
+            'lane_widths_right': [],
         }
 
     def create_object_modal(self, context):
@@ -242,7 +254,7 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                 else:
                     id_extra = self.id_extra_start
                 helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-                    self.id_odr_start, id_extra)
+                    self.id_odr_start, id_extra, self.id_lane_start)
             if self.params_input['connected_end']:
                 link_type = 'end'
                 # TODO keep it generic, direct junction should not appear at this point!
@@ -253,8 +265,9 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                             ' ends (direct junctions) to each other!')
                 else:
                     id_extra = self.params_snap['id_extra']
+                    id_lane = self.params_snap['id_lane']
                 helpers.create_object_xodr_links(obj, link_type, self.cp_type_end,
-                    self.params_snap['id_obj'], id_extra)
+                    self.params_snap['id_obj'], id_extra, id_lane)
 
     def modal(self, context, event):
         # Display help text
@@ -289,8 +302,12 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
             self.selected_heading_end = 0.0
             self.selected_curvature = 0.0
             self.selected_slope = 0.0
+            self.joint_side_start = None
             self.state = 'SELECT_START'
-            self.params_input['design_speed'] = context.scene.road_properties.design_speed
+            if self.object_type == 'junction_connecting_road':
+                self.params_input['design_speed'] = context.scene.dsc_properties.connecting_road_properties.design_speed
+            else:
+                self.params_input['design_speed'] = context.scene.dsc_properties.road_properties.design_speed
             # Create helper stencil mesh
             self.create_stencil(context)
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
@@ -309,8 +326,16 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                 context.scene.cursor.location = self.selected_point
             else:
                 # Snap to existing objects if any, otherwise xy plane
-                hit, params_snap = helpers.mouse_to_object_params(
-                    context, event, filter=self.snap_filter)
+                if self.object_type == 'junction_connecting_road':
+                    if self.state == 'SELECT_START':
+                        hit, params_snap = helpers.mouse_to_road_params(
+                            context, event, road_type='junction_connecting_road', joint_side='right')
+                    else:
+                        hit, params_snap = helpers.mouse_to_road_params(
+                            context, event, road_type='junction_connecting_road', joint_side='left')
+                else:
+                    hit, params_snap = helpers.mouse_to_road_params(
+                        context, event, road_type='road')
                 # Snap to object if not snapping to grid (by holding CTRL)
                 if hit and not event.ctrl:
                     self.params_snap = params_snap
@@ -319,11 +344,17 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                     if self.state == 'SELECT_START':
                         self.selected_heading_start = self.params_snap['heading']
                         self.selected_normal_start = self.params_snap['normal']
+                        self.joint_side_start = self.params_snap['joint_side']
+                        if self.object_type == 'junction_connecting_road':
+                            self.update_road_properties(context, 'start')
                     elif self.state == 'SELECT_POINT':
                         self.selected_heading_end = self.params_snap['heading']
+                        if self.object_type == 'junction_connecting_road':
+                            self.update_road_properties(context, 'end')
                     self.selected_curvature = self.params_snap['curvature']
                     self.selected_slope = self.params_snap['slope']
                     context.scene.cursor.location = selected_point_new
+
                 else:
                     self.reset_params_snap()
                     self.snapped_to_object = False
@@ -365,9 +396,8 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                 self.params_input['points'][-2] = self.selected_point.copy()
                 self.params_input['heading_start'] = self.selected_heading_start
                 self.params_input['normal_start'] = self.selected_normal_start.copy()
-                if self.params_snap['type'] is not None:
-                    if self.params_snap['type'] != 'surface':
-                        self.params_input['connected_start'] = True
+                if self.params_snap['point_type'] is not None:
+                    self.params_input['connected_start'] = True
                 else:
                     self.params_input['connected_start'] = False
                 self.params_input['curvature_start'] = self.selected_curvature
@@ -377,12 +407,11 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
             # moved in SELECT_POINT state
             self.params_input['points'][-1] = self.selected_point.copy()
             self.params_input['heading_start'] = self.selected_heading_start
-            if self.params_snap['type'] is not None:
-                if self.params_snap['type'] != 'surface':
-                    self.params_input['connected_end'] = True
-                    self.params_input['heading_end'] = self.selected_heading_end + pi
-                    self.params_input['curvature_end'] = self.selected_curvature
-                    self.params_input['slope_end'] = self.selected_slope
+            if self.params_snap['point_type'] is not None:
+                self.params_input['connected_end'] = True
+                self.params_input['heading_end'] = self.selected_heading_end + pi
+                self.params_input['curvature_end'] = self.selected_curvature
+                self.params_input['slope_end'] = self.selected_slope
             else:
                 self.params_input['connected_end'] = False
                 self.params_input['heading_end'] = self.calculate_heading_end(self.params_input['points'][-2],
@@ -399,13 +428,14 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                 if self.state == 'SELECT_START':
                     self.id_odr_start = self.params_snap['id_obj']
                     self.id_extra_start = self.params_snap['id_extra']
-                    self.cp_type_start = self.params_snap['type']
+                    self.id_lane_start = self.params_snap['id_lane']
+                    self.cp_type_start = self.params_snap['point_type']
                     # Set elevation so that end point selection starts on the same level
                     self.selected_elevation = self.params_input['points'][-1].z
                     self.state = 'SELECT_POINT'
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_POINT':
-                    self.cp_type_end = self.params_snap['type']
+                    self.cp_type_end = self.params_snap['point_type']
                     if self.input_valid(wireframe=False):
                         if event.shift and self.params_input['connected_end'] == False:
                             # Make sure not to work with identical points

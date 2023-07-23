@@ -78,9 +78,9 @@ class entity:
         vector_start_end = params_input['point_end'] - params_input['point_start']
         heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
         if self.entity_type == 'vehicle':
-            entity_properties = context.scene.entity_properties_vehicle
+            entity_properties = context.scene.dsc_properties.entity_properties_vehicle
         else:
-            entity_properties = context.scene.entity_properties_pedestrian
+            entity_properties = context.scene.dsc_properties.entity_properties_pedestrian
         self.params = {'name': entity_properties.name,
                        'position': params_input['point_start'],
                        'heading': heading,

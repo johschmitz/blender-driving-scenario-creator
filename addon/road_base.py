@@ -24,8 +24,6 @@ class DSC_OT_road(DSC_OT_modal_road_base):
     bl_description = 'Create road mesh'
     bl_options = {'REGISTER', 'UNDO'}
 
-    snap_filter = 'OpenDRIVE'
-
     geometry_solver: bpy.props.StringProperty(
         name='Geometry solver',
         description='Solver used to determine geometry parameters.',
@@ -44,6 +42,13 @@ class DSC_OT_road(DSC_OT_modal_road_base):
         '''
         return self.road.create_object_3d(context, self.params_input)
 
+    def update_road_properties(self, context):
+        '''
+            For non junction connecting roads we currently do not dynamically
+            update the road properties.
+        '''
+        pass
+
     def update_params_get_mesh(self, context, wireframe=True):
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
@@ -53,3 +58,4 @@ class DSC_OT_road(DSC_OT_modal_road_base):
         if not valid:
             self.report({'WARNING'}, 'No valid road geometry solution found!')
         return valid, mesh, self.geometry.matrix_world, materials
+

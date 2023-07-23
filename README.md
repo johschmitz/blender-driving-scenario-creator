@@ -108,14 +108,19 @@ little arrow next to the navigation gizmo to toggle the sidebar. Click
 <kbd>Driving Scenario Creator</kbd> in the sidebar. From here you can create
 roads and vehicles using the mouse by clicking the buttons in the "Driving
 Scenario Creator" menu. Roads, vehicles and trajectories can be placed with the
-mouse. Grid snapping can be activated by holding <kbd>Ctrl</kbd>. Additional
-geometry sections can be added by holding <kbd>Shift</kbd> and clicking. Start
-heading of a road can be adjusted by holding <kbd>Alt</kbd> and moving the mouse
-pointer. For the clothoid geometry using the Hermite solver the end heading can
-be adjusted by holding <kbd>Shift</kbd> and moving the mouse wheel. Road
-elevation can be changed by holding <kbd>E</kbd>(3D view) or
-<kbd>S</kbd>(sideview) keys and moving the mouse. See a summary of the keyboard
-shortcuts in the table below.
+mouse. Junction connecting roads can be build using the mouse similar to normal
+roads after first building a junction area. The cursor will snap to the lanes of
+the incoming roads in this case. Note, that in Blender it is possible to quickly
+left click multiple times in order to select objects which are located on top of
+each other. This helps with selecting and deleting junction connecting roads.
+Grid snapping can be activated by holding <kbd>Ctrl</kbd>. Additional geometry
+sections can be added by holding <kbd>Shift</kbd> and clicking. Start heading of
+a road can be adjusted by holding <kbd>Alt</kbd> and moving the mouse pointer.
+For the clothoid geometry using the Hermite solver the end heading can be
+adjusted by holding <kbd>Shift</kbd> and moving the mouse wheel. Road elevation
+can be changed by holding <kbd>E</kbd>(3D view) or <kbd>S</kbd>(sideview) keys
+and moving the mouse. See a summary of the keyboard shortcuts in the table
+below.
 
 | Keyboard Shortcut                                     | Function                             |
 | ----------------------------------------------------- | ------------------------------------ |

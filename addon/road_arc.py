@@ -22,7 +22,6 @@ class DSC_OT_road_arc(DSC_OT_road):
     bl_options = {'REGISTER', 'UNDO'}
 
     object_type = 'road_arc'
-    snap_filter = 'OpenDRIVE'
 
     def __init__(self):
         self.geometry = DSC_geometry_arc()

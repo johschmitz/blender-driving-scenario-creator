@@ -21,7 +21,6 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
     bl_label = 'DSC trajectory modal operator'
     bl_options = {'REGISTER', 'UNDO'}
 
-    snap_filter = 'OpenSCENARIO'
     trajectory = None
     trajectory_points = []
     trajectory_owner_name = None
@@ -82,12 +81,12 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             # Snap to existing objects if any, otherwise xy plane
             if self.state == 'SELECT_OBJECT':
                 # Start of trajectory should be an OpenSCENARIO object
-                self.snapped, self.params_snap = helpers.mouse_to_object_params(
-                    context, event, filter=self.snap_filter)
+                self.snapped, self.params_snap = helpers.mouse_to_scenario_entity_params(
+                    context, event)
             else:
                 # For remaining trajectory points use any surface point
-                self.snapped, self.params_snap = helpers.mouse_to_object_params(
-                    context, event, filter='surface')
+                self.snapped, self.params_snap = helpers.mouse_to_road_surface_params(
+                    context, event)
             if self.snapped:
                 self.selected_point = self.params_snap['point']
             else:

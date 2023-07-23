@@ -11,8 +11,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from .road_base import DSC_OT_road
-from .geometry_clothoid import DSC_geometry_clothoid
+import bpy
+
+from . road_base import DSC_OT_road
+from . geometry_clothoid import DSC_geometry_clothoid
+from . import helpers
 
 
 class DSC_OT_junction_connecting_road(DSC_OT_road):
@@ -22,7 +25,18 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
     bl_options = {'REGISTER', 'UNDO'}
 
     object_type = 'junction_connecting_road'
-    snap_filter = 'OpenDRIVE_junction'
     only_snapped_to_object = True
 
     geometry = DSC_geometry_clothoid()
+
+    def update_road_properties(self, context, road_contact_point):
+        '''
+            Dynamically update the road properties based on the user input if
+            necessary at start or end of the road.
+        '''
+        if len(self.params_snap['lane_widths_left']) > 0:
+            width_lane_connecting = self.params_snap['lane_widths_left'][0]
+        else:
+            width_lane_connecting = self.params_snap['lane_widths_right'][0]
+
+        helpers.set_connecting_road_properties(context, self.joint_side_start, road_contact_point, width_lane_connecting)
