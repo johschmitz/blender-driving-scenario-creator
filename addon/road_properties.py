@@ -177,7 +177,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     width_line_bold: bpy.props.FloatProperty(default=0.25, min=0.01, max=10.0, step=1)
     length_broken_line: bpy.props.FloatProperty(default=3.0, min=0.01, max=10.0, step=1)
     ratio_broken_line_gap: bpy.props.IntProperty(default=1, min=1, max=3)
-    width_driving: bpy.props.FloatProperty(default=3.75, min=0.01, max=10.0, step=1)
+    width_driving: bpy.props.FloatProperty(default=3.5, min=0.01, max=10.0, step=1)
     width_border: bpy.props.FloatProperty(default=0.5, min=0.01, max=1.0, step=1)
     # width_curb: bpy.props.FloatProperty(default=0.16, min=0.10, max=0.30, step=1)
     width_median: bpy.props.FloatProperty(default=2.0, min=0.01, max=10.0, step=1)
@@ -267,7 +267,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
             else:
                 if idx == self.num_lanes_left - 1:
                     self.add_lane('left', 'border', self.width_border, 'none', 'none', 'none', 0.0, 'none')
-                elif idx == 0:
+                elif idx == self.num_lanes_left - 2:
                     self.add_lane('left', 'driving', self.width_driving, 'none', 'solid', 'standard', 0.12, 'white')
                 else:
                     self.add_lane('left', 'driving', self.width_driving, 'none', 'broken', 'standard', 0.12, 'white')
