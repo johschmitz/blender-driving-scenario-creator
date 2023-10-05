@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.22.0] - 2023-10-06
+
+### Changed
+- After a rewrite the junction connection road tool does now create single lane
+  connecting roads. Also junction joints now have lane information to decouple
+  connecting road snapping and creation from incoming roads.
+
+### Fixed
+- Bug in changing number of left lanes in road cross section
+- Creation of 4-way junction for non symmetric road cross sections
+
 ## [0.21.0] - 2023-06-27
 
 ### Added
@@ -318,7 +329,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.0...v0.19.1
