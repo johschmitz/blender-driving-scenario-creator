@@ -564,16 +564,19 @@ def get_closest_lane_contact_point(lane_contact_points, point):
     '''
         Return closest lane contact point from a list of lane contact points.
     '''
-    d_min = inf
-    for lane_contact_point in lane_contact_points:
-        # Find the closest lane center point
-        lane_center_point = lane_contact_point[4]
-        distance = (lane_center_point - point).length
-        if distance < d_min:
-            d_min = distance
-            joint, id_lane_cp, lane_width, lane_type, contact_point_vec = lane_contact_point[:-1]
+    if len(lane_contact_points) == 0:
+        return None, None, None, None, None
+    else:
+        d_min = inf
+        for lane_contact_point in lane_contact_points:
+            # Find the closest lane center point
+            lane_center_point = lane_contact_point[4]
+            distance = (lane_center_point - point).length
+            if distance < d_min:
+                d_min = distance
+                joint, id_lane_cp, lane_width, lane_type, contact_point_vec = lane_contact_point[:-1]
 
-    return joint, id_lane_cp, lane_width, lane_type, contact_point_vec
+        return joint, id_lane_cp, lane_width, lane_type, contact_point_vec
 
 def point_to_junction_joint_interior(obj, point, joint_side):
     '''
@@ -591,8 +594,11 @@ def point_to_junction_joint_interior(obj, point, joint_side):
     joint_cp, id_lane_cp, lane_width, lane_type, contact_point_vec = get_closest_lane_contact_point(
         lane_contact_points, point)
 
-    return joint_cp['id_joint'], joint_cp['contact_point_type'], \
-        contact_point_vec, joint_cp['heading'] - pi, joint_cp['slope'], id_lane_cp, lane_width, lane_type
+    if joint_cp != None:
+        return joint_cp['id_joint'], joint_cp['contact_point_type'], \
+            contact_point_vec, joint_cp['heading'] - pi, joint_cp['slope'], id_lane_cp, lane_width, lane_type
+    else:
+        return None, None, None, None, None, None, None, None
 
 def point_to_object_connector(obj, point):
     '''
@@ -666,13 +672,14 @@ def mouse_to_road_params(context, event, road_type, joint_side='both'):
         if road_type == 'junction_connecting_road':
             if obj.name.startswith('junction_area'):
                 # This path is for junction connecting roads
-                hit = True
                 id_joint, point_type, snapped_point, heading, slope, id_lane, lane_width, lane_type = \
                     point_to_junction_joint_interior(obj, raycast_point, joint_side=joint_side)
-                heading = heading - pi
-                # Set both IDs to the junction ID
-                id_obj = obj['id_odr']
-                id_extra = id_joint
+                if id_joint != None:
+                    hit = True
+                    heading = heading - pi
+                    # Set both IDs to the junction ID
+                    id_obj = obj['id_odr']
+                    id_extra = id_joint
             if id_lane != None:
                 # Determine road side based on lane ID and reference line direction
                 if id_lane > 0:
