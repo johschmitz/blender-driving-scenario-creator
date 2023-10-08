@@ -81,7 +81,7 @@ class DSC_OT_junction_generic(bpy.types.Operator):
                             joint_lane_types_right = self.params_snap['lane_types_left']
                         joint_added = self.junction.add_joint_incoming(self.params_snap['id_obj'],
                             self.params_snap['point_type'], contact_point_vec,
-                            self.params_snap['heading'], self.params_snap['slope'],
+                            self.params_snap['heading'], self.params_snap['curvature'], self.params_snap['slope'],
                             joint_widths_left, joint_widths_right, joint_lane_types_left, joint_lane_types_right)
                         if joint_added:
                             self.junction.update_stencil()

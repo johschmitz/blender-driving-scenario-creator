@@ -55,6 +55,9 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
             return None
         else:
             obj = self.junction.create_object_3d()
+            # Convert the ngons to tris and quads to get a defined surface for elevated roads
+            helpers.triangulate_quad_mesh(obj)
+
             self.create_connecting_roads(context, obj['id_odr'])
 
             return obj

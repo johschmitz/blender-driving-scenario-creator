@@ -15,6 +15,7 @@ import bpy
 import bmesh
 from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_line_2d
+from pyclothoids import SolveG2
 
 from . import helpers
 
@@ -23,12 +24,13 @@ from math import pi
 
 class junction_joint:
     def __init__(self, id_joint, id_incoming, contact_point_type, contact_point_vec,
-                 heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
+                 heading, curvature, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
         self.id_joint = id_joint
         self.id_incoming = id_incoming
         self.contact_point_type = contact_point_type
         self.contact_point_vec = contact_point_vec
         self.heading = heading
+        self.curvature = curvature
         self.slope = slope
         self.lane_widths_left = lane_widths_left
         self.lane_widths_right = lane_widths_right
@@ -63,7 +65,7 @@ class junction:
         return id_next
 
     def add_joint_incoming(self, id_incoming, contact_point_type, contact_point_vec,
-                 heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
+                 heading, curvature, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
         '''
             Add a new joint, i.e. an incoming road to the junction if it does
             not exist yet.
@@ -73,7 +75,7 @@ class junction:
         else:
             id_joint = self.get_new_id_joint()
             joint = junction_joint(id_joint, id_incoming, contact_point_type, contact_point_vec,
-                                   heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
+                                   heading, curvature, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
             self.joints.append(joint)
             return True
 
@@ -84,7 +86,7 @@ class junction:
         '''
         id_joint = self.get_new_id_joint()
         joint = junction_joint(id_joint, None, 'junction_joint_open', contact_point_vec,
-            heading, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
+            heading, 0.0, slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
         self.joints.append(joint)
         return True
 
@@ -134,6 +136,9 @@ class junction:
             obj.data.materials.append(material)
 
             helpers.select_activate_object(self.context, obj)
+
+            # Convert the ngons to tris and quads to get a defined surface for elevated roads
+            helpers.triangulate_quad_mesh(obj)
 
             # Metadata
             obj['dsc_category'] = 'OpenDRIVE'
@@ -210,8 +215,8 @@ class junction:
             junction mesh.
         '''
         if len(self.joints) == 0:
-            valid = False
-            return valid, None, None
+            valid_mesh = False
+            return valid_mesh, None, None
         else:
             # Shift origin to connecting point
             mat_translation = Matrix.Translation(self.joints[0].contact_point_vec)
@@ -219,24 +224,36 @@ class junction:
             matrix_world = mat_translation @ mat_rotation
             # Create mesh
             joints_corners = []
-            joints_t_vecs = []
+            joints_heading = []
+            joints_corners_curvatures = []
+            joints_slopes = []
             for joint in self.joints:
                 # Find corner points of incoming road joint
                 vector_s = Vector((1.0, 0.0, 0.0))
                 vector_s.rotate(Matrix.Rotation(joint.heading + pi/2, 3, 'Z'))
+                width_left = sum(joint.lane_widths_left)
                 point_local_left = matrix_world.inverted() \
-                    @ (joint.contact_point_vec + vector_s * sum(joint.lane_widths_left))
+                    @ (joint.contact_point_vec + vector_s * width_left)
+                width_right = sum(joint.lane_widths_right)
                 point_local_right = matrix_world.inverted() \
-                    @ (joint.contact_point_vec - vector_s * sum(joint.lane_widths_right))
-                # Get heading vector of incoming road joint (t-direction)
-                vector_t = Vector((1.0, 0.0, 0.0))
-                vector_t.rotate(Matrix.Rotation(joint.heading, 3, 'Z'))
-                vector_t.rotate(mat_rotation.inverted())
-                joints_t_vecs.append(vector_t)
+                    @ (joint.contact_point_vec - vector_s * width_right)
+                joints_heading.append(joint.heading)
                 joints_corners.append([point_local_left, point_local_right])
-            # Obtain the junction hull vertices and create a Blender mesh based of it
-            vertices = get_junction_hull(joints_corners, joints_t_vecs)
-            if len(vertices) == 2 * len(joints_corners):
+                if abs(joint.curvature) > 0.0:
+                    if joint.curvature < 0.0:
+                        curvature_left = 1 / (1/joint.curvature + width_left)
+                        curvature_right = 1 / (1/joint.curvature - width_right)
+                    else:
+                        curvature_left = 1 / (1/joint.curvature - width_left)
+                        curvature_right = 1 / (1/joint.curvature + width_right)
+                else:
+                    curvature_left = 0
+                    curvature_right = 0
+                joints_corners_curvatures.append([curvature_left, curvature_right])
+                joints_slopes.append(joint.slope)
+            # Obtain the junction boundary vertices and create a Blender mesh based of it
+            valid_boundary, vertices = get_junction_boundary(mat_rotation, joints_corners, joints_heading, joints_corners_curvatures, joints_slopes)
+            if valid_boundary:
                 edges = [[idx, idx+1] for idx in range(len(vertices)-1)]
                 edges += [[len(vertices)-1, 0]]
                 if wireframe:
@@ -268,24 +285,25 @@ class junction:
             bm.to_mesh(mesh)
             bm.free()
 
-            valid = True
-            return valid, mesh, matrix_world
+            valid_mesh = True
+            return valid_mesh, mesh, matrix_world
 
-def get_junction_hull(joints_corners, joints_t_vecs):
+def get_junction_boundary(mat_rotation, joints_corners, joints_heading, joints_corners_curvatures, joints_slopes):
     '''
-        Try to return ordered list of junction hull corners based on joint
-        corners to connect [[left corner 0, right corner 0], ... ]. If no
-        suitable solution is found, the list of corners might be shorter than
-        the input.
+        Try to return junction boundary vertices based on joint corners to
+        connect [[left corner 0, right corner 0], ... ].
     '''
     ordered_indices = [0]
-    vertices = [joints_corners[0][0], joints_corners[0][1]]
+    vertices = []
     idx_current = 0
+    idx_next = 0
+    valid_boundary = False
+    # Start at 1 since we now the first joint and need to find all others (in order)
+    joint_count = 1
     for _ in range(len(joints_corners)):
         vec_right_2_left = joints_corners[idx_current][1] - joints_corners[idx_current][0]
         vec_right = joints_corners[idx_current][1]
         angle_current = 0
-        idx_next = 0
         found = False
         # Search for next joint to connect to
         for idx_i, corners_next in enumerate(joints_corners):
@@ -308,8 +326,13 @@ def get_junction_hull(joints_corners, joints_t_vecs):
                             if idx_j != idx_current and idx_j != idx_i:
                                 vec_left_check = corners_check[0]
                                 vec_right_check = corners_check[1]
-                                far_point_left = corners_check[0] - joints_t_vecs[idx_j] * 10000
-                                far_point_right = corners_check[1] - joints_t_vecs[idx_j] * 10000
+
+                                # Get heading vector of incoming road joint (t-direction)
+                                vector_t = Vector((1.0, 0.0, 0.0))
+                                vector_t.rotate(Matrix.Rotation(joints_heading[idx_j], 3, 'Z'))
+                                vector_t.rotate(mat_rotation.inverted())
+                                far_point_left = corners_check[0] - vector_t * 10000
+                                far_point_right = corners_check[1] - vector_t * 10000
                                 intersection_left = intersect_line_line_2d(
                                     vec_right, vec_left_next, vec_left_check, far_point_left)
                                 intersection_right = intersect_line_line_2d(
@@ -321,8 +344,53 @@ def get_junction_hull(joints_corners, joints_t_vecs):
                             idx_next = idx_i
                             found = True
         if found:
+            # Calculate boundary curve points for the next segment and add to vertices
+            joint_count += 1
             ordered_indices.append(idx_next)
-            vertices.append(joints_corners[idx_next][0])
-            vertices.append(joints_corners[idx_next][1])
+            heading_current = joints_heading[idx_current] - joints_heading[0]
+            heading_next = joints_heading[idx_next] -joints_heading[0]
+            boundary_section = calculate_junction_boundary_section(
+                joints_corners[idx_current][1], heading_current, joints_corners_curvatures[idx_current][1], joints_slopes[idx_current],
+                joints_corners[idx_next][0], heading_next-pi, -joints_corners_curvatures[idx_next][0], -joints_slopes[idx_next])
+            # Combine the samples from muliple clothoid segments
+            vertices += [point for curve_segment in boundary_section for point in curve_segment]
         idx_current = idx_next
-    return vertices
+    if joint_count > 1:
+        # Add last segment to close the boundary
+        heading_current = joints_heading[idx_current] - joints_heading[0]
+        boundary_section = calculate_junction_boundary_section(
+                joints_corners[idx_current][1], heading_current, joints_corners_curvatures[idx_current][1], joints_slopes[idx_current],
+                joints_corners[0][0], pi, -joints_corners_curvatures[0][0], -joints_slopes[0])
+        vertices += [point for curve_segment in boundary_section for point in curve_segment]
+        if joint_count == len(joints_corners):
+            valid_boundary = True
+    return valid_boundary, vertices
+
+def calculate_junction_boundary_section(corner_right, heading_right, curvature_right, slope_right,
+                                        corner_left, heading_left, curvature_left, slope_left):
+    '''
+        Calculate junction boundary between right corner of joint n and left
+        corner of joint n+1. Use a 3 segment clothoid curve.
+    '''
+    boundary_segment_curve = SolveG2(
+        corner_right.x, corner_right.y, heading_right, curvature_right,
+        corner_left.x, corner_left.y, heading_left, curvature_left)
+    length = sum((boundary_segment_curve[0].length, boundary_segment_curve[1].length, boundary_segment_curve[2].length))
+    # Use Hermite interpolation for elevation:
+    #     https://en.m.wikipedia.org/wiki/Cubic_Hermite_spline
+    elevation = lambda s : \
+        corner_right[2] \
+        + slope_right * s \
+        + (-3 * corner_right[2] - 2 * length * slope_right + 3 * corner_left[2] - length * -slope_left) / length**2 * s**2 \
+        + (2 * corner_right[2] + length * slope_right - 2 * corner_left[2] + length * -slope_left) / length**3 * s**3
+
+    boundary_points = []
+    length_current = 0
+    for clothoid in boundary_segment_curve:
+        # TODO make sampling adaptive
+        num_intervals = 5
+        sample_points = [i/num_intervals * clothoid.length for i in range(num_intervals+1)]
+        boundary_points.append([[clothoid.X(s), clothoid.Y(s), elevation(length_current+s)] for s in sample_points])
+        length_current += clothoid.length
+
+    return boundary_points
