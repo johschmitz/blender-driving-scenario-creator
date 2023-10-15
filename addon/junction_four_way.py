@@ -19,7 +19,7 @@ from math import pi
 from . modal_two_point_base import DSC_OT_modal_two_point_base
 from . junction import junction
 from . road import road
-from . geometry_clothoid import DSC_geometry_clothoid
+from . geometry_clothoid_triple import DSC_geometry_clothoid_triple
 
 from . import helpers
 
@@ -71,7 +71,7 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
         road_contact_point = 'end'
         helpers.set_connecting_road_properties(context, 'right', road_contact_point, width_lane_incoming)
         road_type = 'junction_connecting_road'
-        geometry = DSC_geometry_clothoid()
+        geometry = DSC_geometry_clothoid_triple()
         geometry_solver = 'hermite'
         connecting_road = road(context, road_type, geometry, geometry_solver)
 

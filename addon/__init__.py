@@ -30,6 +30,7 @@ from . popup_road_properties import DSC_OT_popup_road_properties
 from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
 from . road_properties import DSC_road_properties, DSC_enum_lane
 from . road_clothoid import DSC_OT_road_clothoid
+from . road_clothoid_triple import DSC_OT_road_clothoid_triple
 from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
@@ -83,6 +84,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Clothoid (Forward)',
             icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_forward'
+        row = box.row(align=True)
+        row.operator('dsc.popup_road_properties', text='Clothoid triple (G2)',
+            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_triple'
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Parametric polynomial',
             icon_value=custom_icons['road_parametric_polynomial'].icon_id).operator = 'road_parametric_polynomial'
@@ -147,6 +151,7 @@ classes = (
     DSC_OT_popup_road_properties,
     DSC_OT_road_parametric_polynomial,
     DSC_OT_road_clothoid,
+    DSC_OT_road_clothoid_triple,
     DSC_OT_road_straight,
     DSC_OT_trajectory_nurbs,
     DSC_OT_trajectory_polyline,

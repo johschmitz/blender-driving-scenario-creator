@@ -14,7 +14,7 @@
 import bpy
 
 from . road_base import DSC_OT_road
-from . geometry_clothoid import DSC_geometry_clothoid
+from . geometry_clothoid_triple import DSC_geometry_clothoid_triple
 from . import helpers
 
 
@@ -27,7 +27,7 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
     object_type = 'junction_connecting_road'
     only_snapped_to_object = True
 
-    geometry = DSC_geometry_clothoid()
+    geometry = DSC_geometry_clothoid_triple()
 
     def update_road_properties(self, context, road_contact_point):
         '''

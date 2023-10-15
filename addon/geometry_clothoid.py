@@ -33,10 +33,6 @@ class DSC_geometry_clothoid(DSC_geometry):
             if self.sections[-1]['curve'].length < 10000.0:
                 self.sections[-1]['params']['valid'] = True
             else:
-                # Use old parameters
-                self.sections[-1]['curve'] = Clothoid.G1Hermite(
-                    self.point_start_local.x, self.point_start_local.y, self.heading_start_local,
-                    self.point_end_local.x, self.point_end_local.y, self.heading_end_local)
                 self.sections[-1]['params']['valid'] = False
         elif geometry_solver == 'forward':
             if self.point_end_local == Vector((0.0, 0.0, 0.0)):
@@ -50,19 +46,15 @@ class DSC_geometry_clothoid(DSC_geometry):
                 self.sections[-1]['curve'] = Clothoid.Forward(
                     self.point_start_local.x, self.point_start_local.y, self.heading_start_local,
                     self.curvature_start_local, self.point_end_local.x, self.point_end_local.y)
-                ## When the heading of start and end point is colinear the curvature
+                # When the heading of start and end point is colinear the curvature
                 # can become very small and the length becomes huge (solution is a gigantic
                 # circle). Therefore as a workaround we limit the length to 10 km.
                 if self.sections[-1]['curve'].length < 10000.0:
                     self.sections[-1]['params']['valid'] = True
                 else:
                     self.sections[-1]['params']['valid'] = False
-                    # Use old parameters
-                    self.sections[-1]['curve'] = Clothoid.Forward(
-                        self.point_start_local.x, self.point_start_local.y, self.heading_start_local,
-                        self.curvature_start_local, self.point_end_local.x, self.point_end_local.y)
 
-        # Remember geometry parameters
+        # Remember geometry parameters, only update if valid solution is found
         if self.sections[-1]['params']['valid']:
             self.sections[-1]['params']['curve_type'] = 'spiral'
             self.sections[-1]['params']['point_start'] = params['points'][-2]

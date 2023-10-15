@@ -117,6 +117,8 @@ class DSC_geometry():
             self.heading_end_local = params_input['heading_end'] \
                 - self.sections[0]['params']['heading_start']
             self.curvature_start_local = self.sections[-2]['params']['curvature_end']
+        self.curvature_end_local = params_input['curvature_end']
+        
         # Calculate parameters in section coordinate system
         mat_translation = Matrix.Translation(self.point_start_local)
         mat_rotation = Matrix.Rotation(self.heading_start_local, 4, 'Z')

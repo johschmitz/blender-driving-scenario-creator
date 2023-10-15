@@ -305,32 +305,47 @@ class DSC_OT_export(bpy.types.Operator):
                     planview.set_start_point(obj['geometry'][0]['point_start'][0],
                         obj['geometry'][0]['point_start'][1],obj['geometry'][0]['heading_start'])
                     length = 0
-                    for geometry_section in obj['geometry']:
-                        if geometry_section['curve_type'] == 'line':
-                            geometry = xodr.Line(geometry_section['length'])
-                        elif geometry_section['curve_type'] == 'arc':
-                            geometry = xodr.Arc(geometry_section['curvature_start'],
-                                length=geometry_section['length'])
-                        elif geometry_section['curve_type'] == 'spiral':
-                            geometry = xodr.Spiral(geometry_section['curvature_start'],
-                                geometry_section['curvature_end'], length=geometry_section['length'])
-                        elif geometry_section['curve_type'] == 'parampoly3':
-                            geometry = xodr.ParamPoly3(au=0,
-                                                       bu=geometry_section['coefficients_u']['b'],
-                                                       cu=geometry_section['coefficients_u']['c'],
-                                                       du=geometry_section['coefficients_u']['d'],
-                                                       av=0,
-                                                       bv=geometry_section['coefficients_v']['b'],
-                                                       cv=geometry_section['coefficients_v']['c'],
-                                                       dv=geometry_section['coefficients_v']['d'],
-                                                       prange="normalized",
-                                                       length=geometry_section['length'])
-                        planview.add_fixed_geometry(geom=geometry,
-                                                    x_start=geometry_section['point_start'][0],
-                                                    y_start=geometry_section['point_start'][1],
-                                                    h_start=geometry_section['heading_start'],
-                                                    s=length)
-                        length += geometry_section['length']
+                    for idx_section, geometry_section in enumerate(obj['geometry']):
+                        if geometry_section['curve_type'] == 'spiral_triple':
+                            # Create 3 OpenDRIVE geometries
+                            subsections = obj['geometry_subsections'][idx_section]
+                            for idx_subsection in range(3):
+                                geometry = xodr.Spiral(subsections[idx_subsection]['curvature_start'],
+                                                       subsections[idx_subsection]['curvature_end'],
+                                                       length=subsections[idx_subsection]['length'])
+                                planview.add_fixed_geometry(geom=geometry,
+                                                        x_start=subsections[idx_subsection]['point_start'][0],
+                                                        y_start=subsections[idx_subsection]['point_start'][1],
+                                                        h_start=subsections[idx_subsection]['heading_start'],
+                                                        s=length)
+                                length += subsections[idx_subsection]['length']
+                        else:
+                            # Create 1 OpenDRIVE geometry
+                            if geometry_section['curve_type'] == 'line':
+                                geometry = xodr.Line(geometry_section['length'])
+                            elif geometry_section['curve_type'] == 'arc':
+                                geometry = xodr.Arc(geometry_section['curvature_start'],
+                                    length=geometry_section['length'])
+                            elif geometry_section['curve_type'] == 'spiral':
+                                geometry = xodr.Spiral(geometry_section['curvature_start'],
+                                    geometry_section['curvature_end'], length=geometry_section['length'])
+                            elif geometry_section['curve_type'] == 'parampoly3':
+                                geometry = xodr.ParamPoly3(au=0,
+                                                        bu=geometry_section['coefficients_u']['b'],
+                                                        cu=geometry_section['coefficients_u']['c'],
+                                                        du=geometry_section['coefficients_u']['d'],
+                                                        av=0,
+                                                        bv=geometry_section['coefficients_v']['b'],
+                                                        cv=geometry_section['coefficients_v']['c'],
+                                                        dv=geometry_section['coefficients_v']['d'],
+                                                        prange="normalized",
+                                                        length=geometry_section['length'])
+                            planview.add_fixed_geometry(geom=geometry,
+                                                        x_start=geometry_section['point_start'][0],
+                                                        y_start=geometry_section['point_start'][1],
+                                                        h_start=geometry_section['heading_start'],
+                                                        s=length)
+                            length += geometry_section['length']
                     lanes = self.create_lanes(obj)
                     road = xodr.Road(obj['id_odr'], planview, lanes)
                     self.add_elevation_profiles(obj, road)
@@ -457,17 +472,26 @@ class DSC_OT_export(bpy.types.Operator):
                         if obj_jcr.name.startswith('junction_connecting_road'):
                             if obj_jcr['id_junction'] == junction_id:
                                 if 'link_predecessor_id_l' in obj_jcr and 'link_successor_id_l' in obj_jcr:
-                                    # Create a junction connecting road
-                                    # TODO for now we use a single spiral, later we should use spiral - arc - spiral
+                                    # Create a G2 continous junction connecting road with 3 OpenDRIVE geometries
                                     planview = xodr.PlanView()
-                                    planview.set_start_point(obj_jcr['geometry'][0]['point_start'][0],
-                                        obj_jcr['geometry'][0]['point_start'][1],obj_jcr['geometry'][0]['heading_start'])
-                                    geometry = xodr.Spiral(obj_jcr['geometry'][0]['curvature_start'],
-                                        obj_jcr['geometry'][0]['curvature_end'], length=obj_jcr['geometry'][0]['length'])
-                                    planview.add_geometry(geometry)
-                                    lanes = self.create_lanes(obj_jcr)
-                                    connecting_road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
-                                    self.add_elevation_profiles(obj_jcr, connecting_road)
+                                    planview.set_start_point(obj_jcr['geometry_subsections'][0][0]['point_start'][0],
+                                                                obj_jcr['geometry_subsections'][0][0]['point_start'][1],
+                                                                h_start=obj_jcr['geometry_subsections'][0][0]['heading_start'],)
+                                    length = 0
+                                    for idx in range(3):
+                                        geometry = xodr.Spiral(obj_jcr['geometry_subsections'][0][idx]['curvature_start'],
+                                                               obj_jcr['geometry_subsections'][0][idx]['curvature_end'],
+                                                               length=obj_jcr['geometry_subsections'][0][idx]['length'],)
+                                        planview.add_fixed_geometry(geom=geometry,
+                                                        x_start=obj_jcr['geometry_subsections'][0][idx]['point_start'][0],
+                                                        y_start=obj_jcr['geometry_subsections'][0][idx]['point_start'][1],
+                                                        h_start=obj_jcr['geometry_subsections'][0][idx]['heading_start'],
+                                                        s=length)
+                                        lanes = self.create_lanes(obj_jcr)
+                                        connecting_road = xodr.Road(obj_jcr['id_odr'],planview,lanes, road_type=junction_id)
+                                        self.add_elevation_profiles(obj_jcr, connecting_road)
+                                        # Accumulate overall length
+                                        length += obj_jcr['geometry_subsections'][0][idx]['length']
 
                                     incoming_road = self.get_road_by_id(roads, obj_jcr['link_predecessor_id_l'])
                                     outgoing_road = self.get_road_by_id(roads, obj_jcr['link_successor_id_l'])

@@ -23,6 +23,7 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
                  'road_arc': bpy.ops.dsc.road_arc,
                  'road_clothoid_hermite': bpy.ops.dsc.road_clothoid,
                  'road_clothoid_forward': bpy.ops.dsc.road_clothoid,
+                 'road_clothoid_triple': bpy.ops.dsc.road_clothoid_triple,
                  'road_parametric_polynomial': bpy.ops.dsc.road_parametric_polynomial,
                  'junction_connecting_road': bpy.ops.dsc.junction_connecting_road,
                  'junction_four_way': bpy.ops.dsc.junction_four_way}

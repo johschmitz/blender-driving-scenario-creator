@@ -127,6 +127,9 @@ class road:
 
             obj['geometry'] = [ section['params'] for section in self.geometry.sections ]
             obj['geometry_total_length'] = self.geometry.total_length
+            if self.geometry.sections[0]['params']['curve_type'] == 'spiral_triple':
+                # Store parameters for sub sections
+                obj['geometry_subsections'] = [ section['curve'].get_segment_params() for section in self.geometry.sections ]
 
             obj['lanes_left_num'] = self.params['lanes_left_num']
             obj['lanes_right_num'] = self.params['lanes_right_num']
