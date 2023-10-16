@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.23.0] - 2023-10-16
+
+### Added
+- New triple clothoid road geometry tool with G2 continuity (curvature
+  continuity) at both ends
+
+### Changed
+- Make junction boundary based on three segment G2 clothoid curve, use Hermite
+  interpolation for the boundary elevation and roughly triangulate the junction
+  surface.
+- Use newly added triple clothoid road geometry for junction connecting roads
+
+### Fixed
+- Junction connecting road snapping for left lanes
+- Road sampling when curvature is 0 at start of non straight line geometry
+- Curvature calculation of parampoly3 geometry
+- Sign of snapping curvature at road start
+
 ## [0.22.0] - 2023-10-06
 
 ### Changed
@@ -329,7 +347,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.19.1...v0.20.0
