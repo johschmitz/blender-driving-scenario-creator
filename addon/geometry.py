@@ -263,7 +263,7 @@ class DSC_geometry():
         '''
             Return slope at beginning of geometry.
         '''
-        return -1.0 * self.sections[-1]['params']['elevation'][0]['b']
+        return self.sections[-1]['params']['elevation'][0]['b']
 
     def get_slope_end(self):
         '''

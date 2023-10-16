@@ -453,11 +453,11 @@ def point_to_road_connector(obj, point):
     width_left_end, width_right_end = get_lane_widths_road_joint(obj, contact_point='end')
     if arg_min_dist == 0:
         return 'cp_start_l', Vector(obj['cp_start_l']), obj['geometry'][0]['heading_start'] - pi, \
-            obj['geometry'][0]['curvature_start'], obj['geometry'][0]['slope_start'], \
+            -obj['geometry'][0]['curvature_start'], -obj['geometry'][0]['slope_start'], \
             width_left_start, width_right_start, obj['lanes_left_types'], obj['lanes_right_types']
     if arg_min_dist == 1:
         return 'cp_start_r', Vector(obj['cp_start_r']), obj['geometry'][0]['heading_start'] - pi, \
-            obj['geometry'][0]['curvature_start'], obj['geometry'][0]['slope_start'], \
+            -obj['geometry'][0]['curvature_start'], -obj['geometry'][0]['slope_start'], \
             width_left_start, width_right_start, obj['lanes_left_types'], obj['lanes_right_types']
     elif arg_min_dist == 2:
         return 'cp_end_l', Vector(obj['cp_end_l']), obj['geometry'][-1]['heading_end'], \
@@ -649,8 +649,8 @@ def mouse_to_road_params(context, event, road_type, joint_side='both'):
             if obj['dsc_category'] == 'OpenDRIVE':
                 if obj['dsc_type'] == 'road':
                     hit = True
-                    point_type, snapped_point, heading, curvature, \
-                    slope, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right \
+                    point_type, snapped_point, heading, curvature, slope, \
+                    lane_widths_left, lane_widths_right, lane_types_left, lane_types_right \
                         = point_to_road_connector(obj, raycast_point)
                     id_obj = obj['id_odr']
                     if obj['road_split_type'] == 'end':
