@@ -16,7 +16,9 @@ from mathutils import Vector, Matrix
 
 class DSC_geometry():
 
-    def __init__(self):
+    def __init__(self, curve_type):
+        # TODO: Maybe at some point implement mixed geometries
+        self.curve_type = curve_type
         self.sections = []
         self.total_length = 0
 

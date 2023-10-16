@@ -42,6 +42,9 @@ class Clothoid_triple():
 
 class DSC_geometry_clothoid_triple(DSC_geometry):
 
+    def __init__(self):
+        super().__init__(curve_type='spiral_triple')
+
     def update_plan_view(self, params, geometry_solver='default'):
         # Calculate geometry
         self.sections[-1]['curve'] = Clothoid_triple(

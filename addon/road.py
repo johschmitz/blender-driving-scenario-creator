@@ -473,7 +473,10 @@ class road:
         while s < length:
             # TODO: Make hardcoded sampling parameters configurable
             if curvature_abs == 0:
-                step = 5
+                if self.geometry.curve_type == 'line':
+                    step = 5
+                else:
+                    step = 1
             else:
                 step = max(1, min(5, 0.1 / abs(curvature_abs)))
             s += step

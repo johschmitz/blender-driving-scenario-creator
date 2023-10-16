@@ -20,6 +20,9 @@ from math import pi
 
 class DSC_geometry_clothoid(DSC_geometry):
 
+    def __init__(self):
+        super().__init__(curve_type='clothoid')
+
     def update_plan_view(self, params, geometry_solver='default'):
         # Calculate geometry
         if geometry_solver == 'hermite' or geometry_solver == 'default':

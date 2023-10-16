@@ -21,6 +21,9 @@ from scipy.integrate import quad
 
 class DSC_geometry_parampoly3(DSC_geometry):
 
+    def __init__(self):
+        super().__init__(curve_type='parampoly3')
+
     def evaluate_cubic_polynomial_derivative(self, control_points_1d, t):
         """
             Evaluate the derivative of the cubic polynomial at a given parameter t

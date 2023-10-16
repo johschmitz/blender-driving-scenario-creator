@@ -84,6 +84,9 @@ class Arc():
 
 class DSC_geometry_arc(DSC_geometry):
 
+    def __init__(self):
+        super().__init__(curve_type='arc')
+
     def update_plan_view(self, params, geometry_solver='default'):
         # Transform to section coordinates since we calculate the arc always from (0,0)
         point_end_section = self.sections[-1]['matrix_local'].inverted() \
