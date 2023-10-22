@@ -154,6 +154,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
 
     def reset_params_snap(self):
         self.params_snap = {
+            'hit_type': None,
             'id_obj': None,
             'id_extra': None,
             'id_lane': None,
@@ -213,13 +214,13 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             else:
                 # Snap to existing objects if any, otherwise xy plane
                 if self.snap_filter == 'OpenDRIVE':
-                    hit, params_snap = helpers.mouse_to_road_params(
+                    params_snap = helpers.mouse_to_road_joint_params(
                         context, event, road_type='road')
                 else:
-                    hit, params_snap = helpers.mouse_to_road_surface_params(
+                    params_snap = helpers.mouse_to_road_surface_params(
                         context, event)
                 # Snap to object if not snapping to grid (with holding CTRL)
-                if hit and not event.ctrl:
+                if params_snap['hit_type'] is not None and not event.ctrl:
                     self.params_snap = params_snap
                     self.snapped_to_object = True
                     self.selected_point = self.params_snap['point']

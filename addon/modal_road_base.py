@@ -223,6 +223,7 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
 
     def reset_params_snap(self):
         self.params_snap = {
+            'hit_type': None,
             'id_obj': None,
             'id_extra': None,
             'id_lane': None,
@@ -328,16 +329,16 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                 # Snap to existing objects if any, otherwise xy plane
                 if self.object_type == 'junction_connecting_road':
                     if self.state == 'SELECT_START':
-                        hit, params_snap = helpers.mouse_to_road_params(
+                        params_snap = helpers.mouse_to_road_joint_params(
                             context, event, road_type='junction_connecting_road', joint_side='right')
                     else:
-                        hit, params_snap = helpers.mouse_to_road_params(
+                        params_snap = helpers.mouse_to_road_joint_params(
                             context, event, road_type='junction_connecting_road', joint_side='left')
                 else:
-                    hit, params_snap = helpers.mouse_to_road_params(
+                    params_snap = helpers.mouse_to_road_joint_params(
                         context, event, road_type='road')
                 # Snap to object if not snapping to grid (by holding CTRL)
-                if hit and not event.ctrl:
+                if params_snap['hit_type'] is not None and not event.ctrl:
                     self.params_snap = params_snap
                     self.snapped_to_object = True
                     selected_point_new = self.params_snap['point']

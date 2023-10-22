@@ -103,24 +103,54 @@ box next to it, in the add-on list.
 
 ## How to use
 
-When you are in the Blender "Layout" workspace, press <kbd>N</kbd> or click the
-little arrow next to the navigation gizmo to toggle the sidebar. Click
-<kbd>Driving Scenario Creator</kbd> in the sidebar. From here you can create
-roads and vehicles using the mouse by clicking the buttons in the "Driving
-Scenario Creator" menu. Roads, vehicles and trajectories can be placed with the
-mouse. Junction connecting roads can be build using the mouse similar to normal
-roads after first building a junction area. The cursor will snap to the lanes of
-the incoming roads in this case. Note, that in Blender it is possible to quickly
-left click multiple times in order to select objects which are located on top of
-each other. This helps with selecting and deleting junction connecting roads.
-Grid snapping can be activated by holding <kbd>Ctrl</kbd>. Additional geometry
-sections can be added by holding <kbd>Shift</kbd> and clicking. Start heading of
-a road can be adjusted by holding <kbd>Alt</kbd> and moving the mouse pointer.
-For the clothoid geometry using the Hermite solver the end heading can be
-adjusted by holding <kbd>Shift</kbd> and moving the mouse wheel. Road elevation
-can be changed by holding <kbd>E</kbd>(3D view) or <kbd>S</kbd>(sideview) keys
-and moving the mouse. See a summary of the keyboard shortcuts in the table
-below.
+Before using the add-on some preliminary settings are recommended.
+
+### Recommended Blender settings
+
+When you are in the Blender <kbd>Layout</kbd> workspace (see the tabs at the top), press
+<kbd>N</kbd> or click the little left arrow next to the navigation gizmo to
+toggle the sidebar. Click <kbd>View</kbd>, set `Clip Start` to 1 m and `Clip
+End` to 10000 m to avoid some 3D viewport clipping issues since the Blender
+default setting is targeted more towards smaller models. Click the
+<kbd>Shading</kbd> dropdown button (the little down arrow in the top right
+corner of the 3D viewport) and select `Texture` to be able to directly see the
+road sign textures.
+
+It is also very useful to make yourself familiar with the most important
+shortcuts to navigate with the camera in the 3D viewport. The most important
+ones are <kbd>Shift</kbd> + <kbd>Middlemouse</kbd> to pan and <kbd>Alt</kbd> +
+<kbd>Middlemouse</kbd> to move the pivot point. The pivot point will
+automatically be placed on the surface of an object when it is under the mouse
+pointer which is extremely useful. The view can be rotated by holding
+<kbd>Middlemouse</kbd>. Additionally, the `View` Pie Menu is very useful to see
+the scene from different fixed angles. It can be opened with the <kbd>\`</kbd>
+(backtick) button on the US keyboard layout, alternatively use the Numpad
+shortcuts or go to `Edit -> Preferences -> Input -> Emulate Numpad` and use the
+<kbd>1</kbd>-<kbd>9</kbd> keys. Hint for German keyboard layouts: go to `Edit ->
+Preferences -> Keymap -> 3D View -> 3D View (Global) -> View` and add the
+<kbd>Ctrl</kbd> modifier key to the shortcut. Then it will work with the
+<kbd>^</kbd> key which is in the same location as the <kbd>\`</kbd> key in the
+US keyboard layout (above the <kbd>Tab</kbd> key).
+
+### Using the actual add-on
+
+Click <kbd>Driving Scenario Creator</kbd> in the sidebar. From here you can
+create roads and vehicles using the mouse by clicking the buttons in the
+"Driving Scenario Creator" menu. Roads, signs, vehicles and trajectories can be
+placed with the mouse. Junction connecting roads can be build using the mouse
+similar to normal roads after first building a junction area. The cursor will
+snap to the lanes of the incoming roads in this case. Note, that in Blender it
+is possible to quickly left click multiple times in order to select objects
+which are located on top of each other. This helps with selecting and deleting
+junction connecting roads. Grid snapping can be activated by holding
+<kbd>Ctrl</kbd>. Additional geometry sections can be added by holding
+<kbd>Shift</kbd> and clicking. Start heading of a road can be adjusted by
+holding <kbd>Alt</kbd> and moving the mouse pointer. For the clothoid geometry
+using the Hermite solver the end heading can be adjusted by holding
+<kbd>Shift</kbd> and moving the mouse wheel. Road elevation can be changed by
+holding <kbd>E</kbd>(3D view) or <kbd>S</kbd>(sideview) keys and moving the
+mouse. After placing roads, road signs can be attached to them and placed at the
+side. Finally, vehicles can be placed and a trajectory can be assigned to them.
 
 | Keyboard Shortcut                                     | Function                             |
 | ----------------------------------------------------- | ------------------------------------ |
@@ -196,6 +226,8 @@ Credits for the current version go to
 - [pyclothoids](https://github.com/phillipd94/pyclothoids) which is a Python
   wrapper for Enrico Bertolazzi's
   [Clothoids](https://github.com/ebertolazzi/Clothoids) library
+- Wikipedia and its contributors for the public domain ("gemeinfrei") German
+  road sign textures
 
 ## Main author/maintainer contact
 

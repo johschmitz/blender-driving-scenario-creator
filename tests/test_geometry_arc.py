@@ -32,7 +32,7 @@ def test_geometry_arc_straight_case():
 
     # Sample the first section
     length_0 = geometry.total_length
-    xyz_local_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
+    xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
     xyz_global_0 = geometry.matrix_world @ Vector(xyz_local_0[0])
     assert [xyz_global_0.x, xyz_global_0.y, xyz_global_0.z] == approx([6.0, 3.0, 0.0], 1e-5)
 
@@ -42,14 +42,14 @@ def test_geometry_arc_straight_case():
     geometry.update(params_input, solver)
 
     # Sample the first section again
-    length_0 = geometry.sections[0]['params']['length']
-    xyz_local_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
+    length_0 = geometry.sections[0]['length']
+    xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
     xyz_global_0 = geometry.matrix_world @ Vector(xyz_local_0[0])
     assert [xyz_global_0.x, xyz_global_0.y, xyz_global_0.z] == approx([6.0, 3.0, 0.0], 1e-5)
 
     # Sample the second section
     length_1 = geometry.total_length
-    xyz_local_1, c_1 = geometry.sample_cross_section(s=length_1, t_vec=[0.0])
+    xyz_local_1, h_0, c_1 = geometry.sample_cross_section(s=length_1, t_vec=[0.0])
     xyz_global_1 = geometry.matrix_world @ Vector(xyz_local_1[0])
     assert [xyz_global_1.x, xyz_global_1.y, xyz_global_1.z] == approx([8.0, 4.0, 0.0], 1e-5)
 
@@ -64,7 +64,7 @@ def test_geometry_arc_180():
     geometry.update(params_input, solver)
 
     length_0 = geometry.total_length
-    xyz_local_0, c_0 = geometry.sample_cross_section(s=length_0/2, t_vec=[0.0])
+    xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0/2, t_vec=[0.0])
     xyz_global_0 = geometry.matrix_world @ Vector(xyz_local_0[0])
     assert [xyz_global_0.x, xyz_global_0.y, xyz_global_0.z] == approx([1.0, 1.0, 0.0], 1e-5)
 
@@ -78,7 +78,7 @@ def test_geometry_arc_negative_start_heading():
     geometry.add_section()
     geometry.update(params_input, solver)
 
-    xyz_local, c = geometry.sample_cross_section(s=geometry.total_length, t_vec=[sqrt(2.0)])
+    xyz_local, h, c = geometry.sample_cross_section(s=geometry.total_length, t_vec=[sqrt(2.0)])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([-2.0, 0.0, 0.0], abs=1e-5)
 
@@ -94,7 +94,7 @@ def test_geometry_arc_y_axis_straight():
     geometry.update(params_input, solver)
 
     length_0 = geometry.total_length
-    xyz_local_0, c_0 = geometry.sample_cross_section(s=length_0/2, t_vec=[0.0])
+    xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0/2, t_vec=[0.0])
     xyz_global_0 = geometry.matrix_world @ Vector(xyz_local_0[0])
     assert [xyz_global_0.x, xyz_global_0.y, xyz_global_0.z] == approx([0.0, 1.0, 0.0], abs=1e-5)
 
@@ -110,7 +110,7 @@ def test_geometry_arc_270_three_pieces():
     geometry.update(params_input, solver)
 
     length_0 = geometry.total_length
-    xyz_local, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[5.0])
+    xyz_local, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[5.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([15.0, 20.0, 0.0], 1e-5)
 
@@ -121,7 +121,7 @@ def test_geometry_arc_270_three_pieces():
     geometry.update(params_input, solver)
 
     length = geometry.total_length
-    xyz_local, c_0 = geometry.sample_cross_section(s=length, t_vec=[2.0])
+    xyz_local, h_0, c_0 = geometry.sample_cross_section(s=length, t_vec=[2.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([10.0, 28.0, 0.0], 1e-5)
 
@@ -133,6 +133,6 @@ def test_geometry_arc_270_three_pieces():
     geometry.update(params_input, solver)
 
     length = geometry.total_length
-    xyz_local, c_0 = geometry.sample_cross_section(s=length, t_vec=[-5.0])
+    xyz_local, h_0, c_0 = geometry.sample_cross_section(s=length, t_vec=[-5.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([-5.0, 20.0, 0.0], 1e-5)

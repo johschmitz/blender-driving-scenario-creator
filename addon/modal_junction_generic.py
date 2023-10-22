@@ -47,16 +47,15 @@ class DSC_OT_junction_generic(bpy.types.Operator):
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.reset_state(context)
-            self.snapped = False
             self.state = 'SELECT_INCOMING'
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
         # Update on move
         if event.type == 'MOUSEMOVE':
             # Snap to existing objects if any, otherwise xy plane
-            self.snapped, self.params_snap = helpers.mouse_to_road_params(
+            self.params_snap = helpers.mouse_to_road_joint_params(
                 context, event, road_type='road')
-            if self.snapped:
+            if self.params_snap['hit_type'] != None:
                 context.scene.cursor.location = self.params_snap['point']
             else:
                 selected_point_new = helpers.mouse_to_xy_parallel_plane(context, event, 0.0)
@@ -65,7 +64,7 @@ class DSC_OT_junction_generic(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_INCOMING':
-                    if self.snapped:
+                    if self.params_snap['hit_type'] != None:
                         contact_point_vec = self.params_snap['point'].copy()
                         # Calculate width of junction joints based on road direction
                         if self.params_snap['point_type'].startswith('cp_end'):

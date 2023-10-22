@@ -21,7 +21,11 @@ from math import pi
 class DSC_geometry_line(DSC_geometry):
 
     def __init__(self):
-        super().__init__(curve_type='line')
+        super().__init__()
+
+    def load_section_curve(self, section):
+        # Not needed for line since we can directly sample
+        pass
 
     def update_plan_view(self, params, geometry_solver='default'):
 
@@ -29,21 +33,22 @@ class DSC_geometry_line(DSC_geometry):
         length = (self.point_end_local - self.point_start_local).to_2d().length
 
         # Remember geometry parameters
-        self.sections[-1]['params']['curve_type'] = 'line'
-        self.sections[-1]['params']['point_start'] = params['points'][-2]
-        self.sections[-1]['params']['heading_start'] = params['heading_start']
-        self.sections[-1]['params']['curvature_start'] = 0
-        self.sections[-1]['params']['point_end'] = params['points'][-1]
-        self.sections[-1]['params']['heading_end'] = params['heading_start']
-        self.sections[-1]['params']['curvature_end'] = 0
-        self.sections[-1]['params']['length'] = length
-        self.sections[-1]['params']['valid'] = True
+        self.sections[-1]['curve_type'] = 'line'
+        self.sections[-1]['geometry_solver'] = 'default'
+        self.sections[-1]['point_start'] = params['points'][-2]
+        self.sections[-1]['heading_start'] = params['heading_start']
+        self.sections[-1]['curvature_start'] = 0
+        self.sections[-1]['point_end'] = params['points'][-1]
+        self.sections[-1]['heading_end'] = params['heading_start']
+        self.sections[-1]['curvature_end'] = 0
+        self.sections[-1]['length'] = length
+        self.sections[-1]['valid'] = True
 
     def sample_plan_view(self, s):
         idx_section, s_section = self.get_section_idx_and_s(s)
         x_s = s_section
         y_s = 0
         curvature = 0
-        hdg_t = pi/2
+        hdg = 0
         xyz_s_local = self.sections[idx_section]['matrix_local'] @ Vector((x_s, y_s, 0.0))
-        return xyz_s_local[0], xyz_s_local[1], curvature, hdg_t
+        return xyz_s_local[0], xyz_s_local[1], hdg, curvature

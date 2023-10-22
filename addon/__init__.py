@@ -37,6 +37,10 @@ from . trajectory_polyline import DSC_OT_trajectory_polyline
 from . entity_properties import DSC_entity_properties_vehicle
 from . entity_properties import DSC_entity_properties_pedestrian
 from . popup_entity_properties import DSC_OT_popup_entity_properties
+from . road_object_sign_properties import DSC_road_object_sign_property_item
+from . road_object_sign_properties import DSC_road_object_sign_properties
+from . road_object_sign_operator import DSC_OT_road_object_sign
+from . popup_road_object_sign_properties import DSC_OT_popup_road_object_sign_properties
 
 
 bl_info = {
@@ -55,7 +59,8 @@ bl_info = {
 }
 
 # Global variables
-custom_icons = None
+dsc_custom_icons = None
+dsc_road_sign_previews = None
 
 class DSC_PT_panel_create(bpy.types.Panel):
     bl_idname = 'DSC_PT_panel_create'
@@ -66,7 +71,7 @@ class DSC_PT_panel_create(bpy.types.Panel):
     bl_context = 'objectmode'
 
     def draw(self, context):
-        global custom_icons
+        global dsc_custom_icons
 
         layout = self.layout
         layout.label(text='OpenDRIVE')
@@ -74,33 +79,38 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box.label(text='Roads')
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Straight',
-            icon_value=custom_icons['road_straight'].icon_id).operator = 'road_straight'
+            icon_value=dsc_custom_icons['road_straight'].icon_id).operator = 'road_straight'
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Arc',
-            icon_value=custom_icons['road_arc'].icon_id).operator = 'road_arc'
+            icon_value=dsc_custom_icons['road_arc'].icon_id).operator = 'road_arc'
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Clothoid (Hermite)',
-            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_hermite'
+            icon_value=dsc_custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_hermite'
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Clothoid (Forward)',
-            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_forward'
+            icon_value=dsc_custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_forward'
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Clothoid triple (G2)',
-            icon_value=custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_triple'
+            icon_value=dsc_custom_icons['road_clothoid'].icon_id).operator = 'road_clothoid_triple'
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='Parametric polynomial',
-            icon_value=custom_icons['road_parametric_polynomial'].icon_id).operator = 'road_parametric_polynomial'
+            icon_value=dsc_custom_icons['road_parametric_polynomial'].icon_id).operator = 'road_parametric_polynomial'
         row = box.row(align=True)
         row.label(text='Junctions')
         row = box.row(align=True)
         row.operator('dsc.popup_road_properties', text='4-way junction',
-            icon_value=custom_icons['junction_4way'].icon_id).operator = 'junction_four_way'
+            icon_value=dsc_custom_icons['junction_4way'].icon_id).operator = 'junction_four_way'
         row = box.row(align=True)
         row.operator('dsc.junction_generic', text='Generic junction (area)',
-            icon_value=custom_icons['junction_area'].icon_id)
+            icon_value=dsc_custom_icons['junction_area'].icon_id)
         row = box.row(align=True)
         row.operator('dsc.junction_connecting_road', text='Junction connecting road',
-            icon_value=custom_icons['junction_connecting_road'].icon_id)
+            icon_value=dsc_custom_icons['junction_connecting_road'].icon_id)
+        row = box.row(align=True)
+        row.label(text='Road objects')
+        row = box.row(align=True)
+        row.operator('dsc.popup_road_object_sign_properties', text='Sign',
+            icon_value=dsc_custom_icons['road_object_sign'].icon_id).operator = 'road_object_sign'
 
         layout.label(text='OpenSCENARIO')
         box = layout.box()
@@ -114,9 +124,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
 
         box.label(text='Trajectories')
         row = box.row(align=True)
-        row.operator('dsc.trajectory_polyline', icon_value=custom_icons['trajectory_polyline'].icon_id)
+        row.operator('dsc.trajectory_polyline', icon_value=dsc_custom_icons['trajectory_polyline'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.trajectory_nurbs', icon_value=custom_icons['trajectory_nurbs'].icon_id)
+        row.operator('dsc.trajectory_nurbs', icon_value=dsc_custom_icons['trajectory_nurbs'].icon_id)
 
         layout.label(text='Export (Track, Scenario, Mesh)')
         box = layout.box()
@@ -131,6 +141,8 @@ class DSC_Properties(bpy.types.PropertyGroup):
         name='road_properties', type=DSC_road_properties)
     connecting_road_properties: bpy.props.PointerProperty(
         name='connecting_road_properties', type=DSC_road_properties)
+    road_object_sign_properties: bpy.props.PointerProperty(
+        name='road_object_sign_properties', type=DSC_road_object_sign_properties)
     entity_properties_vehicle: bpy.props.PointerProperty(
         name='entity_properties_vehicle', type=DSC_entity_properties_vehicle)
     entity_properties_pedestrian: bpy.props.PointerProperty(
@@ -160,23 +172,33 @@ classes = (
     DSC_entity_properties_vehicle,
     DSC_entity_properties_pedestrian,
     DSC_OT_popup_entity_properties,
+    DSC_road_object_sign_property_item,
+    DSC_road_object_sign_properties,
+    DSC_OT_road_object_sign,
+    DSC_OT_popup_road_object_sign_properties,
     DSC_Properties,
 )
 
 def register():
-    global custom_icons
-    # Load custom icons
-    custom_icons = bpy.utils.previews.new()
+    global dsc_custom_icons
+    global dsc_road_sign_previews
+
+    # Load custom button icons
+    dsc_custom_icons = bpy.utils.previews.new()
     icons_dir = os.path.join(os.path.dirname(__file__), 'icons')
-    custom_icons.load('road_straight', os.path.join(icons_dir, 'road_straight.png'), 'IMAGE')
-    custom_icons.load('road_arc', os.path.join(icons_dir, 'road_arc.png'), 'IMAGE')
-    custom_icons.load('road_clothoid', os.path.join(icons_dir, 'road_clothoid.png'), 'IMAGE')
-    custom_icons.load('road_parametric_polynomial', os.path.join(icons_dir, 'road_parametric_polynomial.png'), 'IMAGE')
-    custom_icons.load('junction_4way', os.path.join(icons_dir, 'junction_4way.png'), 'IMAGE')
-    custom_icons.load('junction_area', os.path.join(icons_dir, 'junction_area.png'), 'IMAGE')
-    custom_icons.load('junction_connecting_road', os.path.join(icons_dir, 'junction_connecting_road.png'), 'IMAGE')
-    custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
-    custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')
+    dsc_custom_icons.load('road_straight', os.path.join(icons_dir, 'road_straight.png'), 'IMAGE')
+    dsc_custom_icons.load('road_arc', os.path.join(icons_dir, 'road_arc.png'), 'IMAGE')
+    dsc_custom_icons.load('road_clothoid', os.path.join(icons_dir, 'road_clothoid.png'), 'IMAGE')
+    dsc_custom_icons.load('road_parametric_polynomial', os.path.join(icons_dir, 'road_parametric_polynomial.png'), 'IMAGE')
+    dsc_custom_icons.load('junction_4way', os.path.join(icons_dir, 'junction_4way.png'), 'IMAGE')
+    dsc_custom_icons.load('junction_area', os.path.join(icons_dir, 'junction_area.png'), 'IMAGE')
+    dsc_custom_icons.load('junction_connecting_road', os.path.join(icons_dir, 'junction_connecting_road.png'), 'IMAGE')
+    dsc_custom_icons.load('road_object_sign', os.path.join(icons_dir, 'road_object_sign.png'), 'IMAGE')
+    dsc_custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
+    dsc_custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')
+
+    # Create a new preview collection to use in other modules
+    dsc_road_sign_previews = bpy.utils.previews.new()
 
     # Register all addon classes
     for c in classes:
@@ -187,14 +209,15 @@ def register():
     bpy.types.Scene.dsc_properties = bpy.props.PointerProperty(type=DSC_Properties)
 
 def unregister():
-    global custom_icons
+    global dsc_custom_icons
     # Unregister export menu
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     #  Unregister all addon classes
     for c in reversed(classes):
         bpy.utils.unregister_class(c)
-    # Get rid of custom icons
-    bpy.utils.previews.remove(custom_icons)
+    # Get rid of icon collections
+    bpy.utils.previews.remove(dsc_custom_icons)
+    bpy.utils.previews.remove(dsc_road_sign_previews)
     # Get rid of addon property group
     del bpy.types.Scene.dsc_properties
 

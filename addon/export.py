@@ -100,10 +100,6 @@ class DSC_OT_export(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        # if helpers.collection_exists(['OpenDRIVE']):
-        #     return True
-        # else:
-        #     return False
         return True
 
     def draw(self, context):
@@ -215,14 +211,26 @@ class DSC_OT_export(bpy.types.Operator):
             file_path_obj = file_path.with_suffix('.obj')
             file_path_mtl = file_path.with_suffix('.mtl')
             file_path_obj.parent.mkdir(parents=True, exist_ok=True)
-            # bpy.ops.export_scene.obj(filepath=str(file_path_obj), check_existing=True,
-            #                          filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
-            #                          use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
-            #                          use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
-            #                          use_materials=True, use_triangles=False, use_nurbs=False,
-            #                          use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
-            #                          group_by_material=False, keep_vertex_order=False, global_scale=1.0,
-            #                          path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
+            file_paths_textures = set()
+            # Export texture files of all selected objects
+            for obj in bpy.context.selected_objects:
+                # Loop through each material slot of the object
+                for slot in obj.material_slots:
+                    # Get the material from the slot
+                    mat = slot.material
+                    # Check if the material uses nodes
+                    if mat.use_nodes:
+                        # Loop through each node in the material's node tree
+                        for node in mat.node_tree.nodes:
+                            # Check if the node is a texture image node
+                            if node.type == 'TEX_IMAGE' and node.image:
+                                # Construct the output file path
+                                file_path_texture = pathlib.Path(file_path.parent /
+                                                            node.image.name).with_suffix('.png')
+                                # Save the image to the output path
+                                node.image.save_render(str(file_path_texture))
+                                print('Exported texture:', file_path_texture)
+                                file_paths_textures.add(file_path_texture)
             bpy.ops.wm.obj_export(filepath=str(file_path_obj), check_existing=True, filter_blender=False,
                                   filter_backup=False, filter_image=False, filter_movie=False,
                                   filter_python=False, filter_font=False, filter_sound=False,
@@ -241,9 +249,11 @@ class DSC_OT_export(bpy.types.Operator):
                                   export_smooth_groups=False, smooth_group_bitflags=False,
                                   filter_glob='*.obj;*.mtl')
             self.convert_to_osgb(file_path_obj)
-            # Remove mtl and obj files
+            # Remove mtl, obj and texture files
             file_path_obj.unlink()
             file_path_mtl.unlink()
+            for file_path_texture in file_paths_textures:
+                file_path_texture.unlink()
         elif self.mesh_file_type == 'fbx':
             file_path = file_path.with_suffix('.fbx')
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -424,6 +434,39 @@ class DSC_OT_export(bpy.types.Operator):
                     print('Add road with ID', obj['id_odr'])
                     odr.add_road(road)
                     roads.append(road)
+                if obj.name.startswith('sign'):
+                    road_to_attach = self.get_road_by_id(roads, obj['id_road'])
+                    print("Add signal with ID", obj['id_odr'])
+                    # Calculate orientation based on road side
+                    # TODO take lane offset into account when it is implemented
+                    if obj['position_t'] < 0:
+                        orientation = xodr.Orientation.negative
+                    else:
+                        orientation = xodr.Orientation.positive
+                    # Do not export zero values
+                    if obj['value'] != 0:
+                        value = obj['value']
+                    else:
+                        value = None
+                    # TODO implement hOffset
+                    road_to_attach.add_signal(
+                        xodr.Signal(
+                            s=obj['position_s'],
+                            t=obj['position_t'],
+                            zOffset=obj['zOffset'],
+                            orientation=orientation,
+                            country='de',
+                            Type=obj['catalog_type'],
+                            subtype=obj['catalog_subtype'],
+                            name=obj.name,
+                            value=value,
+                            id=obj['id_odr'],
+                            unit='km/h',
+                            height=obj['height'],
+                            width=obj['width'],
+                        )
+                    )
+
             # Now that all roads exist create direct junctions
             for obj in bpy.data.collections['OpenDRIVE'].objects:
                 if obj.name.startswith('road'):

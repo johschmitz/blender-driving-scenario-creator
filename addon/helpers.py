@@ -28,7 +28,7 @@ def get_new_id_opendrive(context):
     '''
     dummy_obj = context.scene.objects.get('id_odr_next')
     if dummy_obj is None:
-        dummy_obj = bpy.data.objects.new('id_odr_next',None)
+        dummy_obj = bpy.data.objects.new('id_odr_next', None)
         # Do not render
         dummy_obj.hide_viewport = True
         dummy_obj.hide_render = True
@@ -64,7 +64,7 @@ def ensure_collection_dsc(context):
         for mod in addon_utils.modules():
             if mod.bl_info['name'] == 'Driving Scenario Creator':
                 version = mod.bl_info['version']
-        version_obj = bpy.data.objects.new('dsc_addon_version',None)
+        version_obj = bpy.data.objects.new('dsc_addon_version', None)
         # Do not render
         version_obj.hide_viewport = True
         version_obj.hide_render = True
@@ -169,7 +169,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra, 
     # 1. Set the link parameters of the object itself
     if 'road' in obj.name:
         if link_type == 'start':
-            if obj['dsc_type'] == 'road':
+            if obj['dsc_type'].startswith('road_'):
                 if obj['road_split_type'] == 'none':
                     obj['link_predecessor_id_l'] = id_other
                 else:
@@ -199,7 +199,7 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra, 
                     obj['link_predecessor_id_l'] = obj_other['joints'][id_extra]['id_incoming']
                     obj['link_predecessor_cp_l'] = obj_other['joints'][id_extra]['contact_point_type']
         else:
-            if obj['dsc_type'] == 'road':
+            if obj['dsc_type'].startswith('road_'):
                 obj['link_successor_id_l'] = id_other
                 if obj['road_split_type'] == 'none':
                     obj['link_successor_id_l'] = id_other
@@ -378,7 +378,7 @@ def remove_duplicate_vertices(context, obj):
     context.view_layer.objects.active = obj
     bpy.ops.object.editmode_toggle()
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.remove_doubles(threshold=0.001,
+    bpy.ops.mesh.remove_doubles(threshold=0.0001,
                 use_unselected=True, use_sharp_edge_from_normals=False)
     bpy.ops.object.editmode_toggle()
 
@@ -618,7 +618,7 @@ def project_point_vector_2d(point_start, heading_start, point_selected):
     else:
         return point_selected
 
-def mouse_to_road_params(context, event, road_type, joint_side='both'):
+def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
     '''
         Check if a road is hit and return snapping parameters. The road side
         parameter determines which side to snap to (left|right|both) for
@@ -626,7 +626,7 @@ def mouse_to_road_params(context, event, road_type, joint_side='both'):
         direction towards the junction interior.
     '''
     # Initialize with some defaults in case nothing is hit
-    hit = False
+    hit_type = None
     id_obj = None
     id_extra = None
     id_lane = None
@@ -647,8 +647,8 @@ def mouse_to_road_params(context, event, road_type, joint_side='both'):
         # DSC mesh hit
         if road_type == 'road':
             if obj['dsc_category'] == 'OpenDRIVE':
-                if obj['dsc_type'] == 'road':
-                    hit = True
+                if obj['dsc_type'].startswith('road_') and obj['dsc_type'] != 'road_object':
+                    hit_type = 'road'
                     point_type, snapped_point, heading, curvature, slope, \
                     lane_widths_left, lane_widths_right, lane_types_left, lane_types_right \
                         = point_to_road_connector(obj, raycast_point)
@@ -663,7 +663,8 @@ def mouse_to_road_params(context, event, road_type, joint_side='both'):
                                 id_extra = obj['id_direct_junction_start']
             if obj.name.startswith('junction_area'):
                 # This path is for incoming road to junction joint snapping
-                hit = True
+                hit_type = 'junction_joint'
+                # Determine road side based on lane ID and reference line direction
                 id_joint, point_type, snapped_point, heading, slope = \
                     point_to_junction_joint_exterior(obj, raycast_point)
                 # Set both IDs to the junction ID
@@ -675,7 +676,7 @@ def mouse_to_road_params(context, event, road_type, joint_side='both'):
                 id_joint, point_type, snapped_point, heading, slope, id_lane, lane_width, lane_type = \
                     point_to_junction_joint_interior(obj, raycast_point, joint_side=joint_side)
                 if id_joint != None:
-                    hit = True
+                    hit_type = 'junction_connecting_road'
                     heading = heading - pi
                     # Set both IDs to the junction ID
                     id_obj = obj['id_odr']
@@ -694,28 +695,29 @@ def mouse_to_road_params(context, event, road_type, joint_side='both'):
                     lane_widths_right = [lane_width]
                     lane_types_left = []
                     lane_types_right = [lane_type]
-    return hit ,{'id_obj': id_obj,
-                 'id_extra': id_extra,
-                 'id_lane': id_lane,
-                 'joint_side': hit_joint_side,
-                 'point': snapped_point,
-                 'normal': snapped_normal,
-                 'point_type': point_type,
-                 'heading': heading,
-                 'curvature': curvature,
-                 'slope': slope,
-                 'lane_widths_left': lane_widths_left,
-                 'lane_widths_right': lane_widths_right,
-                 'lane_types_left': lane_types_left,
-                 'lane_types_right': lane_types_right,
-                 }
+    return {'hit_type': hit_type,
+            'id_obj': id_obj,
+            'id_extra': id_extra,
+            'id_lane': id_lane,
+            'joint_side': hit_joint_side,
+            'point': snapped_point,
+            'normal': snapped_normal,
+            'point_type': point_type,
+            'heading': heading,
+            'curvature': curvature,
+            'slope': slope,
+            'lane_widths_left': lane_widths_left,
+            'lane_widths_right': lane_widths_right,
+            'lane_types_left': lane_types_left,
+            'lane_types_right': lane_types_right,
+            }
 
 def mouse_to_scenario_entity_params(context, event):
     '''
         Check if an entity is hit and return snapping parameters.
     '''
     # Initialize with some defaults in case nothing is hit
-    hit = False
+    hit_type = None
     id_obj = None
     id_extra = None
     point_type = None
@@ -730,25 +732,26 @@ def mouse_to_scenario_entity_params(context, event):
     if dsc_hit:
         # DSC mesh hit
         if obj['dsc_category'] == 'OpenSCENARIO':
-            hit = True
+            hit_type = 'scenario_entity'
             point_type, snapped_point, heading = point_to_object_connector(obj, raycast_point)
             id_obj = obj.name
-    return hit ,{'id_obj': id_obj,
-                 'id_extra': id_extra,
-                 'point': snapped_point,
-                 'normal': snapped_normal,
-                 'point_type': point_type,
-                 'heading': heading,
-                 'curvature': curvature,
-                 'slope': slope,
-                 }
+    return {'hit_type': hit_type,
+            'id_obj': id_obj,
+            'id_extra': id_extra,
+            'point': snapped_point,
+            'normal': snapped_normal,
+            'point_type': point_type,
+            'heading': heading,
+            'curvature': curvature,
+            'slope': slope,
+            }
 
 def mouse_to_road_surface_params(context, event):
     '''
         Check if a road surface is hit and return a snapping parameters.
     '''
     # Initialize with some defaults in case nothing is hit
-    hit = False
+    hit_type = None
     id_obj = None
     id_extra = None
     id_lane = None
@@ -764,31 +767,33 @@ def mouse_to_road_surface_params(context, event):
     if dsc_hit:
         # DSC mesh hit
         if obj['dsc_category'] == 'OpenDRIVE':
-            hit = True
+            hit_type = 'road_surface'
             point_type = 'surface'
             snapped_point = raycast_point
             snapped_normal = raycast_normal
             id_obj = obj.name
-    return hit ,{'id_obj': id_obj,
-                 'id_extra': id_extra,
-                 'id_lane': id_lane,
-                 'point': snapped_point,
-                 'normal': snapped_normal,
-                 'point_type': point_type,
-                 'heading': heading,
-                 'curvature': curvature,
-                 'slope': slope,
-                 }
+    return {'hit_type': hit_type,
+            'id_obj': id_obj,
+            'id_extra': id_extra,
+            'id_lane': id_lane,
+            'point': snapped_point,
+            'normal': snapped_normal,
+            'point_type': point_type,
+            'heading': heading,
+            'curvature': curvature,
+            'slope': slope,
+            }
 
-def assign_road_materials(obj):
+def assign_materials(obj):
     '''
         Assign materials for asphalt and markings to object.
     '''
     default_materials = {
-        'road_asphalt': [.3, .3, .3, 1],
-        'road_mark_white': [.9, .9, .9, 1],
-        'road_mark_yellow': [.85, .63, .0, 1],
-        'grass': [.05, .6, .01, 1],
+        'road_asphalt': [.3, .3, .3, 1.0],
+        'road_mark_white': [.9, .9, .9, 1.0],
+        'road_mark_yellow': [.85, .63, .0, 1.0],
+        'grass': [.05, .6, .01, 1.0],
+        'road_sign_pole': [.4, .4, .4, 1.0],
     }
     for key in default_materials.keys():
         material = bpy.data.materials.get(key)
@@ -813,7 +818,7 @@ def get_paint_material_name(color):
     '''
         Calculate material name from name string and Blender color
     '''
-    return 'vehicle_paint' + '_{:.2f}_{:.2f}_{:.2f}'.format(*color[0:4])
+    return 'paint' + '_{:.2f}_{:.2f}_{:.2f}'.format(*color[0:4])
 
 def get_material_index(obj, material_name):
     '''

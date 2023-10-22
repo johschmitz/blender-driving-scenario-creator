@@ -81,13 +81,13 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             # Snap to existing objects if any, otherwise xy plane
             if self.state == 'SELECT_OBJECT':
                 # Start of trajectory should be an OpenSCENARIO object
-                self.snapped, self.params_snap = helpers.mouse_to_scenario_entity_params(
+                self.params_snap = helpers.mouse_to_scenario_entity_params(
                     context, event)
             else:
                 # For remaining trajectory points use any surface point
-                self.snapped, self.params_snap = helpers.mouse_to_road_surface_params(
+                self.params_snap = helpers.mouse_to_road_surface_params(
                     context, event)
-            if self.snapped:
+            if self.params_snap['hit_type'] is not None:
                 self.selected_point = self.params_snap['point']
             else:
                 self.selected_point = helpers.mouse_to_xy_parallel_plane(context, event, 0)
@@ -95,14 +95,14 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             self.selected_point.z += 0.3
             context.scene.cursor.location = self.selected_point
             # CTRL activates grid snapping if not snapped to object
-            if event.ctrl and not self.snapped:
+            if event.ctrl and self.params_snap['hit_type'] is not None:
                 bpy.ops.view3d.snap_cursor_to_grid()
                 self.selected_point = context.scene.cursor.location
         # Select object and trajectory points
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.state == 'SELECT_OBJECT':
-                    if self.snapped:
+                    if self.params_snap['hit_type'] is not None:
                         self.point_start = self.selected_point
                         self.trajectory_points.append(self.selected_point.copy())
                         self.create_trajectory_temp(context)

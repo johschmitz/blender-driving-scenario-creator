@@ -28,7 +28,7 @@ def test_geometry_line_1d():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    xyz_local, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
+    xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([15.0, 10.0, 0.0], 1e-5)
 
@@ -36,8 +36,8 @@ def test_geometry_line_1d():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    length_section = geometry.sections[1]['params']['length']
-    xyz_local, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
+    length_section = geometry.sections[1]['length']
+    xyz_local, h, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([25.0, 10.0, 0.0], 1e-5)
 
@@ -51,7 +51,7 @@ def test_geometry_line_2d():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    xyz_local, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
+    xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([40.0, 20.0, 0.0], 1e-5)
 
@@ -59,8 +59,8 @@ def test_geometry_line_2d():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    length_section = geometry.sections[1]['params']['length']
-    xyz_local, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
+    length_section = geometry.sections[1]['length']
+    xyz_local, h, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([80.0, 40.0, 0.0], 1e-5)
 
@@ -69,7 +69,7 @@ def test_geometry_line_2d():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    xyz_local, c = geometry.sample_cross_section(s=length, t_vec=[0.0])
+    xyz_local, h, c = geometry.sample_cross_section(s=length, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([320.0, 160.0, 0.0], 1e-5)
 
@@ -83,7 +83,7 @@ def test_geometry_line_2d_projection():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    xyz_local, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
+    xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([40.0, 20.0, 0.0], 1e-5)
 
@@ -91,8 +91,8 @@ def test_geometry_line_2d_projection():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    length_section = geometry.sections[1]['params']['length']
-    xyz_local, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
+    length_section = geometry.sections[1]['length']
+    xyz_local, h, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     # FIXME there seems to be a small error in the projection
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([80.0, 40.0, 0.0], 1e-5)
@@ -107,7 +107,7 @@ def test_geometry_line_3d():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    xyz_local, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
+    xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([4.0, 2.0, 1.5], 1e-5)
 
@@ -115,6 +115,6 @@ def test_geometry_line_3d():
     geometry.add_section()
     geometry.update(params_input, None)
     length = geometry.total_length
-    xyz_local, c = geometry.sample_cross_section(s=length, t_vec=[0.0])
+    xyz_local, h, c = geometry.sample_cross_section(s=length, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
     assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([10.0, 5.0, 4.0], 1e-5)

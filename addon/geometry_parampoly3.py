@@ -22,7 +22,10 @@ from scipy.integrate import quad
 class DSC_geometry_parampoly3(DSC_geometry):
 
     def __init__(self):
-        super().__init__(curve_type='parampoly3')
+        super().__init__()
+
+    def load_section_curve(self, section):
+        pass
 
     def evaluate_cubic_polynomial_derivative(self, control_points_1d, p):
         """
@@ -124,31 +127,32 @@ class DSC_geometry_parampoly3(DSC_geometry):
             hdg_end = 0
 
         # Remember geometry parameters
-        self.sections[-1]['params']['curve_type'] = 'parampoly3'
-        self.sections[-1]['params']['point_start'] = params['points'][-2]
-        self.sections[-1]['params']['heading_start'] = params['heading_start']
+        self.sections[-1]['curve_type'] = 'parampoly3'
+        self.sections[-1]['geometry_solver'] = 'default'
+        self.sections[-1]['point_start'] = params['points'][-2]
+        self.sections[-1]['heading_start'] = params['heading_start']
         # FIXME curvature is not always 0
-        self.sections[-1]['params']['curvature_start'] = self.calculate_curvature(control_points, 0.0)
-        self.sections[-1]['params']['point_end'] = params['points'][-1]
-        self.sections[-1]['params']['heading_end'] = params['heading_start'] + hdg_end
+        self.sections[-1]['curvature_start'] = self.calculate_curvature(control_points, 0.0)
+        self.sections[-1]['point_end'] = params['points'][-1]
+        self.sections[-1]['heading_end'] = params['heading_start'] + hdg_end
         # FIXME curvature is not always 0
-        self.sections[-1]['params']['curvature_end'] = self.calculate_curvature(control_points, 1.0)
-        self.sections[-1]['params']['length'] = length
-        self.sections[-1]['params']['coefficients_u']['a'] = coefficients_u[0]
-        self.sections[-1]['params']['coefficients_u']['b'] = coefficients_u[1]
-        self.sections[-1]['params']['coefficients_u']['c'] = coefficients_u[2]
-        self.sections[-1]['params']['coefficients_u']['d'] = coefficients_u[3]
-        self.sections[-1]['params']['coefficients_v']['a'] = coefficients_v[0]
-        self.sections[-1]['params']['coefficients_v']['b'] = coefficients_v[1]
-        self.sections[-1]['params']['coefficients_v']['c'] = coefficients_v[2]
-        self.sections[-1]['params']['coefficients_v']['d'] = coefficients_v[3]
-        self.sections[-1]['params']['valid'] = True
+        self.sections[-1]['curvature_end'] = self.calculate_curvature(control_points, 1.0)
+        self.sections[-1]['length'] = length
+        self.sections[-1]['coefficients_u']['a'] = coefficients_u[0]
+        self.sections[-1]['coefficients_u']['b'] = coefficients_u[1]
+        self.sections[-1]['coefficients_u']['c'] = coefficients_u[2]
+        self.sections[-1]['coefficients_u']['d'] = coefficients_u[3]
+        self.sections[-1]['coefficients_v']['a'] = coefficients_v[0]
+        self.sections[-1]['coefficients_v']['b'] = coefficients_v[1]
+        self.sections[-1]['coefficients_v']['c'] = coefficients_v[2]
+        self.sections[-1]['coefficients_v']['d'] = coefficients_v[3]
+        self.sections[-1]['valid'] = True
 
     def sample_plan_view(self, s):
         idx_section, s_section = self.get_section_idx_and_s(s)
-        coeffs_u = self.sections[idx_section]['params']['coefficients_u']
-        coeffs_v = self.sections[idx_section]['params']['coefficients_v']
-        length_section = self.sections[idx_section]['params']['length']
+        coeffs_u = self.sections[idx_section]['coefficients_u']
+        coeffs_v = self.sections[idx_section]['coefficients_v']
+        length_section = self.sections[idx_section]['length']
         p = s_section / length_section
         x_s = coeffs_u['a'] + coeffs_u['b'] * p \
             + coeffs_u['c'] * p**2 + coeffs_u['d'] * p**3
@@ -160,12 +164,12 @@ class DSC_geometry_parampoly3(DSC_geometry):
         vec_1_0 = Vector((1.0, 0.0))
         vec_hdg = Vector((dx_dp, dy_dp))
         if vec_hdg.length > 0.0:
-            hdg_t = vec_hdg.angle_signed(vec_1_0) + pi/2
+            hdg = vec_hdg.angle_signed(vec_1_0)
         else:
-            hdg_t = 0
+            hdg = 0
         # Curvature calculation
         d2x_dp2 = 2 * coeffs_u['c'] + 6 * coeffs_u['d'] * p
         d2y_dp2 = 2 * coeffs_v['c'] + 6 * coeffs_v['d'] * p
         curvature = (dx_dp * d2y_dp2 - dy_dp * d2x_dp2) / (dx_dp**2 + dy_dp**2)**(3/2)
 
-        return x_s, y_s, curvature, hdg_t
+        return x_s, y_s, hdg, curvature

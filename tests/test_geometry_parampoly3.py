@@ -30,7 +30,7 @@ def test_geometry_parampoly3():
     geometry.update(params_input, solver)
 
     length_0 = geometry.total_length
-    xyz_local_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
+    xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
     xyz_global_0 = geometry.matrix_world @ Vector(xyz_local_0[0])
     assert [xyz_global_0.x, xyz_global_0.y, xyz_global_0.z] == approx([30.0, 0.0, 0.0], 1e-5)
 
@@ -38,12 +38,12 @@ def test_geometry_parampoly3():
     geometry.add_section()
     geometry.update(params_input, solver)
 
-    length_0 = geometry.sections[0]['params']['length']
-    xyz_local_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
+    length_0 = geometry.sections[0]['length']
+    xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
     xyz_global_0 = geometry.matrix_world @ Vector(xyz_local_0[0])
     assert [xyz_global_0.x, xyz_global_0.y, xyz_global_0.z] == approx([30.0, 0.0, 0.0], 1e-5)
 
     length_1 = geometry.total_length
-    xyz_local_1, c_1 = geometry.sample_cross_section(s=length_1, t_vec=[0.0])
+    xyz_local_1, h_1, c_1 = geometry.sample_cross_section(s=length_1, t_vec=[0.0])
     xyz_global_1 = geometry.matrix_world @ Vector(xyz_local_1[0])
     assert [xyz_global_1.x, xyz_global_1.y, xyz_global_1.z] == approx([40.0, 0.0, 0.0], 1e-5)

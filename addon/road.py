@@ -48,7 +48,7 @@ class road:
             helpers.link_object_opendrive(context, obj)
 
             # Assign materials
-            helpers.assign_road_materials(obj)
+            helpers.assign_materials(obj)
             for idx in range(len(obj.data.polygons)):
                 if idx in materials['road_mark_white']:
                     obj.data.polygons[idx].material_index = \
@@ -72,10 +72,7 @@ class road:
 
             # Metadata
             obj['dsc_category'] = 'OpenDRIVE'
-            if self.road_type == 'junction_connecting_road':
-                obj['dsc_type'] = 'junction_connecting_road'
-            else:
-                obj['dsc_type'] = 'road'
+            obj['dsc_type'] = self.road_type
 
             # Number lanes which split to the left side at road end
             obj['road_split_lane_idx'] = self.params['road_split_lane_idx']
@@ -86,14 +83,14 @@ class road:
                 obj['cp_end_l'] = self.geometry.section[-1].params['point_end']
                 obj['cp_end_r'] = self.geometry.section[-1].params['point_end']
             elif self.params['road_split_type'] == 'end':
-                obj['cp_start_l'] = self.geometry.sections[0]['params']['point_start']
-                obj['cp_start_r'] = self.geometry.sections[0]['params']['point_start']
+                obj['cp_start_l'] = self.geometry.sections[0]['point_start']
+                obj['cp_start_r'] = self.geometry.sections[0]['point_start']
                 obj['cp_end_l'], obj['cp_end_r']= self.get_split_cps()
             else:
-                obj['cp_start_l'] = self.geometry.sections[0]['params']['point_start']
-                obj['cp_start_r'] = self.geometry.sections[0]['params']['point_start']
-                obj['cp_end_l'] = self.geometry.sections[-1]['params']['point_end']
-                obj['cp_end_r'] = self.geometry.sections[-1]['params']['point_end']
+                obj['cp_start_l'] = self.geometry.sections[0]['point_start']
+                obj['cp_start_r'] = self.geometry.sections[0]['point_start']
+                obj['cp_end_l'] = self.geometry.sections[-1]['point_end']
+                obj['cp_end_r'] = self.geometry.sections[-1]['point_end']
 
             # A road split needs to create an OpenDRIVE direct junction
             obj['road_split_type'] = self.params['road_split_type']
@@ -125,11 +122,11 @@ class road:
             # Set OpenDRIVE custom properties
             obj['id_odr'] = id_obj
 
-            obj['geometry'] = [ section['params'] for section in self.geometry.sections ]
+            obj['geometry'] = self.geometry.sections
             obj['geometry_total_length'] = self.geometry.total_length
-            if self.geometry.sections[0]['params']['curve_type'] == 'spiral_triple':
+            if self.geometry.sections[0]['curve_type'] == 'spiral_triple':
                 # Store parameters for sub sections
-                obj['geometry_subsections'] = [ section['curve'].get_segment_params() for section in self.geometry.sections ]
+                obj['geometry_subsections'] = [ section_curve.get_segment_params() for section_curve in self.geometry.section_curves ]
 
             obj['lanes_left_num'] = self.params['lanes_left_num']
             obj['lanes_right_num'] = self.params['lanes_right_num']
@@ -157,7 +154,7 @@ class road:
         '''
         # Update parameters based on selected points
         self.geometry.update(params_input, self.geometry_solver)
-        if self.geometry.sections[-1]['params']['valid'] == False:
+        if self.geometry.sections[-1]['valid'] == False:
             valid = False
             return valid, None, None, []
         if self.road_type == 'junction_connecting_road':
@@ -179,10 +176,10 @@ class road:
             # Transform start and end point to local coordinate system then add
             # a vertical edge down to the xy-plane to make elevation profile
             # more easily visible
-            point_start = (self.geometry.sections[0]['params']['point_start'])
+            point_start = (self.geometry.sections[0]['point_start'])
             point_start_local = (0.0, 0.0, 0.0)
             point_start_bottom = (0.0, 0.0, -point_start.z)
-            point_end = self.geometry.sections[-1]['params']['point_end']
+            point_end = self.geometry.sections[-1]['point_end']
             point_end_local = self.geometry.matrix_world.inverted() @ point_end
             point_end_local.z = point_end.z - point_start.z
             point_end_bottom = (point_end_local.x, point_end_local.y, -point_start.z)
@@ -249,10 +246,10 @@ class road:
         t_cp_split = self.road_split_lane_idx_to_t()
         if self.params['road_split_type'] == 'start':
             t = 0
-            cp_base = self.geometry.sections[0]['params']['point_start']
+            cp_base = self.geometry.sections[0]['point_start']
         else:
             t = self.geometry.total_length
-            cp_base = self.geometry.sections[-1]['params']['point_end']
+            cp_base = self.geometry.sections[-1]['point_end']
         # Split
         cp_split = self.geometry.matrix_world @ Vector(self.geometry.sample_cross_section(
             t, [t_cp_split])[0][0])
@@ -460,7 +457,7 @@ class road:
         s = 0
         strips_t_values = self.get_strips_t_values(lanes, s)
         # Obtain first curvature value
-        xyz_samples, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values)
+        xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values)
         # We need 2 vectors for each strip to later construct the faces with one
         # list per face on each side of each strip
         sample_points = [[[]] for _ in range(2 * (len(strips_t_values) - 1))]
@@ -473,7 +470,8 @@ class road:
         while s < length:
             # TODO: Make hardcoded sampling parameters configurable
             if curvature_abs == 0:
-                if self.geometry.curve_type == 'line':
+                # TODO: Make it work with mixed curve types
+                if self.geometry.sections[0] == 'line':
                     step = 5
                 else:
                     step = 1
@@ -485,7 +483,7 @@ class road:
 
             # Sample next points along road geometry (all t values for current s value)
             strips_t_values = self.get_strips_t_values(lanes, s)
-            xyz_samples, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values)
+            xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values)
             point_index = -2
             while point_index < len(sample_points) - 2:
                 point_index = point_index + 2
@@ -512,7 +510,7 @@ class road:
                     while smaller:
                         # Sample the geometry
                         t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip + 1]]
-                        xyz_boundary, curvature_abs = self.geometry.sample_cross_section(
+                        xyz_boundary, hdg, curvature_abs = self.geometry.sample_cross_section(
                             s_boundaries_next[idx_smaller], t_values)
                         if idx_smaller == 0:
                             # Append left extra point
