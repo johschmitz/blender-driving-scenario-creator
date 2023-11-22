@@ -132,7 +132,7 @@ class junction:
             if material is None:
                 # Create material
                 material = bpy.data.materials.new(name='junction_area')
-                material.diffuse_color = (.1, .1, .1, .1)
+                material.diffuse_color = (.1, .1, .1, 1.0)
             obj.data.materials.append(material)
 
             helpers.select_activate_object(self.context, obj)

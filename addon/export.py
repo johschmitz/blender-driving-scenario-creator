@@ -215,14 +215,31 @@ class DSC_OT_export(bpy.types.Operator):
             file_path_obj = file_path.with_suffix('.obj')
             file_path_mtl = file_path.with_suffix('.mtl')
             file_path_obj.parent.mkdir(parents=True, exist_ok=True)
-            bpy.ops.export_scene.obj(filepath=str(file_path_obj), check_existing=True,
-                                     filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
-                                     use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
-                                     use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
-                                     use_materials=True, use_triangles=False, use_nurbs=False,
-                                     use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
-                                     group_by_material=False, keep_vertex_order=False, global_scale=1.0,
-                                     path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
+            # bpy.ops.export_scene.obj(filepath=str(file_path_obj), check_existing=True,
+            #                          filter_glob='*.obj,*.mtl', use_selection=True, use_animation=False,
+            #                          use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
+            #                          use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True,
+            #                          use_materials=True, use_triangles=False, use_nurbs=False,
+            #                          use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
+            #                          group_by_material=False, keep_vertex_order=False, global_scale=1.0,
+            #                          path_mode='RELATIVE', axis_forward='-Z', axis_up='Y')
+            bpy.ops.wm.obj_export(filepath=str(file_path_obj), check_existing=True, filter_blender=False,
+                                  filter_backup=False, filter_image=False, filter_movie=False,
+                                  filter_python=False, filter_font=False, filter_sound=False,
+                                  filter_text=False, filter_archive=False, filter_btx=False,
+                                  filter_collada=False, filter_alembic=False, filter_usd=False,
+                                  filter_obj=False, filter_volume=False, filter_folder=True,
+                                  filter_blenlib=False, filemode=8, display_type='DEFAULT',
+                                  sort_method='DEFAULT', export_animation=False, start_frame=-2147483648,
+                                  end_frame=2147483647, forward_axis='NEGATIVE_Z', up_axis='Y',
+                                  global_scale=1.0, apply_modifiers=True, export_eval_mode='DAG_EVAL_VIEWPORT',
+                                  export_selected_objects=True, export_uv=True, export_normals=True,
+                                  export_colors=False, export_materials=True, export_pbr_extensions=False,
+                                  path_mode='AUTO', export_triangulated_mesh=True,
+                                  export_curves_as_nurbs=False, export_object_groups=False,
+                                  export_material_groups=False, export_vertex_groups=False,
+                                  export_smooth_groups=False, smooth_group_bitflags=False,
+                                  filter_glob='*.obj;*.mtl')
             self.convert_to_osgb(file_path_obj)
             # Remove mtl and obj files
             file_path_obj.unlink()
