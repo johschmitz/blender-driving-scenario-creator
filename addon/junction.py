@@ -275,16 +275,6 @@ class junction:
             mesh = bpy.data.meshes.new('temp')
             mesh.from_pydata(vertices, edges, faces)
 
-            # Set corner vertex crease values to prepare for usage of
-            # subdivision surface modifier
-            bm = bmesh.new()
-            bm.from_mesh(mesh)
-            crease_layer = bm.verts.layers.crease.verify()
-            for vert in bm.verts:
-                vert[crease_layer] = 1.0
-            bm.to_mesh(mesh)
-            bm.free()
-
             valid_mesh = True
             return valid_mesh, mesh, matrix_world
 
