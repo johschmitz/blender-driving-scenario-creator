@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.23.1] - 2023-11-22
+
+### Fixed
+- Do not set junction vertex creases for Blender 4.0.1 compatiblity
+- Export of .obj files (used for .osgb converter) in Blender 4.0.1
+- Wrong sign in elevation profile calculation of junction surface boundary
+
 ## [0.23.0] - 2023-10-16
 
 ### Added
@@ -347,7 +354,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.20.0...v0.21.0
