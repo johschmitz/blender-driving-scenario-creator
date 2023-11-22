@@ -381,8 +381,8 @@ def calculate_junction_boundary_section(corner_right, heading_right, curvature_r
     elevation = lambda s : \
         corner_right[2] \
         + slope_right * s \
-        + (-3 * corner_right[2] - 2 * length * slope_right + 3 * corner_left[2] - length * -slope_left) / length**2 * s**2 \
-        + (2 * corner_right[2] + length * slope_right - 2 * corner_left[2] + length * -slope_left) / length**3 * s**3
+        + (-3 * corner_right[2] - 2 * length * slope_right + 3 * corner_left[2] - length * slope_left) / length**2 * s**2 \
+        + (2 * corner_right[2] + length * slope_right - 2 * corner_left[2] + length * slope_left) / length**3 * s**3
 
     boundary_points = []
     length_current = 0
