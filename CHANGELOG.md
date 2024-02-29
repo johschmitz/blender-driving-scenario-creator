@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.24.0] - 2024-02-29
+
+### Added
+- Tool for creating road signs which are placed by snapping to a road geometry
+- Small collection of road signs from German sign catalog "VzKat" (speedlimits,
+end of restrictions, stop, yield, right of way)
+
 ## [0.23.1] - 2023-11-22
 
 ### Fixed
@@ -354,7 +361,8 @@
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.1...v0.24.0
 [0.23.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.21.0...v0.22.0
