@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.24.1] - 2024-03-07
+
+### Fixed
+- Junction connecting road to junction joint left lane snapping
+
 ## [0.24.0] - 2024-02-29
 
 ### Added
@@ -361,7 +366,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.1...HEAD
+[0.24.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.1...v0.24.0
 [0.23.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.22.0...v0.23.0
