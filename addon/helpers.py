@@ -500,7 +500,7 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
         # Find all left side lane contact points
         t = 0
         lane_id = 0
-        for width_left in list(joint['lane_widths_left'])[::-1]:
+        for width_left in list(joint['lane_widths_left']):
             lane_id += 1
             t_contact_point = t
             t_lane_center = t + width_left/2
@@ -535,14 +535,14 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
     lane_center_vec = None
     # Left lanes
     for idx_lane, lane_center_point in enumerate(lane_center_points_left):
-        lane_type = list(joint['lane_types_left'])[::-1][idx_lane]
+        lane_type = list(joint['lane_types_left'])[idx_lane]
         if lane_type == 'driving' or lane_type == 'stop' or lane_type == 'onRamp' or lane_type == 'offRamp':
             distance = (lane_center_point - point).length
             # Take the contact point for the lane with the closest center point
             if distance < d_min:
                 d_min = distance
                 id_lane_cp = lane_ids_left[idx_lane]
-                lane_width = list(joint['lane_widths_left'])[::-1][idx_lane]
+                lane_width = list(joint['lane_widths_left'])[idx_lane]
                 contact_point_vec = lane_contact_points_left[idx_lane]
                 lane_center_vec = lane_center_point
     # Right lanes
