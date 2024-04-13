@@ -22,8 +22,8 @@ from . entity import entity
 
 class DSC_OT_entity(DSC_OT_modal_two_point_base):
     bl_idname = 'dsc.entity'
-    bl_label = 'Entity'
-    bl_description = 'Place an entity object'
+    bl_label = 'Scenario entity'
+    bl_description = 'Place a scenario entity object'
     bl_options = {'REGISTER', 'UNDO'}
 
     params = {}

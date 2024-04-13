@@ -323,6 +323,13 @@ def create_object_xodr_links(obj, link_type, cp_type_other, id_other, id_extra, 
                                 obj_jcr['link_successor_id_l'] = obj['id_odr']
                                 obj_jcr['link_successor_cp_l'] = cp_type
 
+def create_reference_object_xodr_link(reference_object, id_object):
+    '''
+        Set the reference object ID for a road object
+    '''
+    reference_object['id_ref_object'] = id_object
+
+
 def set_connecting_road_properties(context, joint_side_start, road_contact_point, width_lane_incoming):
     '''
         Set the properties for construction of a connecting road.
@@ -363,13 +370,20 @@ def get_lane_widths_road_joint(obj, contact_point):
         lane_widths_right = obj['lanes_right_widths_end']
     return lane_widths_left, lane_widths_right
 
+def select_object(context, obj):
+    '''
+        Select object.
+    '''
+    if obj is not None:
+        obj.select_set(state=True)
+
 def select_activate_object(context, obj):
     '''
         Select and activate object.
     '''
-    bpy.ops.object.select_all(action='DESELECT')
-    obj.select_set(state=True)
-    context.view_layer.objects.active = obj
+    if obj is not None:
+        obj.select_set(state=True)
+        context.view_layer.objects.active = obj
 
 def remove_duplicate_vertices(context, obj):
     '''
@@ -602,9 +616,9 @@ def point_to_junction_joint_interior(obj, point, joint_side):
 
 def point_to_object_connector(obj, point):
     '''
-        Get a snapping point and heading from a dynamic object.
+        Get a snapping point and heading from a scenario or road object.
     '''
-    return 'cp_axle_rear', Vector(obj['position']), obj['hdg']
+    return 'cp_object', Vector(obj['position']), obj['hdg']
 
 def project_point_vector_2d(point_start, heading_start, point_selected):
     '''
@@ -712,9 +726,9 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
             'lane_types_right': lane_types_right,
             }
 
-def mouse_to_scenario_entity_params(context, event):
+def mouse_to_road_object_params(context, event, road_object_type):
     '''
-        Check if an entity is hit and return snapping parameters.
+        Check if an object is hit and return snapping parameters.
     '''
     # Initialize with some defaults in case nothing is hit
     hit_type = None
@@ -731,8 +745,42 @@ def mouse_to_scenario_entity_params(context, event):
         = raycast_mouse_to_dsc_object(context, event)
     if dsc_hit:
         # DSC mesh hit
-        if obj['dsc_category'] == 'OpenSCENARIO':
-            hit_type = 'scenario_entity'
+        if obj['dsc_type'] == 'road_object' and obj['road_object_type'] == road_object_type:
+            hit_type = 'object'
+            point_type, snapped_point, heading = point_to_object_connector(obj, raycast_point)
+            id_obj = obj['id_odr']
+    return {'hit_type': hit_type,
+            'id_obj': id_obj,
+            'id_extra': id_extra,
+            'point': snapped_point,
+            'normal': snapped_normal,
+            'point_type': point_type,
+            'heading': heading,
+            'curvature': curvature,
+            'slope': slope,
+            }
+
+def mouse_to_entity_params(context, event):
+    '''
+        Check if an object is hit and return snapping parameters.
+    '''
+    # Initialize with some defaults in case nothing is hit
+    hit_type = None
+    id_obj = None
+    id_extra = None
+    point_type = None
+    snapped_point = Vector((0.0,0.0,0.0))
+    snapped_normal = Vector((0.0,0.0,1.0))
+    heading = 0
+    curvature = 0
+    slope = 0
+    # Do the raycasting
+    dsc_hit, raycast_point, raycast_normal, obj \
+        = raycast_mouse_to_dsc_object(context, event)
+    if dsc_hit:
+        # DSC mesh hit
+        if obj['dsc_type'] == 'entity':
+            hit_type = 'object'
             point_type, snapped_point, heading = point_to_object_connector(obj, raycast_point)
             id_obj = obj.name
     return {'hit_type': hit_type,

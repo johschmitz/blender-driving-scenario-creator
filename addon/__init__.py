@@ -41,6 +41,7 @@ from . road_object_sign_properties import DSC_road_object_sign_property_item
 from . road_object_sign_properties import DSC_road_object_sign_properties
 from . road_object_sign_operator import DSC_OT_road_object_sign
 from . popup_road_object_sign_properties import DSC_OT_popup_road_object_sign_properties
+from . road_object_stop_line_operator import DSC_OT_road_object_stop_line
 
 
 bl_info = {
@@ -111,6 +112,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.operator('dsc.popup_road_object_sign_properties', text='Sign',
             icon_value=dsc_custom_icons['road_object_sign'].icon_id).operator = 'road_object_sign'
+        row = box.row(align=True)
+        row.operator('dsc.road_object_stop_line', text='Stop line',
+            icon_value=dsc_custom_icons['road_object_stop_line'].icon_id)
 
         layout.label(text='OpenSCENARIO')
         box = layout.box()
@@ -176,6 +180,7 @@ classes = (
     DSC_road_object_sign_properties,
     DSC_OT_road_object_sign,
     DSC_OT_popup_road_object_sign_properties,
+    DSC_OT_road_object_stop_line,
     DSC_Properties,
 )
 
@@ -194,6 +199,7 @@ def register():
     dsc_custom_icons.load('junction_area', os.path.join(icons_dir, 'junction_area.png'), 'IMAGE')
     dsc_custom_icons.load('junction_connecting_road', os.path.join(icons_dir, 'junction_connecting_road.png'), 'IMAGE')
     dsc_custom_icons.load('road_object_sign', os.path.join(icons_dir, 'road_object_sign.png'), 'IMAGE')
+    dsc_custom_icons.load('road_object_stop_line', os.path.join(icons_dir, 'road_object_stop_line.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')
 
@@ -223,3 +229,4 @@ def unregister():
 
 if __name__ == '__main__':
     register()
+

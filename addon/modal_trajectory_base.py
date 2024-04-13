@@ -81,7 +81,7 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             # Snap to existing objects if any, otherwise xy plane
             if self.state == 'SELECT_OBJECT':
                 # Start of trajectory should be an OpenSCENARIO object
-                self.params_snap = helpers.mouse_to_scenario_entity_params(
+                self.params_snap = helpers.mouse_to_entity_params(
                     context, event)
             else:
                 # For remaining trajectory points use any surface point

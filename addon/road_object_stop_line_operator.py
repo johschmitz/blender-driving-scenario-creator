@@ -17,36 +17,37 @@ from mathutils import Vector, Matrix
 from math import pi
 
 from . modal_road_object_base import DSC_OT_modal_road_object_base
-from . road_object_sign import road_object_sign
+from . road_object_stop_line import road_object_stop_line
 
 
-class DSC_OT_road_object_sign(DSC_OT_modal_road_object_base):
-    bl_idname = 'dsc.road_object_sign'
-    bl_label = 'Sign'
-    bl_description = 'Place a sign object'
+class DSC_OT_road_object_stop_line(DSC_OT_modal_road_object_base):
+    bl_idname = 'dsc.road_object_stop_line'
+    bl_label = 'Stop line'
+    bl_description = 'Place a stop line object'
     bl_options = {'REGISTER', 'UNDO'}
 
     params = {}
-
-    reference_object_mode = False
 
     # Do not snap to other xodr or xosc objects in scene
     # TODO snap to road contact points, requires a lot of work
     snap_filter = 'surface'
 
-    road_object_type = 'sign'
+    road_object_type = 'stop_line'
+
+    reference_object_mode = True
+    reference_object_name = 'stop sign'
 
     def create_object_model(self, context):
         '''
             Create a model object instance
         '''
-        self.road_object = road_object_sign(context, self.road_object_type)
+        self.road_object = road_object_stop_line(context, self.road_object_type)
 
     def create_object_3d(self, context):
         '''
             Create a 3d road object
         '''
-        return self.road_object.create_object_3d(context, self.params_input, self.id_road)
+        return self.road_object.create_object_3d(context, self.params_input, self.id_road, self.id_reference_object)
 
     def update_params_get_mesh(self, context, wireframe=True):
         '''

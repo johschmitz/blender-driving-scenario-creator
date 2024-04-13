@@ -54,6 +54,9 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
 
     stencil = None
 
+    reference_object_mode = False
+    reference_object_name = 'reference object'
+
     params_input = {}
     params_snap = {}
 
@@ -108,7 +111,10 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
         else:
             # Create object from mesh
             mesh = bpy.data.meshes.new('dsc_stencil')
-            vertices, edges, faces = self.get_initial_vertices_edges_faces()
+            if self.state == 'SELECT_REFERENCE_OBJECT':
+                vertices, edges, faces = self.get_initial_vertices_edges_faces_reference_object()
+            else:
+                vertices, edges, faces = self.get_initial_vertices_edges_faces_road_object()
             mesh.from_pydata(vertices, edges, faces)
             # Rotate in start heading direction
             self.stencil = bpy.data.objects.new('dsc_stencil', mesh)
@@ -145,9 +151,22 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                 # Set stencil global transform
                 self.stencil.matrix_world = matrix_world
 
-    def get_initial_vertices_edges_faces(self):
+    def get_initial_vertices_edges_faces_reference_object(self):
         '''
-            Calculate and return the vertices, edges and faces to create the initial stencil mesh.
+            Calculate and return the vertices, edges and faces to create the
+            initial stencil mesh for the reference object link visulization.
+        '''
+        vector_hdg = Vector((1.0, 0.0))
+        vector_hdg.rotate(Matrix.Rotation(self.params_input['heading'] + pi/2, 2))
+        vertices = [(0.0, 0.0, 0.0), (0.0, 0.0, -self.params_input['point'].z)]
+        edges = [[0,1]]
+        faces = []
+        return vertices, edges, faces
+
+    def get_initial_vertices_edges_faces_road_object(self):
+        '''
+            Calculate and return the vertices, edges and faces to create the
+            initial stencil mesh for the road object.
         '''
         vector_hdg = Vector((1.0, 0.0))
         vector_hdg.rotate(Matrix.Rotation(self.params_input['heading'] + pi/2, 2))
@@ -215,9 +234,7 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             Helper function to create the object in the modal operator
         '''
         obj = self.create_object_3d(context)
-        # TODO link object to road
-        #helpers.create_object_xodr_links(obj, link_type, self.cp_type_start,
-        #    self.id_road, id_extra, self.id_lane)
+        return obj
 
     def modal(self, context, event):
         # Display help text
@@ -235,6 +252,7 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             self.reset_params_input()
             self.reset_params_snap()
             self.snapped_to_grid = False
+            self.selected_reference_object = None
             self.selected_elevation = 0.0
             self.selected_point = helpers.mouse_to_xy_parallel_plane(context, event, self.selected_elevation)
             self.point_ref_line = None
@@ -244,7 +262,13 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             self.selected_heading = 0.0
             self.selected_road = None
             self.selected_geometry = None
-            self.state = 'SELECT_ROAD'
+            self.id_reference_object = None
+            self.id_road = None
+            self.id_lane = None
+            if self.reference_object_mode == True:
+                self.state = 'SELECT_REFERENCE_OBJECT'
+            else:
+                self.state = 'SELECT_ROAD'
             # Create helper stencil mesh
             self.create_stencil(context)
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
@@ -252,7 +276,26 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
         # Update on move
         if event.type == 'MOUSEMOVE':
             self.reset_params_snap()
-            if self.state == 'SELECT_ROAD':
+            if self.state == 'SELECT_REFERENCE_OBJECT':
+                # Snap to existing objects if any, otherwise xy plane
+                params_snap = helpers.mouse_to_road_object_params(
+                    context, event, 'sign')
+                # Snap to object
+                if params_snap['hit_type'] is not None:
+                    self.params_snap = params_snap
+                    self.selected_reference_object_id = self.params_snap['id_obj']
+                    self.selected_reference_object = helpers.get_object_xodr_by_id(self.params_snap['id_obj'])
+                    selected_point_new = self.params_snap['point']
+                    self.params_input['point_ref_object'] = selected_point_new
+                    self.selected_heading = self.params_snap['heading']
+                    self.selected_elevation = selected_point_new.z
+                    context.scene.cursor.location = selected_point_new
+                else:
+                    selected_point_new = helpers.mouse_to_xy_parallel_plane(context, event,
+                        self.selected_elevation)
+                    self.selected_road = None
+                    context.scene.cursor.location = selected_point_new
+            elif self.state == 'SELECT_ROAD':
                 # Snap to existing objects if any, otherwise xy plane
                 params_snap = helpers.mouse_to_road_joint_params(
                     context, event, road_type='road')
@@ -297,7 +340,7 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             # Process and remember plan view (floor) points according to modal state machine
             self.params_input['point'] = self.selected_point.copy()
             self.params_input['heading'] = self.selected_heading
-            if self.state == 'SELECT_ROAD':
+            if self.state == 'SELECT_ROAD' or self.state == 'SELECT_REFERENCE_OBJECT':
                 self.update_stencil(context, update_start=True)
             if self.state == 'SELECT_POINT':
                 if self.input_valid(wireframe=True):
@@ -305,6 +348,14 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
         # Select start, intermediate/end points
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
+                if self.state == 'SELECT_REFERENCE_OBJECT':
+                    if self.params_snap['id_obj'] != None:
+                        self.id_reference_object = self.params_snap['id_obj']
+                        helpers.select_object(context, self.selected_reference_object)
+                        self.state = 'SELECT_ROAD'
+                    else:
+                        self.report({'INFO'}, 'First select a ' + self.reference_object_name + '.')
+                    return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_ROAD':
                     if self.params_snap['id_obj'] != None:
                         self.selected_geometry = load_geometry(self.selected_road['dsc_type'], self.selected_road['geometry'])
@@ -320,7 +371,14 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                     self.cp_type_end = self.params_snap['point_type']
                     if self.input_valid(wireframe=False):
                         # Create the final object
-                        self.create_object_modal(context)
+                        obj = self.create_object_modal(context)
+                        # Link reference object to object
+                        if self.reference_object_mode == True:
+                            helpers.create_reference_object_xodr_link(self.selected_reference_object, obj['id_odr'])
+                        # Make stencil active object again for next object
+                        if obj is not None:
+                            obj.select_set(state=False)
+                            helpers.select_activate_object(context, self.stencil)
                     return {'RUNNING_MODAL'}
         # Cancel step by step
         elif event.type == 'RIGHTMOUSE':
@@ -330,8 +388,16 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                     self.remove_stencil()
                     self.state = 'SELECT_ROAD'
                     return {'RUNNING_MODAL'}
+                elif self.state == 'SELECT_ROAD':
+                    if self.reference_object_mode == True:
+                        self.state = 'SELECT_REFERENCE_OBJECT'
+                        return {'RUNNING_MODAL'}
+                    else:
+                        # Exit
+                        self.clean_up(context)
+                        return {'FINISHED'}
                 # Exit
-                if self.state == 'SELECT_ROAD':
+                elif self.state == 'SELECT_REFERENCE_OBJECT':
                     self.clean_up(context)
                     return {'FINISHED'}
         # Zoom

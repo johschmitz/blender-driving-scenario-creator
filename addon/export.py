@@ -434,7 +434,7 @@ class DSC_OT_export(bpy.types.Operator):
                     print('Add road with ID', obj['id_odr'])
                     odr.add_road(road)
                     roads.append(road)
-                if obj.name.startswith('sign'):
+                if obj.name.startswith('sign') or obj.name.startswith('stop_line'):
                     road_to_attach = self.get_road_by_id(roads, obj['id_road'])
                     print("Add signal with ID", obj['id_odr'])
                     # Calculate orientation based on road side
@@ -444,7 +444,7 @@ class DSC_OT_export(bpy.types.Operator):
                     else:
                         orientation = xodr.Orientation.positive
                     # Do not export zero values
-                    if obj['value'] != 0:
+                    if obj['value'] != 0 and obj['value'] is not None:
                         value = obj['value']
                     else:
                         value = None
@@ -462,8 +462,10 @@ class DSC_OT_export(bpy.types.Operator):
                             value=value,
                             id=obj['id_odr'],
                             unit='km/h',
-                            height=obj['height'],
                             width=obj['width'],
+                            # TODO implement length when OpenDRIVE 1.8 is available
+                            # length=obj['length'],
+                            height=obj['height'],
                         )
                     )
 

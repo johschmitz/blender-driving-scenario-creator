@@ -244,6 +244,7 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
         '''
         obj = self.create_object_3d(context)
         if obj != None:
+            obj.select_set(state=False)
             if self.params_input['connected_start']:
                 link_type = 'start'
                 # TODO do not get the direct junction information from the object

@@ -71,6 +71,8 @@ class road_object_sign:
             obj['id_road'] = road_id
             obj['position_s'] = params_input['point_s']
             obj['position_t'] = params_input['point_t']
+            obj['position'] = params_input['point']
+            obj['hdg'] = params_input['heading']
             obj['width'] = context.scene.dsc_properties.road_object_sign_properties.width
             obj['height'] = context.scene.dsc_properties.road_object_sign_properties.width
             # TODO for now assume 2 mm steel for the signs
