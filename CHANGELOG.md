@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.25.0] - 2024-07-08
+
+### Added
+- Tool for creating stop lines that have a reference to a stop sign
+
+### Fixed
+- Refactoring bug in split road creation code leading to crash of road creation
+  tool
+
 ## [0.24.1] - 2024-03-07
 
 ### Fixed
@@ -366,7 +375,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.1...v0.25.0
 [0.24.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.1...v0.24.0
 [0.23.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.23.0...v0.23.1
