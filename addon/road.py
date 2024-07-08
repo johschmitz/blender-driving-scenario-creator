@@ -80,8 +80,8 @@ class road:
             # Remember connecting points for road snapping
             if self.params['road_split_type'] == 'start':
                 obj['cp_start_l'], obj['cp_start_r'] = self.get_split_cps()
-                obj['cp_end_l'] = self.geometry.section[-1].params['point_end']
-                obj['cp_end_r'] = self.geometry.section[-1].params['point_end']
+                obj['cp_end_l'] = self.geometry.sections[-1]['point_end']
+                obj['cp_end_r'] = self.geometry.sections[-1]['point_end']
             elif self.params['road_split_type'] == 'end':
                 obj['cp_start_l'] = self.geometry.sections[0]['point_start']
                 obj['cp_start_r'] = self.geometry.sections[0]['point_start']
