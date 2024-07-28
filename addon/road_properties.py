@@ -28,6 +28,7 @@ def callback_road_mark_weight(self, context):
 def callback_road_split(self, context):
     self.update_road_split(context)
 
+
 class DSC_enum_lane(bpy.types.PropertyGroup):
     idx: bpy.props.IntProperty(min=0)
     side: bpy.props.EnumProperty(
@@ -187,6 +188,9 @@ class DSC_road_properties(bpy.types.PropertyGroup):
 
     num_lanes_left: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
     num_lanes_right: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
+
+    lane_offset_start: bpy.props.IntProperty(default=0, min=0, max=20)
+    lane_offset_end: bpy.props.IntProperty(default=0, min=0, max=20)
 
     road_split_type: bpy.props.EnumProperty(
         name = 'Split type',

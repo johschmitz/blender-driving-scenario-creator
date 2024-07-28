@@ -445,8 +445,9 @@ class DSC_geometry():
         vector_hdg_t = Vector((1.0, 0.0))
         vector_hdg_t.rotate(Matrix.Rotation(hdg + pi/2, 2))
         xyz = []
+        s_norm = s / self.total_length
         for t in t_vec:
-            xy_vec = Vector((x_s, y_s)) + t * vector_hdg_t
+            xy_vec = Vector((x_s, y_s)) + t * vector_hdg_t + (3.0 * s_norm**2 - 2.0 * s_norm**3) * 3.5 * vector_hdg_t
             xyz += [(xy_vec.x, xy_vec.y, z)]
         return xyz, hdg, curvature_abs
 
