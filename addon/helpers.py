@@ -355,6 +355,17 @@ def set_connecting_road_properties(context, joint_side_start, road_contact_point
     context.scene.dsc_properties.connecting_road_properties.lanes[0].road_mark_type = 'none'
     context.scene.dsc_properties.connecting_road_properties.lanes[1].road_mark_type = 'none'
 
+def calculate_lane_offset(s, lane_offset_coefficients, total_length):
+    '''
+        Return lane offset in [m] for the given s value based on the
+        pre-calculated polynomial coefficients. Note that 'b' is not
+        required for the implemented solution.
+    '''
+    s_norm = s / total_length
+    lane_offset = lane_offset_coefficients['a'] + \
+        (lane_offset_coefficients['c'] * s_norm**2 + lane_offset_coefficients['d'] * s_norm**3)
+    return lane_offset
+
 def get_lane_widths_road_joint(obj, contact_point):
     '''
         Return the widths of the left and right road side of the road end
@@ -463,24 +474,30 @@ def point_to_road_connector(obj, point):
     dist_end_r = (Vector(obj['cp_end_r']) - point).length
     distances = [dist_start_l, dist_start_r, dist_end_l, dist_end_r]
     arg_min_dist = distances.index(min(distances))
-    width_left_start, width_right_start = get_lane_widths_road_joint(obj, contact_point='start')
-    width_left_end, width_right_end = get_lane_widths_road_joint(obj, contact_point='end')
+    widths_left_start, widths_right_start = get_lane_widths_road_joint(obj, contact_point='start')
+    widths_left_end, widths_right_end = get_lane_widths_road_joint(obj, contact_point='end')
     if arg_min_dist == 0:
+        lane_offset = calculate_lane_offset(0, obj['lane_offset_coefficients'], obj['geometry_total_length'])
         return 'cp_start_l', Vector(obj['cp_start_l']), obj['geometry'][0]['heading_start'] - pi, \
-            -obj['geometry'][0]['curvature_start'], -obj['geometry'][0]['slope_start'], \
-            width_left_start, width_right_start, obj['lanes_left_types'], obj['lanes_right_types']
+            -obj['geometry'][0]['curvature_start'], -obj['geometry'][0]['slope_start'], lane_offset, \
+            widths_left_start, widths_right_start, obj['lanes_left_types'], obj['lanes_right_types']
     if arg_min_dist == 1:
+        lane_offset = calculate_lane_offset(0, obj['lane_offset_coefficients'], obj['geometry_total_length'])
         return 'cp_start_r', Vector(obj['cp_start_r']), obj['geometry'][0]['heading_start'] - pi, \
-            -obj['geometry'][0]['curvature_start'], -obj['geometry'][0]['slope_start'], \
-            width_left_start, width_right_start, obj['lanes_left_types'], obj['lanes_right_types']
+            -obj['geometry'][0]['curvature_start'], -obj['geometry'][0]['slope_start'], lane_offset, \
+            widths_left_start, widths_right_start, obj['lanes_left_types'], obj['lanes_right_types']
     elif arg_min_dist == 2:
+        lane_offset = calculate_lane_offset(
+            obj['geometry_total_length'], obj['lane_offset_coefficients'], obj['geometry_total_length'])
         return 'cp_end_l', Vector(obj['cp_end_l']), obj['geometry'][-1]['heading_end'], \
-            obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], \
-            width_left_end, width_right_end, obj['lanes_left_types'], obj['lanes_right_types']
+            obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], lane_offset, \
+            widths_left_end, widths_right_end, obj['lanes_left_types'], obj['lanes_right_types']
     else:
+        lane_offset = calculate_lane_offset(
+            obj['geometry_total_length'], obj['lane_offset_coefficients'], obj['geometry_total_length'])
         return 'cp_end_r', Vector(obj['cp_end_r']), obj['geometry'][-1]['heading_end'], \
-            obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], \
-            width_left_end, width_right_end, obj['lanes_left_types'], obj['lanes_right_types']
+            obj['geometry'][-1]['curvature_end'], obj['geometry'][-1]['slope_end'], lane_offset, \
+            widths_left_end, widths_right_end, obj['lanes_left_types'], obj['lanes_right_types']
 
 def point_to_junction_joint_exterior(obj, point):
     '''
@@ -516,8 +533,8 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
         lane_id = 0
         for width_left in list(joint['lane_widths_left']):
             lane_id += 1
-            t_contact_point = t
-            t_lane_center = t + width_left/2
+            t_contact_point = t + joint['lane_offset']
+            t_lane_center = t + width_left/2 + joint['lane_offset']
             t += width_left
             lane_ids_left.append(lane_id)
             vec_hdg = Vector((1.0, 0.0, 0.0))
@@ -531,8 +548,8 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
         lane_id = 0
         for width_right in joint['lane_widths_right']:
             lane_id -= 1
-            t_contact_point = t
-            t_lane_center = t - width_right/2
+            t_contact_point = t + joint['lane_offset']
+            t_lane_center = t - width_right/2 + joint['lane_offset']
             t -= width_right
             lane_ids_right.append(lane_id)
             vec_hdg = Vector((1.0, 0.0, 0.0))
@@ -651,6 +668,7 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
     heading = 0
     curvature = 0
     slope = 0
+    lane_offset_coefficients = {'a': 0, 'b': 0, 'c': 0, 'd': 0}
     lane_widths_left = []
     lane_widths_right = []
     lane_types_left = []
@@ -663,7 +681,7 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
             if obj['dsc_category'] == 'OpenDRIVE':
                 if obj['dsc_type'].startswith('road_') and obj['dsc_type'] != 'road_object':
                     hit_type = 'road'
-                    point_type, snapped_point, heading, curvature, slope, \
+                    point_type, snapped_point, heading, curvature, slope, lane_offset_coefficients, \
                     lane_widths_left, lane_widths_right, lane_types_left, lane_types_right \
                         = point_to_road_connector(obj, raycast_point)
                     id_obj = obj['id_odr']
@@ -720,6 +738,7 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
             'heading': heading,
             'curvature': curvature,
             'slope': slope,
+            'lane_offset_coefficients': lane_offset_coefficients,
             'lane_widths_left': lane_widths_left,
             'lane_widths_right': lane_widths_right,
             'lane_types_left': lane_types_left,

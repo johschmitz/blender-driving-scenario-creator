@@ -26,7 +26,7 @@ def test_geometry_line_1d():
     params_input['points'] = [Vector((10.0, 10.0, 0.0)), Vector((20.0, 10.0, 0.0))]
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
@@ -34,7 +34,7 @@ def test_geometry_line_1d():
 
     params_input['points'] = [Vector((10.0, 10.0, 0.0)), Vector((20.0, 10.0, 0.0)), Vector((30.0, 10.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     length_section = geometry.sections[1]['length']
     xyz_local, h, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
@@ -49,7 +49,7 @@ def test_geometry_line_2d():
     params_input['points'] = [Vector((20.0, 10.0, 0.0)), Vector((60.0, 30.0, 0.0))]
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
@@ -57,7 +57,7 @@ def test_geometry_line_2d():
 
     params_input['points'] = [Vector((20.0, 10.0, 0.0)), Vector((60.0, 30.0, 0.0)), Vector((100.0, 50.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     length_section = geometry.sections[1]['length']
     xyz_local, h, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
@@ -67,7 +67,7 @@ def test_geometry_line_2d():
     params_input['points'] = [Vector((20.0, 10.0, 0.0)), Vector((60.0, 30.0, 0.0)),
                               Vector((100.0, 50.0, 0.0)), Vector((320.0, 160.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     xyz_local, h, c = geometry.sample_cross_section(s=length, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
@@ -81,7 +81,7 @@ def test_geometry_line_2d_projection():
     params_input['points'] = [Vector((20.0, 10.0, 0.0)), Vector((60.0, 30.0, 0.0))]
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
@@ -89,7 +89,7 @@ def test_geometry_line_2d_projection():
 
     params_input['points'] = [Vector((20.0, 10.0, 0.0)), Vector((60.0, 30.0, 0.0)), Vector((90.0, 70.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     length_section = geometry.sections[1]['length']
     xyz_local, h, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0])
@@ -105,7 +105,7 @@ def test_geometry_line_3d():
     params_input['points'] = [Vector((2.0, 1.0, 1.0)), Vector((6.0, 3.0, 2.0))]
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     xyz_local, h, c = geometry.sample_cross_section(s=length/2.0, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
@@ -113,7 +113,7 @@ def test_geometry_line_3d():
 
     params_input['points'] = [Vector((2.0, 1.0, 1.0)), Vector((6.0, 3.0, 2.0)), Vector((10.0, 5.0, 4.0))]
     geometry.add_section()
-    geometry.update(params_input, None)
+    geometry.update(params_input, 0.0, 0.0, None)
     length = geometry.total_length
     xyz_local, h, c = geometry.sample_cross_section(s=length, t_vec=[0.0])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])

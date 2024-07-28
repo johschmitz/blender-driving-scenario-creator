@@ -68,12 +68,14 @@ class DSC_OT_junction_generic(bpy.types.Operator):
                         contact_point_vec = self.params_snap['point'].copy()
                         # Calculate width of junction joints based on road direction
                         if self.params_snap['point_type'].startswith('cp_end'):
+                            joint_lane_offset = self.params_snap['lane_offset_coefficients']
                             joint_widths_left = self.params_snap['lane_widths_left']
                             joint_widths_right = self.params_snap['lane_widths_right']
                             joint_lane_types_left = self.params_snap['lane_types_left']
                             joint_lane_types_right = self.params_snap['lane_types_right']
                         else:
                             # Switch direction if road points away from junction joint
+                            joint_lane_offset = self.params_snap['lane_offset_coefficients']
                             joint_widths_left = self.params_snap['lane_widths_right']
                             joint_widths_right = self.params_snap['lane_widths_left']
                             joint_lane_types_left = self.params_snap['lane_types_right']
@@ -81,7 +83,8 @@ class DSC_OT_junction_generic(bpy.types.Operator):
                         joint_added = self.junction.add_joint_incoming(self.params_snap['id_obj'],
                             self.params_snap['point_type'], contact_point_vec,
                             self.params_snap['heading'], self.params_snap['curvature'], self.params_snap['slope'],
-                            joint_widths_left, joint_widths_right, joint_lane_types_left, joint_lane_types_right)
+                            joint_lane_offset, joint_widths_left, joint_widths_right,
+                            joint_lane_types_left, joint_lane_types_right)
                         if joint_added:
                             self.junction.update_stencil()
                         else:

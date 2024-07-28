@@ -391,6 +391,7 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                     self.selected_slope = 0
                     self.selected_normal_start = Vector((0.0,0.0,1.0))
                     if (event.alt or self.always_adjust_heading) \
+                        and self.state != 'SELECT_START' \
                         and self.params_input['connected_start'] == False \
                         and len(self.params_input['points']) == 2:
                         # Calculate angular change to update start heading

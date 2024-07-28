@@ -28,7 +28,7 @@ def test_geometry_arc_straight_case():
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     params_input['heading_end'] = params_input['heading_start']
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     # Sample the first section
     length_0 = geometry.total_length
@@ -39,7 +39,7 @@ def test_geometry_arc_straight_case():
     # Add a second section
     params_input['points'] = [Vector((2.0, 1.0, 0.0)), Vector((6.0, 3.0, 0.0)), Vector((8.0, 4.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     # Sample the first section again
     length_0 = geometry.sections[0]['length']
@@ -61,7 +61,7 @@ def test_geometry_arc_180():
     params_input['points'] = [Vector((0.0, 0.0, 0.0)), Vector((0.0, 2.0, 0.0))]
     params_input['heading_start'] = 0
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     length_0 = geometry.total_length
     xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0/2, t_vec=[0.0])
@@ -76,7 +76,7 @@ def test_geometry_arc_negative_start_heading():
     params_input['points'] = [Vector((0.0, 0.0, 0.0)), Vector((-1.0, 1.0, 0.0))]
     params_input['heading_start'] = 3/4*pi
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     xyz_local, h, c = geometry.sample_cross_section(s=geometry.total_length, t_vec=[sqrt(2.0)])
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
@@ -91,7 +91,7 @@ def test_geometry_arc_y_axis_straight():
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     params_input['heading_end'] = params_input['heading_start']
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     length_0 = geometry.total_length
     xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0/2, t_vec=[0.0])
@@ -107,7 +107,7 @@ def test_geometry_arc_270_three_pieces():
                               Vector((20.0, 20.0, 0.0))]
     params_input['heading_start'] = 0
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     length_0 = geometry.total_length
     xyz_local, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[5.0])
@@ -118,7 +118,7 @@ def test_geometry_arc_270_three_pieces():
                               Vector((20.0, 20.0, 0.0)),
                               Vector((10.0, 30.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     length = geometry.total_length
     xyz_local, h_0, c_0 = geometry.sample_cross_section(s=length, t_vec=[2.0])
@@ -130,7 +130,7 @@ def test_geometry_arc_270_three_pieces():
                               Vector((10.0, 30.0, 0.0)),
                               Vector((0.0, 20.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     length = geometry.total_length
     xyz_local, h_0, c_0 = geometry.sample_cross_section(s=length, t_vec=[-5.0])

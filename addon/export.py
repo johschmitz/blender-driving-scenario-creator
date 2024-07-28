@@ -777,6 +777,11 @@ class DSC_OT_export(bpy.types.Operator):
             lane.add_roadmark(road_mark)
             lanesection.add_right_lane(lane)
         lanes.add_lanesection(lanesection)
+        lanes.add_laneoffset(xodr.LaneOffset(0,
+                                             obj['lane_offset_coefficients']['a'],
+                                             obj['lane_offset_coefficients']['b'] / obj['geometry_total_length'],
+                                             obj['lane_offset_coefficients']['c'] / obj['geometry_total_length']**2,
+                                             obj['lane_offset_coefficients']['d'] / obj['geometry_total_length']**3))
 
         return lanes
 

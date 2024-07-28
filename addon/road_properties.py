@@ -28,6 +28,7 @@ def callback_road_mark_weight(self, context):
 def callback_road_split(self, context):
     self.update_road_split(context)
 
+
 class DSC_enum_lane(bpy.types.PropertyGroup):
     idx: bpy.props.IntProperty(min=0)
     side: bpy.props.EnumProperty(
@@ -188,6 +189,9 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     num_lanes_left: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
     num_lanes_right: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
 
+    lane_offset_start: bpy.props.IntProperty(default=0, min=-20, max=20)
+    lane_offset_end: bpy.props.IntProperty(default=0, min=-20, max=20)
+
     road_split_type: bpy.props.EnumProperty(
         name = 'Split type',
         items=(('none', 'None', '', 0),
@@ -205,6 +209,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     cross_section_preset: bpy.props.EnumProperty(
             items=(
                 ('two_lanes_default','Two lanes (default)','Two lanes (default)'),
+                ('two_lanes_turning_lane_offset_left_open','Two lanes with offset left turning lane opening','Two lanes with opening offset left turning lane'),
                 # Typical German road cross sections
                 ('ekl4_rq9', 'EKL 4, RQ 9', 'EKL 4, RQ 9'),
                 ('ekl3_rq11', 'EKL 3, RQ 11', 'EKL 3, RQ 11'),
@@ -215,13 +220,13 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 # ('eka3_rq38_5', 'EKA 3, RQ 38_5', 'EKA 3, RQ 38_5'),
                 # ('eka2_rq28', 'EKA 1, RQ 28', 'EKA 1, RQ 28'),
                 ('eka1_rq31', 'EKA 1, RQ 31', 'EKA 1, RQ 31'),
-                ('eka1_rq31_exit_lane_right_open', 'EKA 1, RQ 31 - exit lane right open', 'EKA 1, RQ 31 - exit lane right open'),
+                ('eka1_rq31_exit_lane_right_open', 'EKA 1, RQ 31 - exit lane right opening', 'EKA 1, RQ 31 - exit lane right opening'),
                 ('eka1_rq31_exit_lane_right_to_off_ramp', 'EKA 1, RQ 31 - exit lane right to off-ramp', 'EKA 1, RQ 31 - exit lane right to off-ramp'),
                 ('eka1_rq31_exit_right_continuation_begin_end', 'EKA 1, RQ 31 - exit right continuation begin/end', 'EKA 1, RQ 31 - exit right continuation begin/end'),
                 ('eka1_rq31_exit_right_continuation_shoulder_begin', 'EKA 1, RQ 31 - exit right continuation shoulder begin', 'EKA 1, RQ 31 - exit right continuation shoulder begin'),
                 ('eka1_rq31_exit_right_continuation_shoulder_end', 'EKA 1, RQ 31 - exit right continuation shoulder end', 'EKA 1, RQ 31 - exit right continuation shoulder end'),
                 ('eka1_rq31_entry_right_from_on_ramp', 'EKA 1, RQ 31 - entry right from on-ramp', 'EKA 1, RQ 31 - entry right from on-ramp'),
-                ('eka1_rq31_entry_right_close', 'EKA 1, RQ 31 - entry right close', 'EKA 1, RQ 31 - entry right close'),
+                ('eka1_rq31_entry_right_close', 'EKA 1, RQ 31 - entry right closing', 'EKA 1, RQ 31 - entry right closing'),
                 ('eka1_rq36', 'EKA 1, RQ 36', 'EKA 1, RQ 36'),
                 ('eka1_rq43_5', 'EKA 1, RQ 43.5', 'EKA 1, RQ 43.5'),
                 ('off_ramp_begin', 'Off-ramp begin', 'Off-ramp begin'),
@@ -334,6 +339,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 num_lanes_left += 1
             if params['sides'][idx] == 'right':
                 num_lanes_right += 1
+        self.lane_offset_start = params['lane_offset_start']
+        self.lane_offset_end = params['lane_offset_end']
         self.road_split_type = params['road_split_type']
         self.road_split_lane_idx = params['road_split_lane_idx']
         for idx, lane in enumerate(self.lanes):

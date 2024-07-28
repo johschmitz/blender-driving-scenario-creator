@@ -15,6 +15,8 @@ from mathutils import Vector, Matrix
 from math import pi, copysign
 from numpy import linspace
 
+from . import helpers
+
 class DSC_geometry():
 
     def __init__(self):
@@ -22,6 +24,7 @@ class DSC_geometry():
         self.sections = []
         self.section_curves = []
         self.total_length = 0
+        self.lane_offset_coefficients = {'a': 0, 'b': 0, 'c': 0, 'd': 0}
 
     def update_total_length(self):
         '''
@@ -125,7 +128,7 @@ class DSC_geometry():
         self.update_total_length()
         self.matrix_world = None
 
-    def update(self, params_input, geometry_solver):
+    def update(self, params_input, lane_offset_start, lane_offset_end, geometry_solver):
         '''
             Update parameters of the geometry and local to global tranformation
             matrix.
@@ -135,6 +138,7 @@ class DSC_geometry():
         self.update_local_to_global(params_input)
         self.update_local_and_section_params(params_input)
         self.update_plan_view(params_input, geometry_solver)
+        self.update_lane_offset_coefficients(lane_offset_start, lane_offset_end)
         self.update_elevation(params_input)
         self.update_total_length()
 
@@ -177,6 +181,14 @@ class DSC_geometry():
             Update plan view (2D) geometry of road.
         '''
         raise NotImplementedError()
+
+    def update_lane_offset_coefficients(self, lane_offset_start, lane_offset_end):
+        '''
+            Update lane offset coefficients of road geometry.
+        '''
+        c = 3.0 * (lane_offset_end - lane_offset_start)
+        d = -2.0 * (lane_offset_end - lane_offset_start)
+        self.lane_offset_coefficients = {'a': lane_offset_start, 'b': 0, 'c': c, 'd': d}
 
     def update_elevation(self, params_input):
         '''
@@ -406,7 +418,7 @@ class DSC_geometry():
                 break
         return idx_section, s_section
 
-    def get_elevation(self, s):
+    def calculate_elevation(self, s):
         '''
             Return the elevation level for the given value of s in the
             geometry section with the given index and its curvature.
@@ -440,13 +452,14 @@ class DSC_geometry():
             reference line.
         '''
         x_s, y_s, hdg, curvature_plan_view = self.sample_plan_view(s)
-        z, curvature_elevation = self.get_elevation(s)
+        z, curvature_elevation = self.calculate_elevation(s)
         curvature_abs = max(abs(curvature_plan_view), abs(curvature_elevation))
         vector_hdg_t = Vector((1.0, 0.0))
         vector_hdg_t.rotate(Matrix.Rotation(hdg + pi/2, 2))
         xyz = []
         for t in t_vec:
-            xy_vec = Vector((x_s, y_s)) + t * vector_hdg_t
+            lane_offset = helpers.calculate_lane_offset(s, self.lane_offset_coefficients, self.total_length)
+            xy_vec = Vector((x_s, y_s)) + t * vector_hdg_t + lane_offset * vector_hdg_t
             xyz += [(xy_vec.x, xy_vec.y, z)]
         return xyz, hdg, curvature_abs
 

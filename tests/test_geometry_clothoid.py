@@ -27,7 +27,7 @@ def test_geometry_clothoid():
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     params_input['heading_end'] = params_input['heading_start']
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     length_0 = geometry.total_length
     xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
@@ -36,7 +36,7 @@ def test_geometry_clothoid():
 
     params_input['points'] = [Vector((2.0, 1.0, 0.0)), Vector((6.0, 3.0, 0.0)), Vector((8.0, 4.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0 solver)
 
     length_0 = geometry.sections[0]['length']
     xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])

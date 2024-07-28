@@ -27,7 +27,7 @@ def test_geometry_parampoly3():
     params_input['heading_start'] = get_heading_start(params_input['points'][0], params_input['points'][1])
     params_input['heading_end'] = params_input['heading_start']
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0, solver)
 
     length_0 = geometry.total_length
     xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])
@@ -36,7 +36,7 @@ def test_geometry_parampoly3():
 
     params_input['points'] = [Vector((10.0, 0.0, 0.0)), Vector((30.0, 0.0, 0.0)), Vector((40.0, 0.0, 0.0))]
     geometry.add_section()
-    geometry.update(params_input, solver)
+    geometry.update(params_input, 0.0, 0.0, solver)
 
     length_0 = geometry.sections[0]['length']
     xyz_local_0, h_0, c_0 = geometry.sample_cross_section(s=length_0, t_vec=[0.0])

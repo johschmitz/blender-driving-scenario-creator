@@ -127,6 +127,7 @@ class road:
             if self.geometry.sections[0]['curve_type'] == 'spiral_triple':
                 # Store parameters for sub sections
                 obj['geometry_subsections'] = [ section_curve.get_segment_params() for section_curve in self.geometry.section_curves ]
+            obj['lane_offset_coefficients'] = self.geometry.lane_offset_coefficients
 
             obj['lanes_left_num'] = self.params['lanes_left_num']
             obj['lanes_right_num'] = self.params['lanes_right_num']
@@ -152,11 +153,6 @@ class road:
         '''
             Calculate and return the vertices, edges, faces and parameters to create a road mesh.
         '''
-        # Update parameters based on selected points
-        self.geometry.update(params_input, self.geometry_solver)
-        if self.geometry.sections[-1]['valid'] == False:
-            valid = False
-            return valid, None, None, []
         if self.road_type == 'junction_connecting_road':
             length_broken_line = context.scene.dsc_properties.connecting_road_properties.length_broken_line
             self.set_lane_params(context.scene.dsc_properties.connecting_road_properties)
@@ -165,6 +161,11 @@ class road:
             length_broken_line = context.scene.dsc_properties.road_properties.length_broken_line
             self.set_lane_params(context.scene.dsc_properties.road_properties)
             lanes = context.scene.dsc_properties.road_properties.lanes
+        # Update parameters based on selected points
+        self.geometry.update(params_input, self.params['lane_offset_start'], self.params['lane_offset_end'],self.geometry_solver)
+        if self.geometry.sections[-1]['valid'] == False:
+            valid = False
+            return valid, None, None, []
         # Get values in t and s direction where the faces of the road start and end
         strips_s_boundaries = self.get_strips_s_boundaries(lanes, length_broken_line)
         # Calculate meshes for Blender
@@ -195,6 +196,23 @@ class road:
         valid = True
         return valid, mesh, self.geometry.matrix_world, materials
 
+    def calculate_lane_offset_start_end_in_m(self, lane_offset, lanes_left_width, lanes_right_width):
+        '''
+            Calculate lane offset in [m] based on lane widths.
+        '''
+        lane_offset_m = 0.0
+        if lane_offset == 0:
+            return lane_offset_m
+        if lane_offset < 0:
+            for i in range(len(lanes_left_width)):
+                if i < abs(lane_offset):
+                    lane_offset_m -= lanes_left_width[i]
+        else:
+            for i in range(len(lanes_right_width)):
+                if i < lane_offset:
+                    lane_offset_m += lanes_right_width[i]
+        return lane_offset_m
+
     def set_lane_params(self, road_properties):
         '''
             Set the lane parameters dictionary for later export.
@@ -216,6 +234,8 @@ class road:
                        'lane_center_road_mark_type': [],
                        'lane_center_road_mark_weight': [],
                        'lane_center_road_mark_color': [],
+                       'lane_offset_start': road_properties.lane_offset_start,
+                       'lane_offset_end': road_properties.lane_offset_end,
                        'road_split_type': road_properties.road_split_type,
                        'road_split_lane_idx': road_properties.road_split_lane_idx}
         for idx, lane in enumerate(road_properties.lanes):
@@ -238,6 +258,10 @@ class road:
                 self.params['lane_center_road_mark_type'] = lane.road_mark_type
                 self.params['lane_center_road_mark_weight'] = lane.road_mark_weight
                 self.params['lane_center_road_mark_color'] = lane.road_mark_color
+        self.params['lane_offset_start'] = self.calculate_lane_offset_start_end_in_m(road_properties.lane_offset_start,
+            self.params['lanes_left_widths_start'], self.params['lanes_right_widths_start'])
+        self.params['lane_offset_end'] = self.calculate_lane_offset_start_end_in_m(road_properties.lane_offset_end,
+            self.params['lanes_left_widths_end'], self.params['lanes_right_widths_end'])
 
     def get_split_cps(self):
         '''
@@ -461,10 +485,9 @@ class road:
         # We need 2 vectors for each strip to later construct the faces with one
         # list per face on each side of each strip
         sample_points = [[[]] for _ in range(2 * (len(strips_t_values) - 1))]
-        t_offset = 0
         for idx_t in range(len(strips_t_values) - 1):
-            sample_points[2 * idx_t][0].append((0, strips_t_values[idx_t], 0))
-            sample_points[2 * idx_t + 1][0].append((0, strips_t_values[idx_t + 1], 0))
+            sample_points[2 * idx_t][0].append(xyz_samples[idx_t])
+            sample_points[2 * idx_t + 1][0].append(xyz_samples[idx_t + 1])
         # Concatenate vertices until end of road
         idx_boundaries_strips = [0] * len(strips_s_boundaries)
         while s < length:
@@ -487,8 +510,6 @@ class road:
             point_index = -2
             while point_index < len(sample_points) - 2:
                 point_index = point_index + 2
-                if not sample_points[point_index][0]:
-                    continue
                 idx_strip = point_index//2
                 # Get the boundaries of road marking faces for current strip plus left and right
                 idx_boundaries = [0, 0, 0]
@@ -564,9 +585,6 @@ class road:
         point_index = 0
         while point_index < len(road_sample_points):
             for idx_face_strip in range(len(road_sample_points[point_index])):
-                # ignore empty samplepoints, it may be none type line or any thing that doesn't need to build a mesh
-                if not road_sample_points[point_index][0]:
-                    continue
                 samples_right = road_sample_points[point_index + 1][idx_face_strip]
                 samples_left = road_sample_points[point_index][idx_face_strip]
                 num_vertices = len(samples_left) + len(samples_right)

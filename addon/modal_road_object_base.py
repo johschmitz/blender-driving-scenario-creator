@@ -26,9 +26,9 @@ from . geometry_clothoid_triple import DSC_geometry_clothoid_triple
 from . geometry_parampoly3 import DSC_geometry_parampoly3
 
 
-def load_geometry(road_type, section_data):
+def load_geometry(road_type, section_data, lane_offset):
     '''
-        Load geometry from stored sections data.
+        Load geometry from stored geometry data.
     '''
     geometry = None
     if road_type == 'road_straight':
@@ -44,6 +44,7 @@ def load_geometry(road_type, section_data):
 
     if geometry != None:
         geometry.load_sections(section_data)
+        geometry.lane_offset_coefficients = lane_offset
 
     return geometry
 
