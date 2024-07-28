@@ -328,6 +328,7 @@ class DSC_OT_export(bpy.types.Operator):
         if helpers.collection_exists(['OpenDRIVE']):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
                 if obj.name.startswith('road'):
+                    self.clean_up_broken_road_links(obj)
                     planview = xodr.PlanView()
                     planview.set_start_point(obj['geometry'][0]['point_start'][0],
                         obj['geometry'][0]['point_start'][1],obj['geometry'][0]['heading_start'])
@@ -1048,3 +1049,27 @@ class DSC_OT_export(bpy.types.Operator):
                         else:
                             lane_offset = obj_split['lanes_left_num'] - obj_split['road_split_lane_idx'] - 1
                     return lane_offset
+
+    def clean_up_broken_road_links(self, obj):
+        '''
+            Remove broken links from road objects
+        '''
+        if obj.name.startswith('road'):
+            if 'link_predecessor_id_l' in obj and not helpers.get_object_xodr_by_id(obj['link_predecessor_id_l']):
+                self.report({'WARNING'}, 'On Road with ID {} predecessor road with ID {} does not exist. Probably deleted. Removing broken link.'.format(obj['id_odr'], obj['link_predecessor_id_l']))
+                del obj['link_predecessor_id_l']
+                del obj['link_predecessor_cp_l']
+            if 'link_predecessor_id_r' in obj and not helpers.get_object_xodr_by_id(obj['link_predecessor_id_r']):
+                self.report({'WARNING'}, 'On Road with ID {} predecessor road with ID {} does not exist. Probably deleted. Removing broken link.'.format(obj['id_odr'], obj['link_predecessor_id_r']))
+                del obj['link_predecessor_id_r']
+                del obj['link_predecessor_cp_r']
+            if 'link_successor_id_l' in obj and not helpers.get_object_xodr_by_id(obj['link_successor_id_l']):
+                self.report({'WARNING'}, 'On Road with ID {} successor road with ID {} does not exist. Probably deleted. Removing broken link.'.format(obj['id_odr'], obj['link_successor_id_l']))
+                del obj['link_successor_id_l']
+                del obj['link_successor_cp_l']
+            if 'link_successor_id_r' in obj and not helpers.get_object_xodr_by_id(obj['link_successor_id_r']):
+                self.report({'WARNING'}, 'On Road with ID {} successor road with ID {} does not exist. Probably deleted. Removing broken link.'.format(obj['id_odr'], obj['link_successor_id_r']))
+                del obj['link_successor_id_r']
+                del obj['link_successor_cp_r']
+        return
+
