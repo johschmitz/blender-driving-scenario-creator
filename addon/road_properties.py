@@ -39,11 +39,11 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
     )
     width_start: bpy.props.FloatProperty(
         name='Width start',
-        default=3.5, min=0.01, max=10.0, step=1
+        default=3.5, min=0.0, max=10.0, step=1
     )
     width_end: bpy.props.FloatProperty(
         name='Width end',
-        default=3.5, min=0.01, max=10.0, step=1
+        default=3.5, min=0.0, max=10.0, step=1
     )
     type: bpy.props.EnumProperty(
         name = 'Type',
@@ -62,8 +62,8 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
                ('median', 'Median', '', 12),
                ('entry', 'Entry', '', 13),
                ('exit', 'Exit', '', 14),
-               ('onRamp', 'On ramp', '', 15),
-               ('offRamp', 'Off ramp', '', 16),
+               ('onRamp', 'On-ramp', '', 15),
+               ('offRamp', 'Off-ramp', '', 16),
                #('connectingRamp', 'Connecting ramp', '', 17),
                ('none', 'None', '', 18),
                ('center', 'Center', '', 19),
@@ -216,20 +216,22 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 # ('eka2_rq28', 'EKA 1, RQ 28', 'EKA 1, RQ 28'),
                 ('eka1_rq31', 'EKA 1, RQ 31', 'EKA 1, RQ 31'),
                 ('eka1_rq31_exit_lane_right_open', 'EKA 1, RQ 31 - exit lane right open', 'EKA 1, RQ 31 - exit lane right open'),
-                ('eka1_rq31_exit_lane_right', 'EKA 1, RQ 31 - exit lane right', 'EKA 1, RQ 31 - exit lane right'),
+                ('eka1_rq31_exit_lane_right_to_off_ramp', 'EKA 1, RQ 31 - exit lane right to off-ramp', 'EKA 1, RQ 31 - exit lane right to off-ramp'),
                 ('eka1_rq31_exit_right_continuation_begin_end', 'EKA 1, RQ 31 - exit right continuation begin/end', 'EKA 1, RQ 31 - exit right continuation begin/end'),
                 ('eka1_rq31_exit_right_continuation_shoulder_begin', 'EKA 1, RQ 31 - exit right continuation shoulder begin', 'EKA 1, RQ 31 - exit right continuation shoulder begin'),
                 ('eka1_rq31_exit_right_continuation_shoulder_end', 'EKA 1, RQ 31 - exit right continuation shoulder end', 'EKA 1, RQ 31 - exit right continuation shoulder end'),
-                ('eka1_rq31_entry_right', 'EKA 1, RQ 31 - entry right', 'EKA 1, RQ 31 - entry right'),
+                ('eka1_rq31_entry_right_from_on_ramp', 'EKA 1, RQ 31 - entry right from on-ramp', 'EKA 1, RQ 31 - entry right from on-ramp'),
                 ('eka1_rq31_entry_right_close', 'EKA 1, RQ 31 - entry right close', 'EKA 1, RQ 31 - entry right close'),
                 ('eka1_rq36', 'EKA 1, RQ 36', 'EKA 1, RQ 36'),
                 ('eka1_rq43_5', 'EKA 1, RQ 43.5', 'EKA 1, RQ 43.5'),
-                ('on_ramp_end', 'On ramp end', 'On ramp end'),
-                ('on_ramp_shoulder_end', 'On ramp shoulder end', 'On ramp shoulder end'),
-                ('on_ramp', 'On ramp', 'On ramp'),
-                ('off_ramp_begin', 'Off ramp begin', 'Off ramp begin'),
-                ('off_ramp_shoulder_begin', 'Off ramp shoulder begin', 'Off ramp shoulder begin'),
-                ('off_ramp', 'Off ramp', 'Off ramp'),
+                ('off_ramp_begin', 'Off-ramp begin', 'Off-ramp begin'),
+                ('off_ramp_shoulder_begin', 'Off-ramp shoulder begin', 'Off-ramp shoulder begin'),
+                ('off_ramp_middle', 'Off-ramp middle', 'Off-ramp middle'),
+                ('off_ramp_end', 'Off-ramp end', 'Off-ramp end'),
+                ('on_ramp_end', 'On-ramp end', 'On-ramp end'),
+                ('on_ramp_shoulder_end', 'On-ramp shoulder end', 'On-ramp shoulder end'),
+                ('on_ramp_middle', 'On-ramp middle', 'On-ramp middle'),
+                ('on_ramp_begin', 'On-ramp begin', 'On-ramp begin'),
                 ('shoulder_left', 'Shoulder left', 'Shoulder left'),
                 ('shoulder_right', 'Shoulder right', 'Shoulder right'),
                 ('junction_connecting_road', 'Connecting road (for junctions)', 'Connecting road (for junctions)'),
@@ -335,7 +337,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.road_split_type = params['road_split_type']
         self.road_split_lane_idx = params['road_split_lane_idx']
         for idx, lane in enumerate(self.lanes):
-            if idx < self.road_split_lane_idx:
+            if idx <= self.road_split_lane_idx:
                 lane.split_right = False
             else:
                 lane.split_right = True
