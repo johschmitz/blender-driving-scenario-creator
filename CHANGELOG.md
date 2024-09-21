@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.26.1] - 2024-09-21
+
+### Fixed
+- Road width visualization during road snapping with mouse pointer
+
 ## [0.26.0] - 2024-09-11
 
 ### Added
@@ -384,7 +389,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.26.1...HEAD
+[0.26.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.1...v0.25.0
 [0.24.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.0...v0.24.1
