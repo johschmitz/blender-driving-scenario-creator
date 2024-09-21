@@ -95,7 +95,7 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
         else:
             # Create object from mesh
             mesh = bpy.data.meshes.new('dsc_stencil')
-            vertices, edges, faces = self.get_initial_vertices_edges_faces()
+            vertices, edges, faces = self.get_initial_vertices_edges_faces(context)
             mesh.from_pydata(vertices, edges, faces)
             # Rotate in start heading direction
             self.stencil = bpy.data.objects.new('dsc_stencil', mesh)
@@ -135,14 +135,20 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                 # Set stencil global transform
                 self.stencil.matrix_world = matrix_world
 
-    def get_initial_vertices_edges_faces(self):
+    def get_initial_vertices_edges_faces(self, context):
         '''
             Calculate and return the vertices, edges and faces to create the initial stencil mesh.
         '''
         vector_hdg = Vector((1.0, 0.0))
         vector_hdg.rotate(Matrix.Rotation(self.params_input['heading_start'] + pi/2, 2))
-        vector_left = (vector_hdg * sum(self.params_snap['lane_widths_left'])).to_3d().to_tuple()
-        vector_right = (vector_hdg * -sum(self.params_snap['lane_widths_right'])).to_3d().to_tuple()
+        if self.object_type == 'junction_connecting_road':
+            width_lanes_left = sum([lane.width_start if lane.side == 'left' else 0 for lane in context.scene.dsc_properties.connecting_road_properties.lanes])
+            width_lanes_right = sum([lane.width_start if lane.side == 'right' else 0 for lane in context.scene.dsc_properties.connecting_road_properties.lanes])
+        else:
+            width_lanes_left = sum([lane.width_start if lane.side == 'left' else 0 for lane in context.scene.dsc_properties.road_properties.lanes])
+            width_lanes_right = sum([lane.width_start if lane.side == 'right' else 0 for lane in context.scene.dsc_properties.road_properties.lanes])
+        vector_left = (vector_hdg * width_lanes_left).to_3d().to_tuple()
+        vector_right = (vector_hdg * -width_lanes_right).to_3d().to_tuple()
         vertices = [vector_left, vector_right, (0.0, 0.0, 0.0), (0.0, 0.0, -self.params_input['points'][-2].z)]
         edges = [[0,1],[2,3]]
         faces = []
