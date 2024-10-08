@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.27.0] - 2024-10-08
+
+### Added
+- Integer lane offset in road creation tool which can be used to build left
+  turning lanes
+- Cross section template for junction incoming roads with an opening left
+  turning lane
+
 ## [0.26.1] - 2024-09-21
 
 ### Fixed
@@ -389,7 +397,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.26.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.26.1...v0.27.0
 [0.26.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.24.1...v0.25.0
