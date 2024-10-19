@@ -12,11 +12,11 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from . modal_road_object_base import DSC_OT_modal_road_object_base
-from . road_object_sign import road_object_sign
+from . road_object_traffic_light import road_object_traffic_light
 
 
-class DSC_OT_road_object_sign(DSC_OT_modal_road_object_base):
-    bl_idname = 'dsc.road_object_sign'
+class DSC_OT_road_object_traffic_light(DSC_OT_modal_road_object_base):
+    bl_idname = 'dsc.road_object_traffic_light'
     bl_label = 'Sign'
     bl_description = 'Place a sign object'
     bl_options = {'REGISTER', 'UNDO'}
@@ -35,7 +35,7 @@ class DSC_OT_road_object_sign(DSC_OT_modal_road_object_base):
         '''
             Create a model object instance
         '''
-        self.road_object = road_object_sign(context, self.road_object_type)
+        self.road_object = road_object_traffic_light(context, self.road_object_type)
 
     def create_object_3d(self, context):
         '''

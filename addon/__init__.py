@@ -39,8 +39,11 @@ from . entity_properties import DSC_entity_properties_pedestrian
 from . popup_entity_properties import DSC_OT_popup_entity_properties
 from . road_object_sign_properties import DSC_road_object_sign_property_item
 from . road_object_sign_properties import DSC_road_object_sign_properties
+from . road_object_traffic_light_properties import DSC_road_object_traffic_light_properties
 from . road_object_sign_operator import DSC_OT_road_object_sign
+from . road_object_traffic_light_operator import DSC_OT_road_object_traffic_light
 from . popup_road_object_sign_properties import DSC_OT_popup_road_object_sign_properties
+from . popup_road_object_traffic_light_properties import DSC_OT_popup_road_object_traffic_light_properties
 from . road_object_stop_line_operator import DSC_OT_road_object_stop_line
 
 
@@ -113,6 +116,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.popup_road_object_sign_properties', text='Sign',
             icon_value=dsc_custom_icons['road_object_sign'].icon_id).operator = 'road_object_sign'
         row = box.row(align=True)
+        row.operator('dsc.popup_road_object_traffic_light_properties', text='Traffic light',
+            icon_value=dsc_custom_icons['road_object_traffic_light'].icon_id).operator = 'road_object_traffic_light'
+        row = box.row(align=True)
         row.operator('dsc.road_object_stop_line', text='Stop line',
             icon_value=dsc_custom_icons['road_object_stop_line'].icon_id)
 
@@ -147,6 +153,8 @@ class DSC_Properties(bpy.types.PropertyGroup):
         name='connecting_road_properties', type=DSC_road_properties)
     road_object_sign_properties: bpy.props.PointerProperty(
         name='road_object_sign_properties', type=DSC_road_object_sign_properties)
+    road_object_traffic_light_properties: bpy.props.PointerProperty(
+        name='road_object_traffic light_properties', type=DSC_road_object_traffic_light_properties)
     entity_properties_vehicle: bpy.props.PointerProperty(
         name='entity_properties_vehicle', type=DSC_entity_properties_vehicle)
     entity_properties_pedestrian: bpy.props.PointerProperty(
@@ -178,8 +186,11 @@ classes = (
     DSC_OT_popup_entity_properties,
     DSC_road_object_sign_property_item,
     DSC_road_object_sign_properties,
+    DSC_road_object_traffic_light_properties,
     DSC_OT_road_object_sign,
+    DSC_OT_road_object_traffic_light,
     DSC_OT_popup_road_object_sign_properties,
+    DSC_OT_popup_road_object_traffic_light_properties,
     DSC_OT_road_object_stop_line,
     DSC_Properties,
 )
@@ -199,6 +210,7 @@ def register():
     dsc_custom_icons.load('junction_area', os.path.join(icons_dir, 'junction_area.png'), 'IMAGE')
     dsc_custom_icons.load('junction_connecting_road', os.path.join(icons_dir, 'junction_connecting_road.png'), 'IMAGE')
     dsc_custom_icons.load('road_object_sign', os.path.join(icons_dir, 'road_object_sign.png'), 'IMAGE')
+    dsc_custom_icons.load('road_object_traffic_light', os.path.join(icons_dir, 'road_object_traffic_light.png'), 'IMAGE')
     dsc_custom_icons.load('road_object_stop_line', os.path.join(icons_dir, 'road_object_stop_line.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')

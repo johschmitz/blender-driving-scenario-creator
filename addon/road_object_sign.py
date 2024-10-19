@@ -49,9 +49,9 @@ class road_object_sign:
             # Assign materials
             helpers.assign_materials(obj)
             for idx in range(len(obj.data.polygons)):
-                if idx in materials['road_sign_pole']:
+                if idx in materials['road_signal_pole']:
                     obj.data.polygons[idx].material_index = \
-                        helpers.get_material_index(obj, 'road_sign_pole')
+                        helpers.get_material_index(obj, 'road_signal_pole')
 
             # Assign texture
             material_name = self.assign_road_sign_texture(context, obj)
@@ -201,7 +201,7 @@ class road_object_sign:
         ]
 
         materials = {
-            'road_sign_pole': (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+            'road_signal_pole': (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
             'road_sign_plate': (10, 11, 12, 13, 14, 15),
         }
 
