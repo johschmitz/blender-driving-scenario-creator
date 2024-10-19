@@ -704,7 +704,7 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
                 id_extra = id_joint
         if road_type == 'junction_connecting_road':
             if obj.name.startswith('junction_area'):
-                # This path is for junction connecting roads
+                # This path is for junction connecting road snapping
                 id_joint, point_type, snapped_point, heading, slope, id_lane, lane_width, lane_type = \
                     point_to_junction_joint_interior(obj, raycast_point, joint_side=joint_side)
                 if id_joint != None:
@@ -860,7 +860,11 @@ def assign_materials(obj):
         'road_mark_white': [.9, .9, .9, 1.0],
         'road_mark_yellow': [.85, .63, .0, 1.0],
         'grass': [.05, .6, .01, 1.0],
-        'road_sign_pole': [.4, .4, .4, 1.0],
+        'road_signal_pole': [.4, .4, .4, 1.0],
+        'traffic_light_housing': [.1, .1, .1, 1.0],
+        'traffic_light_red': [1.0, .0, .0, 1.0],
+        'traffic_light_yellow': [1.0, 1.0, .0, 1.0],
+        'traffic_light_green': [.0, 1.0, .0, 1.0],
     }
     for key in default_materials.keys():
         material = bpy.data.materials.get(key)

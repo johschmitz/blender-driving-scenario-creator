@@ -122,7 +122,7 @@ class DSC_road_object_sign_property_item(bpy.types.PropertyGroup):
 
 class DSC_road_object_sign_properties(bpy.types.PropertyGroup):
 
-    pole_height: bpy.props.FloatProperty(default=2.20, min=1.0, max=4.0, step=10)
+    pole_height: bpy.props.FloatProperty(default=2.20, min=1.0, max=10.0, step=10)
     width: bpy.props.FloatProperty(default=0.6, min=0.5, max=1.0, step=10)
     sign_catalog: bpy.props.CollectionProperty(type=DSC_road_object_sign_property_item)
     texture_directory: bpy.props.StringProperty(name='Texture directory')
