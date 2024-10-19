@@ -276,7 +276,7 @@ class road:
             cp_base = self.geometry.sections[-1]['point_end']
         # Split
         cp_split = self.geometry.matrix_world @ Vector(self.geometry.sample_cross_section(
-            t, [t_cp_split])[0][0])
+            t, [t_cp_split])[0][0], True)
         # Check which part of the split contains the center lane, that part
         # gets the contact point on the center lane
         if t_cp_split < 0:
@@ -481,7 +481,7 @@ class road:
         s = 0
         strips_t_values = self.get_strips_t_values(lanes, s)
         # Obtain first curvature value
-        xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values)
+        xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values, True)
         # We need 2 vectors for each strip to later construct the faces with one
         # list per face on each side of each strip
         sample_points = [[[]] for _ in range(2 * (len(strips_t_values) - 1))]
@@ -506,7 +506,7 @@ class road:
 
             # Sample next points along road geometry (all t values for current s value)
             strips_t_values = self.get_strips_t_values(lanes, s)
-            xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values)
+            xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values, True)
             point_index = -2
             while point_index < len(sample_points) - 2:
                 point_index = point_index + 2
@@ -532,7 +532,7 @@ class road:
                         # Sample the geometry
                         t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip + 1]]
                         xyz_boundary, hdg, curvature_abs = self.geometry.sample_cross_section(
-                            s_boundaries_next[idx_smaller], t_values)
+                            s_boundaries_next[idx_smaller], t_values, True)
                         if idx_smaller == 0:
                             # Append left extra point
                             sample_points[2 * idx_strip][idx_boundaries[1]].append(xyz_boundary[0])

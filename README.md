@@ -182,7 +182,7 @@ recommendable. It allows hot reloading and rapid iterations.
 
 # How to run the test
 
-There is a handfull of tests for the geometries in the `tests/` directory. They
+There is a handful of tests for the geometries in the `tests/` directory. They
 can be run by executing pytest from the Blender python distribution in the
 project root directory
 

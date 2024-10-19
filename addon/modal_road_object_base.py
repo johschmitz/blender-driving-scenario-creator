@@ -330,7 +330,7 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                 # Recalculate the selected point by transforming back from the calculated Frenet coordinates
                 selected_point_new = self.selected_geometry.matrix_world @ \
                     Vector(self.selected_geometry.sample_cross_section(
-                        self.params_input['point_s'], [self.params_input['point_t']])[0][0])
+                        self.params_input['point_s'], [self.params_input['point_t']], False)[0][0])
                 if event.alt:
                     # Calculate angular change to update start heading
                     heading_difference = self.calculate_heading_start_difference(
@@ -359,7 +359,7 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                     return {'RUNNING_MODAL'}
                 if self.state == 'SELECT_ROAD':
                     if self.params_snap['id_obj'] != None:
-                        self.selected_geometry = load_geometry(self.selected_road['dsc_type'], self.selected_road['geometry'])
+                        self.selected_geometry = load_geometry(self.selected_road['dsc_type'], self.selected_road['geometry'], self.selected_road['lane_offset_coefficients'])
                         self.id_road = self.params_snap['id_obj']
                         self.id_lane = self.params_snap['id_lane']
                         # Set elevation so that end point selection starts on the same level

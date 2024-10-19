@@ -445,7 +445,7 @@ class DSC_geometry():
             elevation['d'] * s_section**3
         return z, curvature_elevation
 
-    def sample_cross_section(self, s, t_vec):
+    def sample_cross_section(self, s, t_vec, with_lane_offset):
         '''
             Sample a cross section (multiple t values) in the local coordinate
             system. Also return corresponding curvature and heading of the
@@ -458,7 +458,10 @@ class DSC_geometry():
         vector_hdg_t.rotate(Matrix.Rotation(hdg + pi/2, 2))
         xyz = []
         for t in t_vec:
-            lane_offset = helpers.calculate_lane_offset(s, self.lane_offset_coefficients, self.total_length)
+            if with_lane_offset:
+                lane_offset = helpers.calculate_lane_offset(s, self.lane_offset_coefficients, self.total_length)
+            else:
+                lane_offset = 0
             xy_vec = Vector((x_s, y_s)) + t * vector_hdg_t + lane_offset * vector_hdg_t
             xyz += [(xy_vec.x, xy_vec.y, z)]
         return xyz, hdg, curvature_abs
