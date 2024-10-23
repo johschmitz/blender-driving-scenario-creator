@@ -196,16 +196,16 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
 
         # Add 4 new joints, 1 for each direction
         self.junction.add_joint_open(self.params['cp_left'],
-            self.params['hdg_left'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['hdg_left'], 0, 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
             self.params['types_left'], self.params['types_right'])
         self.junction.add_joint_open(self.params['cp_down'],
-            self.params['hdg_down'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['hdg_down'], 0, 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
             self.params['types_left'], self.params['types_right'])
         self.junction.add_joint_open(self.params['cp_right'],
-            self.params['hdg_right'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['hdg_right'], 0, 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
             self.params['types_left'], self.params['types_right'])
         self.junction.add_joint_open(self.params['cp_up'],
-            self.params['hdg_up'], 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
+            self.params['hdg_up'], 0, 0, self.params['lane_widths_left'], self.params['lane_widths_right'],
             self.params['types_left'], self.params['types_right'])
 
         valid, mesh, matrix_world = self.junction.get_mesh(wireframe=True)
