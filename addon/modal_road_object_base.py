@@ -26,7 +26,7 @@ from . geometry_clothoid_triple import DSC_geometry_clothoid_triple
 from . geometry_parampoly3 import DSC_geometry_parampoly3
 
 
-def load_geometry(road_type, section_data, lane_offset):
+def load_geometry(road_type, section_data, lane_offset_coefficients):
     '''
         Load geometry from stored geometry data.
     '''
@@ -44,7 +44,7 @@ def load_geometry(road_type, section_data, lane_offset):
 
     if geometry != None:
         geometry.load_sections(section_data)
-        geometry.lane_offset_coefficients = lane_offset
+        geometry.lane_offset_coefficients = lane_offset_coefficients
 
     return geometry
 
@@ -326,7 +326,13 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                     self.selected_geometry.get_closest_ref_line_x_y_heading_s_t(selected_point_new)
                 # Transform to world coordinates
                 self.params_input['point_ref_line'] = self.selected_geometry.matrix_world @ point_ref_line_local.to_3d()
-                self.selected_heading = self.selected_geometry.sections[0]['heading_start'] + heading_ref_line
+                lane_offset = helpers.calculate_lane_offset(self.params_input['point_s'],
+                                                            self.selected_geometry.lane_offset_coefficients,
+                                                            self.selected_geometry.total_length)
+                if self.params_input['point_t'] - lane_offset < 0:
+                    self.selected_heading = self.selected_geometry.sections[0]['heading_start'] + heading_ref_line
+                else:
+                    self.selected_heading = self.selected_geometry.sections[0]['heading_start'] + heading_ref_line + pi
                 # Recalculate the selected point by transforming back from the calculated Frenet coordinates
                 selected_point_new = self.selected_geometry.matrix_world @ \
                     Vector(self.selected_geometry.sample_cross_section(

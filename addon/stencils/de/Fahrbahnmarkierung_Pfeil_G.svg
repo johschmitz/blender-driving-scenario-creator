@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="55cm"
+   height="55cm"
+   version="1.0"
+   viewBox="-50 -300 2078.78 2078.725"
+   id="svg1"
+   sodipodi:docname="Fahrbahnmarkierung_Pfeil_G.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="cm"
+     inkscape:zoom="0.37676667"
+     inkscape:cx="214.98717"
+     inkscape:cy="747.14677"
+     inkscape:window-width="3440"
+     inkscape:window-height="1372"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <rect
+     x="-50"
+     y="-300"
+     width="2078.78"
+     height="2078.78"
+     fill="#333333"
+     id="rect1"
+     style="stroke-width:2.41714;stroke-dasharray:none;fill:#4d4d4d" />
+  <polygon
+     transform="matrix(0,-3.7795,3.7795,0,989.38996,1684.2375)"
+     points="300,8 300,24 500,0 300,-24 300,-8 0,-12 0,12 "
+     fill="#ffffff"
+     id="polygon1" />
+</svg>
