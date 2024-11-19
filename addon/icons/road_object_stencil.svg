@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   version="1.1"
+   viewBox="0 0 8.4667 8.4667"
+   id="svg4"
+   sodipodi:docname="road_object_stencil.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   inkscape:export-filename="road_object_stencil.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="true"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="true"
+     inkscape:zoom="45.254834"
+     inkscape:cx="21.710388"
+     inkscape:cy="15.213844"
+     inkscape:window-width="3440"
+     inkscape:window-height="1372"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4">
+    <inkscape:grid
+       id="grid4"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="0.26458437"
+       spacingy="0.26458437"
+       empcolor="#3f3fff"
+       empopacity="0.25098039"
+       color="#3f3fff"
+       opacity="0.1254902"
+       empspacing="5"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata1">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <path
+     d="M 0.66146,0.53 V 7.9383"
+     stroke-width="0.26458"
+     id="path1"
+     style="fill:none;stroke:#ffffff" />
+  <path
+     d="M 8.0698,0.53 V 7.9383"
+     stroke-width="0.26458"
+     id="path3"
+     style="fill:none;stroke:#ffffff"
+     sodipodi:nodetypes="cc" />
+  <path
+     d="M 4.36564,0.52916874 V 7.9375309"
+     stroke-dasharray="1.5875, 1.5875"
+     stroke-dashoffset="0.26458"
+     stroke-width="0.26458"
+     id="path4"
+     style="fill:none;stroke:#ffffff"
+     sodipodi:nodetypes="cc" />
+  <path
+     d="M 2.80071,2.3533175 2.0408181,2.7407076 2.80071,3.1280977 2.0408181,2.7407076 h 1.0131891 l 0.2532973,0.3873901 v 3.4865114"
+     stroke-width="0.26458"
+     id="path3-3"
+     style="fill:none;stroke:#ffffff;stroke-width:0.52916875;stroke-dasharray:none"
+     sodipodi:nodetypes="ccccccc" />
+  <path
+     d="M 5.8207386,3.6453936 6.2202889,2.5993512 6.6144917,3.6453936 6.2202889,2.5993512 6.2172389,6.6146091"
+     stroke-width="0.26458"
+     id="path3-3-3"
+     style="fill:none;stroke:#ffffff;stroke-width:0.52916875;stroke-dasharray:none"
+     sodipodi:nodetypes="ccccc" />
+</svg>

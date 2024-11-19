@@ -13,7 +13,7 @@
 
 import bpy
 import os
-from mathutils import Vector, Matrix
+from mathutils import Matrix
 
 from math import pi
 
@@ -91,10 +91,7 @@ class road_object_sign:
             pole or plate mesh.
         '''
         origin_point = params_input['point']
-        if params_input['point_t'] < 0:
-            heading = params_input['heading']
-        else:
-            heading = params_input['heading'] + pi
+        heading = params_input['heading']
         # Build sign plate
         pole_height = context.scene.dsc_properties.road_object_sign_properties.pole_height
         sign_width = context.scene.dsc_properties.road_object_sign_properties.width

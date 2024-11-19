@@ -1,0 +1,54 @@
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+from . modal_road_object_base import DSC_OT_modal_road_object_base
+from . road_object_stencil import road_object_stencil
+
+
+class DSC_OT_road_object_stencil(DSC_OT_modal_road_object_base):
+    bl_idname = 'dsc.road_object_stencil'
+    bl_label = 'Stencil'
+    bl_description = 'Place a stencil object'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    params = {}
+
+    reference_object_mode = False
+
+    # Do not snap to other xodr or xosc objects in scene
+    # TODO snap to road contact points, requires a lot of work
+    snap_filter = 'surface'
+
+    road_object_type = 'stencil'
+
+    def create_object_model(self, context):
+        '''
+            Create a model object instance
+        '''
+        self.road_object = road_object_stencil(context, self.road_object_type)
+
+    def create_object_3d(self, context):
+        '''
+            Create a 3d road object
+        '''
+        return self.road_object.create_object_3d(context, self.params_input, self.id_road)
+
+    def update_params_get_mesh(self, context, wireframe=True):
+        '''
+            Calculate and return the vertices, edges and faces to create a road object mesh.
+        '''
+        valid, mesh, matrix_world, materials = \
+            self.road_object.update_params_get_mesh(context, self.params_input, wireframe)
+        if not valid:
+            self.report({'WARNING'}, 'No valid road object geometry solution found!')
+        return valid, mesh, matrix_world, materials

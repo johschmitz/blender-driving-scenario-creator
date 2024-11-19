@@ -91,10 +91,7 @@ class road_object_traffic_light:
             pole or plate mesh.
         '''
         origin_point = params_input['point']
-        if params_input['point_t'] < 0:
-            heading = params_input['heading']
-        else:
-            heading = params_input['heading'] + pi
+        heading = params_input['heading']
         # Build sign plate
         pole_height = context.scene.dsc_properties.road_object_traffic_light_properties.pole_height
         housing_height = context.scene.dsc_properties.road_object_traffic_light_properties.height

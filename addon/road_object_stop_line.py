@@ -82,10 +82,7 @@ class road_object_stop_line:
             pole or plate mesh.
         '''
         origin_point = params_input['point']
-        if params_input['point_t'] < 0:
-            heading = params_input['heading']
-        else:
-            heading = params_input['heading'] + pi
+        heading = params_input['heading']
         # Build sign plate
         length = 3.5
         vertices, edges, faces, materials = self.get_vertices_edges_faces_materials(length)
