@@ -227,7 +227,7 @@ Credits for the current version go to
   wrapper for Enrico Bertolazzi's
   [Clothoids](https://github.com/ebertolazzi/Clothoids) library
 - Wikipedia and its contributors for the public domain ("gemeinfrei") German
-  road sign textures
+  road sign textures and road stencil designs
 
 ## Main author/maintainer contact
 
