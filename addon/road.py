@@ -269,14 +269,14 @@ class road:
         '''
         t_cp_split = self.road_split_lane_idx_to_t()
         if self.params['road_split_type'] == 'start':
-            t = 0
+            s = 0.0
             cp_base = self.geometry.sections[0]['point_start']
         else:
-            t = self.geometry.total_length
+            s = self.geometry.total_length
             cp_base = self.geometry.sections[-1]['point_end']
         # Split
         cp_split = self.geometry.matrix_world @ Vector(self.geometry.sample_cross_section(
-            t, [t_cp_split])[0][0], True)
+            s, [t_cp_split], True)[0][0])
         # Check which part of the split contains the center lane, that part
         # gets the contact point on the center lane
         if t_cp_split < 0:
