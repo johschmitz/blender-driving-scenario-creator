@@ -73,8 +73,8 @@ class DSC_geometry_parampoly3(DSC_geometry):
             Calculate the arc length of the cubic curve
         """
         p_values = np.linspace(0, 1, num_points)
-        arc_lengths = np.array([quad(lambda p: self.arc_length_integrand(control_points, p), 0, p)[0] for p in p_values])
-        return arc_lengths[-1]
+        arc_lengths_np = np.array([quad(lambda p: self.arc_length_integrand(control_points, p), 0, p)[0] for p in p_values])
+        return float(arc_lengths_np[-1])
 
     def calculate_control_points(self):
         '''
@@ -100,7 +100,7 @@ class DSC_geometry_parampoly3(DSC_geometry):
         c0_y, p1_y, p2_y, p3_y = [c.y for c in control_points]
         coefficients_x = np.array([c0_x, 3 * (p1_x - c0_x), 3 * (p2_x - 2 * p1_x + c0_x), p3_x - 3 * p2_x + 3 * p1_x - c0_x])
         coefficients_y = np.array([c0_y, 3 * (p1_y - c0_y), 3 * (p2_y - 2 * p1_y + c0_y), p3_y - 3 * p2_y + 3 * p1_y - c0_y])
-        return coefficients_x, coefficients_y
+        return coefficients_x.tolist(), coefficients_y.tolist()
 
     def update_plan_view(self, params, geometry_solver='default'):
         # Calculate curve length for arc length parameterization

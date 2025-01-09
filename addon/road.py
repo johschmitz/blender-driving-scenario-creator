@@ -478,10 +478,10 @@ class road:
             Adaptively sample road in s direction based on local curvature.
         '''
         length = self.geometry.total_length
-        s = 0
+        s = 0.0
         strips_t_values = self.get_strips_t_values(lanes, s)
         # Obtain first curvature value
-        xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(0, strips_t_values, True)
+        xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(0.0, strips_t_values, True)
         # We need 2 vectors for each strip to later construct the faces with one
         # list per face on each side of each strip
         sample_points = [[[]] for _ in range(2 * (len(strips_t_values) - 1))]
@@ -492,12 +492,12 @@ class road:
         idx_boundaries_strips = [0] * len(strips_s_boundaries)
         while s < length:
             # TODO: Make hardcoded sampling parameters configurable
-            if curvature_abs == 0:
+            if curvature_abs == 0.0:
                 # TODO: Make it work with mixed curve types
                 if self.geometry.sections[0] == 'line':
-                    step = 5
+                    step = 5.0
                 else:
-                    step = 1
+                    step = 1.0
             else:
                 step = max(1, min(5, 0.1 / abs(curvature_abs)))
             s += step

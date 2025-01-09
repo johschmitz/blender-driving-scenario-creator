@@ -23,14 +23,14 @@ class DSC_geometry():
         # TODO: Maybe at some point implement mixed geometries
         self.sections = []
         self.section_curves = []
-        self.total_length = 0
+        self.total_length = 0.0
         self.lane_offset_coefficients = {'a': 0, 'b': 0, 'c': 0, 'd': 0}
 
     def update_total_length(self):
         '''
             Update the total length of the geometry.
         '''
-        self.total_length = 0
+        self.total_length = 0.0
         for section in self.sections:
             self.total_length += section['length']
 
@@ -47,7 +47,7 @@ class DSC_geometry():
         '''
         self.sections = []
         self.section_curves = []
-        self.total_length = 0
+        self.total_length = 0.0
 
     def add_section(self):
         '''
@@ -56,15 +56,15 @@ class DSC_geometry():
         section = {
             'curve_type': None,
             'geometry_solver': None,
-            'length': 0,
+            'length': 0.0,
             'point_start': Vector((0.0,0.0,0.0)),
             'point_end': Vector((0.0,0.0,0.0)),
-            'heading_start': 0,
-            'curvature_start': 0,
-            'slope_start': 0,
-            'heading_end': 0,
-            'curvature_end': 0,
-            'slope_end': 0,
+            'heading_start': 0.0,
+            'curvature_start': 0.0,
+            'slope_start': 0.0,
+            'heading_end': 0.0,
+            'curvature_end': 0.0,
+            'slope_end': 0.0,
             'coefficients_u': {'a': 0, 'b': 0, 'c': 0, 'd': 0},
             'coefficients_v': {'a': 0, 'b': 0, 'c': 0, 'd': 0},
             'elevation': [{'s_section': 0, 'a': 0, 'b': 0, 'c': 0, 'd': 0}],
@@ -438,7 +438,7 @@ class DSC_geometry():
             de_ds = elevation['b']+ 2 * elevation['c'] * s_section + 3 * elevation['d'] * s_section
             curvature_elevation = (1 + de_ds**2)**(3/2) / d2e_d2s
         else:
-            curvature_elevation = 0
+            curvature_elevation = 0.0
         z = elevation['a'] + \
             elevation['b'] * s_section + \
             elevation['c'] * s_section**2 + \
@@ -461,7 +461,7 @@ class DSC_geometry():
             if with_lane_offset:
                 lane_offset = helpers.calculate_lane_offset(s, self.lane_offset_coefficients, self.total_length)
             else:
-                lane_offset = 0
+                lane_offset = 0.0
             xy_vec = Vector((x_s, y_s)) + t * vector_hdg_t + lane_offset * vector_hdg_t
             xyz += [(xy_vec.x, xy_vec.y, z)]
         return xyz, hdg, curvature_abs
