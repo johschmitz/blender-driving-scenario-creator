@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.28.1] - 2025-01-09
+
+### Fixed
+- Direct junction roads not working
+- Parampoly3 geometry roads not working
+
 ## [0.28.0] - 2024-12-04
 
 ### Added
@@ -413,7 +419,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.1...HEAD
+[0.28.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.0...v0.28.1
 [0.28.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.27.2...v0.28.0
 [0.27.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.27.1...v0.27.2
 [0.27.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.27.0...v0.27.1
