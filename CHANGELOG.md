@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.28.2] - 2025-01-14
+
+### Fixed
+- Missing thumbnails and textures for road signs and road stencils due to
+  Github's Ubuntu runner image upate
+
 ## [0.28.1] - 2025-01-09
 
 ### Fixed
@@ -419,7 +425,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.2...HEAD
+[0.28.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.1...v0.28.2
 [0.28.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.0...v0.28.1
 [0.28.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.27.2...v0.28.0
 [0.27.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.27.1...v0.27.2
