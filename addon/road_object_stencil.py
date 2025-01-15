@@ -459,7 +459,7 @@ class road_object_stencil:
         heading = params_input['heading']
         vertices, edges, faces, materials = self.get_vertices_edges_faces_materials(context)
         # Raise the stencil a bit above the road surface to avoid z fighting issues
-        origin_point.z += 0.01
+        origin_point.z += 0.005
         mat_translation = Matrix.Translation(origin_point)
         mat_rotation = Matrix.Rotation(heading, 4, 'Z')
         matrix_world = mat_translation @ mat_rotation

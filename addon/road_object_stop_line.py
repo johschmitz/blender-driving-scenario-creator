@@ -86,7 +86,8 @@ class road_object_stop_line:
         # Build sign plate
         length = 3.5
         vertices, edges, faces, materials = self.get_vertices_edges_faces_materials(length)
-        # TODO make sign height configurable
+        # Raise the stencil a bit above the road surface to workaround z fighting issues
+        origin_point.z += 0.005
         mat_translation = Matrix.Translation(origin_point)
         mat_rotation = Matrix.Rotation(heading, 4, 'Z')
         matrix_world = mat_translation @ mat_rotation
