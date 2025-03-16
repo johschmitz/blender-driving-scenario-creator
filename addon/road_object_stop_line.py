@@ -65,6 +65,7 @@ class road_object_stop_line:
             obj['id_ref_object'] = id_reference_object
             obj['position_s'] = params_input['point_s']
             obj['position_t'] = params_input['point_t']
+            # TODO make width configurable or take it from the lane
             obj['width'] = 3.5
             # TODO for now assume 2 mm steel for the signs
             obj['length'] = 0.5

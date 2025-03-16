@@ -184,8 +184,6 @@ class DSC_road_properties(bpy.types.PropertyGroup):
 
     design_speed: bpy.props.FloatProperty(default=130.0, min=1.00, max=400.0, step=1)
 
-    junction_connectiong_road: bpy.props.BoolProperty(default=False)
-
     num_lanes_left: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
     num_lanes_right: bpy.props.IntProperty(default=2, min=0, max=20, update=callback_num_lanes)
 
@@ -260,9 +258,6 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.road_split_lane_idx = 1
 
     def update_num_lanes(self):
-        # Do not update recursively when switching presets
-        if self.lock_lanes:
-            return
         # Avoid callbacks
         self.lock_lanes = True
         self.clear_lanes()

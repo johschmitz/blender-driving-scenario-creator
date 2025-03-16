@@ -29,6 +29,9 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
 
     geometry = DSC_geometry_clothoid_triple()
 
+    width_start = 0.0
+    width_end = 0.0
+
     def update_road_properties(self, context, road_contact_point):
         '''
             Dynamically update the road properties based on the user input if
@@ -39,4 +42,10 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
         else:
             width_lane_connecting = self.params_snap['lane_widths_right'][0]
 
-        helpers.set_connecting_road_properties(context, self.joint_side_start, road_contact_point, width_lane_connecting)
+        if road_contact_point == 'start':
+            self.width_start = width_lane_connecting
+        else:
+            self.width_end = width_lane_connecting
+
+        helpers.set_connecting_road_properties(context, self.joint_side_start,
+                                               road_contact_point, self.width_start, self.width_end)

@@ -330,27 +330,33 @@ def create_reference_object_xodr_link(reference_object, id_object):
     reference_object['id_ref_object'] = id_object
 
 
-def set_connecting_road_properties(context, joint_side_start, road_contact_point, width_lane_incoming):
+def set_connecting_road_properties(context, joint_side_start, road_contact_point, width_lane_incoming, width_lane_outgoing):
     '''
         Set the properties for construction of a connecting road.
     '''
-    context.scene.dsc_properties.connecting_road_properties.junction_connecting_road = True
+    context.scene.dsc_properties.connecting_road_properties.clear_lanes()
+    context.scene.dsc_properties.connecting_road_properties.cross_section_preset = 'junction_connecting_road'
+    context.scene.dsc_properties.connecting_road_properties.update_cross_section()
     if joint_side_start == 'left':
         context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 1
         context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 0
         if road_contact_point == 'start':
             # We add lanes from left to right so first left has index 0, center lane index 1
             context.scene.dsc_properties.connecting_road_properties.lanes[0].width_start = width_lane_incoming
+            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_end = width_lane_outgoing
         else:
-            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_end = width_lane_incoming
+            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_start = width_lane_incoming
+            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_end = width_lane_outgoing
     else:
         context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 0
         context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 1
         if road_contact_point == 'start':
             # We add lanes from left to right so center lane has index 0, first right index 1
             context.scene.dsc_properties.connecting_road_properties.lanes[1].width_start = width_lane_incoming
+            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_end = width_lane_outgoing
         else:
-            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_end = width_lane_incoming
+            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_start = width_lane_incoming
+            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_end = width_lane_outgoing
     # Remove lane markings for connecting roads
     context.scene.dsc_properties.connecting_road_properties.lanes[0].road_mark_type = 'none'
     context.scene.dsc_properties.connecting_road_properties.lanes[1].road_mark_type = 'none'
