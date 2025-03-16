@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.28.3] - 2025-03-16
+
+### Fixed
+- Fix snapping based setting of connecting roads start and end widths
+
 ## [0.28.2] - 2025-01-14
 
 ### Fixed
@@ -425,7 +430,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.2...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.3...HEAD
+[0.28.3]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.2...v0.28.3
 [0.28.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.1...v0.28.2
 [0.28.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.0...v0.28.1
 [0.28.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.27.2...v0.28.0
