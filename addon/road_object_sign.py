@@ -239,7 +239,6 @@ class road_object_sign:
             material.node_tree.links.new(tex_node.outputs[0], principled_BSDF.inputs[0])
             material.use_backface_culling = True
             material.blend_method = 'CLIP'
-            material.shadow_method = 'CLIP'
         obj.data.materials.append(material)
         # Make sure the textures are packed into the .blend file
         bpy.ops.file.pack_all()
