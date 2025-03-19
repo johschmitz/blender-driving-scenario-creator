@@ -40,11 +40,11 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
     )
     width_start: bpy.props.FloatProperty(
         name='Width start',
-        default=3.5, min=0.0, max=10.0, step=1
+        default=3.5, min=0.0, max=20.0, step=1
     )
     width_end: bpy.props.FloatProperty(
         name='Width end',
-        default=3.5, min=0.0, max=10.0, step=1
+        default=3.5, min=0.0, max=20.0, step=1
     )
     type: bpy.props.EnumProperty(
         name = 'Type',
@@ -174,7 +174,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     width_line_bold: bpy.props.FloatProperty(default=0.25, min=0.01, max=10.0, step=1)
     length_broken_line: bpy.props.FloatProperty(default=3.0, min=0.01, max=10.0, step=1)
     ratio_broken_line_gap: bpy.props.IntProperty(default=1, min=1, max=3)
-    width_driving: bpy.props.FloatProperty(default=3.5, min=0.01, max=10.0, step=1)
+    width_driving: bpy.props.FloatProperty(default=3.5, min=0.01, max=20.0, step=1)
     width_border: bpy.props.FloatProperty(default=0.5, min=0.01, max=1.0, step=1)
     # width_curb: bpy.props.FloatProperty(default=0.16, min=0.10, max=0.30, step=1)
     width_median: bpy.props.FloatProperty(default=2.0, min=0.01, max=10.0, step=1)
