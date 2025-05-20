@@ -69,7 +69,7 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
         # TODO: Get the widths from the selected road cross section
         width_lane_incoming = 3.5
         road_contact_point = 'end'
-        helpers.set_connecting_road_properties(context, 'right', road_contact_point, width_lane_incoming)
+        helpers.set_connecting_road_properties(context, 'right', road_contact_point, width_lane_incoming, width_lane_incoming)
         road_type = 'junction_connecting_road'
         geometry = DSC_geometry_clothoid_triple()
         geometry_solver = 'hermite'
