@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.28.5] - 2025-05-20
+
+### Fixed
+- Crashing 4-way junction tool
+
 ## [0.28.4] - 2025-03-16
 
 ### Fixed
@@ -435,8 +440,9 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.4...HEAD
-[0.28.3]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.3...v0.28.4
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.5...HEAD
+[0.28.5]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.4...v0.28.5
+[0.28.4]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.3...v0.28.4
 [0.28.3]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.2...v0.28.3
 [0.28.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.1...v0.28.2
 [0.28.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.0...v0.28.1
