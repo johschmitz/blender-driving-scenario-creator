@@ -17,7 +17,7 @@ from mathutils import Vector, Matrix
 from math import pi
 
 from . modal_two_point_base import DSC_OT_modal_two_point_base
-from . entity import entity
+from . entity_legacy import entity
 
 
 class DSC_OT_entity(DSC_OT_modal_two_point_base):

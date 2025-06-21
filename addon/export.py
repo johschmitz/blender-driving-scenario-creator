@@ -12,16 +12,17 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-from . import helpers
-
-from scenariogeneration import xosc
-from scenariogeneration import xodr
-
-from mathutils import Vector
-from math import pi, copysign
-
 import pathlib
 import subprocess
+import bmesh
+from mathutils import Vector, Matrix
+from math import radians, degrees, sin, cos, tan, copysign
+
+import scenariogeneration as xodr
+import scenariogeneration as xosc
+
+from . import helpers
+from .utils.logging_utils import info, error, debug, log_object_creation, warning
 
 mapping_lane_type = {
     'driving': xodr.LaneType.driving,
@@ -153,7 +154,7 @@ class DSC_OT_export(bpy.types.Operator):
             vehicle_catalog_file_created = False
             pedestrian_catalog_file_created = False
             for obj in bpy.data.collections['OpenSCENARIO'].children['entities'].objects:
-                print('Export entity object model for', obj.name)
+                info(f'Exporting entity model: {obj.name}', "Export")
                 model_path = pathlib.Path(self.directory) / 'models' / 'entities' / str(obj.name)
                 # Create a temporary copy without transform
                 obj_export = obj.copy()
@@ -198,7 +199,7 @@ class DSC_OT_export(bpy.types.Operator):
                     else:
                         pedestrian.append_to_catalog(pedestrian_catalog_path)
                 else:
-                    print('Unknown entity type:', obj['entity_type'])
+                    error(f'Unknown entity type: {obj["entity_type"]}', "Export")
                     self.report({'ERROR'}, 'Unknown entity type: {}'.format(obj['entity_type']))
 
     def export_mesh(self, file_path):
@@ -228,7 +229,7 @@ class DSC_OT_export(bpy.types.Operator):
                                                             node.image.name).with_suffix('.png')
                                 # Save the image to the output path
                                 node.image.save_render(str(file_path_texture))
-                                print('Exported texture:', file_path_texture)
+                                debug(f'Exported texture: {file_path_texture}', "Export")
                                 file_paths_textures.add(file_path_texture)
             bpy.ops.wm.obj_export(filepath=str(file_path_obj), check_existing=True, filter_blender=False,
                                   filter_backup=False, filter_image=False, filter_movie=False,
@@ -277,7 +278,7 @@ class DSC_OT_export(bpy.types.Operator):
                 export_format = 'GLB'
                 file_path = file_path.with_suffix('.glb')
             elif self.mesh_file_type == 'gltf':
-                export_format = 'GLTF_EMBEDDED'
+                export_format = 'GLTF_SEPARATE'
                 file_path = file_path.with_suffix('.gltf')
             file_path.parent.mkdir(parents=True, exist_ok=True)
             bpy.ops.export_scene.gltf(filepath=str(file_path), check_existing=True,
@@ -431,12 +432,12 @@ class DSC_OT_export(bpy.types.Operator):
                     if 'id_direct_junction_end' in obj:
                         # Connect to direction junction attached to the other (split) road
                         road.add_successor(xodr.ElementType.junction, obj['id_direct_junction_end'])
-                    print('Add road with ID', obj['id_odr'])
+                    log_object_creation('Road', obj.name, obj['id_odr'])
                     odr.add_road(road)
                     roads.append(road)
                 if obj.name.startswith('sign') or obj.name.startswith('stop_line') or obj.name.startswith('stencil'):
                     road_to_attach = self.get_road_by_id(roads, obj['id_road'])
-                    print("Add signal with ID", obj['id_odr'])
+                    log_object_creation('Signal', obj.name, obj['id_odr'])
                     # Calculate orientation based on road side
                     # TODO take lane offset into account when it is implemented
                     if obj['position_t'] < 0:
@@ -503,8 +504,8 @@ class DSC_OT_export(bpy.types.Operator):
                                 self.get_lanes_ids_to_link(road_obj_in, road_in_cp_l, road_obj_out_l, road_out_cp_l)
                             lane_ids_road_in_r, lane_ids_road_out_r = \
                                 self.get_lanes_ids_to_link(road_obj_in, road_in_cp_r, road_obj_out_r, road_out_cp_r)
-                            print(road_in.id, road_out_l.id, road_out_r.id)
-                            print(lane_ids_road_in_l, lane_ids_road_out_l, lane_ids_road_in_r, lane_ids_road_out_r)
+                            debug(f'Direct junction roads: {road_in.id} -> {road_out_l.id}, {road_out_r.id}', "Junction")
+                            debug(f'Lane connections: L{lane_ids_road_in_l}->{lane_ids_road_out_l}, R{lane_ids_road_in_r}->{lane_ids_road_out_r}', "Junction")
                             if len(lane_ids_road_in_l) > 0 and len(lane_ids_road_out_l) > 0:
                                 dj_creator.add_connection(road_in, road_out_l, lane_ids_road_in_l, lane_ids_road_out_l)
                             if len(lane_ids_road_in_r) > 0 and len(lane_ids_road_out_r) > 0:
@@ -603,7 +604,7 @@ class DSC_OT_export(bpy.types.Operator):
                                     odr.add_road(connecting_road)
 
                     # Finally add the junction
-                    print('Add junction with ID', junction_id)
+                    log_object_creation('Junction', f'junction_{junction_id}', junction_id)
                     odr.add_junction(junction)
 
         # Create the OpenDRIVE XML file
@@ -619,7 +620,7 @@ class DSC_OT_export(bpy.types.Operator):
             for obj in bpy.data.collections['OpenSCENARIO'].children['entities'].objects:
                 if 'dsc_type' in obj and obj['dsc_type'] == 'entity':
                     entity_name = obj.name
-                    print('Add entity with name', obj.name)
+                    log_object_creation('Entity', obj.name)
                     if obj['entity_type'] == 'vehicle':
                         catalog = 'VehicleCatalog'
                     elif obj['entity_type'] == 'pedestrian':
@@ -733,7 +734,7 @@ class DSC_OT_export(bpy.types.Operator):
         for road in roads:
             if road.id == id:
                 return road
-        print('WARNING: No road with ID {} found. Maybe a junction?'.format(id))
+        warning(f'No road with ID {id} found - may be a junction', "Validation")
         return None
 
     def get_road_mark(self, marking_type, weight, color):
