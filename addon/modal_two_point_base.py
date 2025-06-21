@@ -317,7 +317,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                                     id_extra = self.params_snap['id_extra']
                                     id_lane = self.params_snap['id_lane']
                                 helpers.create_object_xodr_links(obj, link_type, cp_type_end,
-                                    self.params_snap['id_obj'], id_extra)
+                                    self.params_snap['id_obj'], id_extra, id_lane)
                             # Remove stencil and go back to initial state to draw again
                             self.remove_stencil()
                             self.state = 'INIT'

@@ -16,7 +16,7 @@ import bpy.utils.previews
 
 import os
 
-from . export import DSC_OT_export
+from .export import DSC_OT_export
 from . junction_four_way import DSC_OT_junction_four_way
 from . modal_junction_generic import DSC_OT_junction_generic
 from . junction_connecting_road import DSC_OT_junction_connecting_road
@@ -56,7 +56,7 @@ bl_info = {
     'author' : 'Johannes Schmitz',
     'description' : 'Create OpenDRIVE and OpenSCENARIO based driving scenarios.',
     'blender' : (3, 6, 0),
-    'version' : (0, 28, 5),
+    'version' : (0, 28, 6),
     'location' : 'View3D > Sidebar > Driving Scenario Creator',
     'warning' : '',
     'doc_url': '',
@@ -148,10 +148,10 @@ class DSC_PT_panel_create(bpy.types.Panel):
         layout.label(text='Export (Track, Scenario, Mesh)')
         box = layout.box()
         row = box.row(align=True)
-        row.operator('dsc.export_driving_scenario', icon='EXPORT')
+        row.operator('dsc.export', icon='EXPORT')
 
 def menu_func_export(self, context):
-    self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xosc, .xodr, .fbx/.gltf/.osgb)')
+    self.layout.operator('dsc.export', text='Driving Scenario (.xosc, .xodr, .fbx/.gltf/.osgb)')
 
 class DSC_Properties(bpy.types.PropertyGroup):
     road_properties: bpy.props.PointerProperty(
