@@ -12,8 +12,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-
-from . params_cross_section import params_cross_section
+from . import helpers
+from .params_cross_section import params_cross_section
+from .utils.logging_utils import info
 
 
 # We need global wrapper callbacks due to Blender update callback implementation
@@ -351,7 +352,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.lock_lanes = False
 
     def print_cross_section(self):
-        print('New cross section:', self.cross_section_preset)
+        info(f'Applied cross section preset: {self.cross_section_preset}', "Road Configuration")
         sides = []
         widths_start = []
         widths_end = []
