@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.28.6] - 2025-07-03
+
+### Fixed
+- Road cross section selection not working anymore after 0.28.3 bugfix
+
 ## [0.28.5] - 2025-05-20
 
 ### Fixed
@@ -440,7 +445,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.5...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.6...HEAD
+[0.28.6]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.5...v0.28.6
 [0.28.5]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.4...v0.28.5
 [0.28.4]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.3...v0.28.4
 [0.28.3]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.2...v0.28.3
