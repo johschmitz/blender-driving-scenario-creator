@@ -258,6 +258,9 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.road_split_lane_idx = 1
 
     def update_num_lanes(self):
+        # Do not update recursively when switching presets
+        if self.lock_lanes:
+            return
         # Avoid callbacks
         self.lock_lanes = True
         self.clear_lanes()

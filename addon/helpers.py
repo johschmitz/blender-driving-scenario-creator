@@ -335,8 +335,9 @@ def set_connecting_road_properties(context, joint_side_start, road_contact_point
         Set the properties for construction of a connecting road.
     '''
     context.scene.dsc_properties.connecting_road_properties.clear_lanes()
-    context.scene.dsc_properties.connecting_road_properties.cross_section_preset = 'junction_connecting_road'
-    context.scene.dsc_properties.connecting_road_properties.update_cross_section()
+    if context.scene.dsc_properties.connecting_road_properties.cross_section_preset != 'junction_connecting_road':
+        context.scene.dsc_properties.connecting_road_properties.cross_section_preset = 'junction_connecting_road'
+        context.scene.dsc_properties.connecting_road_properties.update_cross_section()
     if joint_side_start == 'left':
         context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 1
         context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 0
