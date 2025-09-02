@@ -26,7 +26,8 @@ from . entity_motorbike import DSC_OT_entity_motorbike
 from . entity_pedestrian import DSC_OT_entity_pedestrian
 from . entity_truck import DSC_OT_entity_truck
 from . road_arc import DSC_OT_road_arc
-from . popup_road_properties import DSC_OT_popup_road_properties
+from . popup_road_properties import (DSC_OT_popup_road_properties, DSC_OT_save_cross_section_preset,
+    DSC_OT_delete_cross_section_preset, DSC_OT_copy_cross_section_preset_name)
 from . road_parametric_polynomial import DSC_OT_road_parametric_polynomial
 from . road_properties import DSC_road_properties, DSC_enum_lane
 from . road_clothoid import DSC_OT_road_clothoid
@@ -182,6 +183,9 @@ classes = (
     DSC_OT_entity_truck,
     DSC_OT_road_arc,
     DSC_OT_popup_road_properties,
+    DSC_OT_save_cross_section_preset,
+    DSC_OT_delete_cross_section_preset,
+    DSC_OT_copy_cross_section_preset_name,
     DSC_OT_road_parametric_polynomial,
     DSC_OT_road_clothoid,
     DSC_OT_road_clothoid_triple,

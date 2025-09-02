@@ -12,8 +12,11 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import os
+import json
 
 from . params_cross_section import params_cross_section
+from . helpers import get_user_cross_sections_path
 
 
 # We need global wrapper callbacks due to Blender update callback implementation
@@ -109,6 +112,10 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
     split_right: bpy.props.BoolProperty(description='Split above here', update=callback_road_split)
 
     def update_lane_width(self, context):
+        # Avoid updating recursively
+        if context.scene.dsc_properties.road_properties.lock_lanes:
+            return
+        context.scene.dsc_properties.road_properties.lock_lanes = True
         mapping_width_type_lane = {
             'driving' : context.scene.dsc_properties.road_properties.width_driving,
             'entry' : context.scene.dsc_properties.road_properties.width_driving,
@@ -124,14 +131,22 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
         }
         self.width_start = mapping_width_type_lane[self.type]
         self.width_end = mapping_width_type_lane[self.type]
+        # Unlock updating
+        context.scene.dsc_properties.road_properties.lock_lanes = False
 
     def update_road_mark_weight(self, context):
+        # Avoid updating recursively
+        if context.scene.dsc_properties.road_properties.lock_lanes:
+            return
+        context.scene.dsc_properties.road_properties.lock_lanes = True
         mapping_width_type_road_mark = {
             'none' : 0,
             'standard' : context.scene.dsc_properties.road_properties.width_line_standard,
             'bold' : context.scene.dsc_properties.road_properties.width_line_bold,
         }
         self.road_mark_width = mapping_width_type_road_mark[self.road_mark_weight]
+        # Unlock updating
+        context.scene.dsc_properties.road_properties.lock_lanes = False
 
     def update_road_split(self, context):
         # Avoid updating recursively
@@ -204,8 +219,9 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     lane_idx_current: bpy.props.IntProperty(default=0, min=0)
     lanes: bpy.props.CollectionProperty(type=DSC_enum_lane)
 
-    cross_section_preset: bpy.props.EnumProperty(
-            items=(
+    def get_cross_section_presets(self, context):
+        # Built-in presets
+        items = [
                 ('two_lanes_default','Two lanes (default)','Two lanes (default)'),
                 ('two_lanes_turning_lane_offset_left_open','Two lanes with offset left turning lane opening','Two lanes with opening offset left turning lane'),
                 # Typical German road cross sections
@@ -238,12 +254,37 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 ('shoulder_left', 'Shoulder left', 'Shoulder left'),
                 ('shoulder_right', 'Shoulder right', 'Shoulder right'),
                 ('junction_connecting_road', 'Connecting road (for junctions)', 'Connecting road (for junctions)'),
-            ),
-            name='cross_section',
-            description='Road cross section presets',
-            default='two_lanes_default',
-            update=callback_cross_section,
-            )
+        ]
+
+        # Load and append user presets
+        user_json_path = get_user_cross_sections_path()
+        if os.path.exists(user_json_path):
+            try:
+                with open(user_json_path, 'r') as f:
+                    user_presets = json.load(f)
+                items.extend([
+                    (name, f"User: {name}", f"User-defined preset: {name}")
+                    for name in user_presets.keys()
+                ])
+            except Exception as e:
+                print(f"Error loading user presets: {e}")
+
+        return items
+
+    cross_section_preset: bpy.props.EnumProperty(
+        items=get_cross_section_presets,
+        name='cross_section',
+        description='Road cross section presets',
+        default=0,
+        update=callback_cross_section,
+    )
+
+    new_cross_section_preset_name: bpy.props.StringProperty(
+        name='New Preset Name',
+        description='Name for saving the current cross section as a new preset',
+        default='',
+        maxlen=64
+    )
 
     # A lock for deactivating callbacks
     lock_lanes: bpy.props.BoolProperty(default=False)
@@ -262,6 +303,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         if self.lock_lanes:
             return
         # Avoid callbacks
+        if self.lock_lanes:
+            return
         self.lock_lanes = True
         self.clear_lanes()
         # Left lanes
@@ -326,8 +369,24 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.clear_lanes()
         num_lanes_left = 0
         num_lanes_right = 0
+
+        # Try to find preset in user presets first
+        found_in_user_presets = False
+        user_json_path = get_user_cross_sections_path()
+        if os.path.exists(user_json_path):
+            try:
+                with open(user_json_path, 'r') as f:
+                    user_presets = json.load(f)
+                    if self.cross_section_preset in user_presets:
+                        params = user_presets[self.cross_section_preset]
+                        found_in_user_presets = True
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Error loading user presets: {e}")
+
+        # If not found in user presets, try built-in presets
+        if not found_in_user_presets:
+            params = params_cross_section[self.cross_section_preset]
         # Build up cross section
-        params = params_cross_section[self.cross_section_preset]
         for idx in range(len(params['sides'])):
             self.add_lane(params['sides'][idx], params['types'][idx],
                 params['widths_start'][idx], params['widths_end'][idx], params['road_mark_types'][idx],
@@ -337,6 +396,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
                 num_lanes_left += 1
             if params['sides'][idx] == 'right':
                 num_lanes_right += 1
+
+        # Set road properties
         self.lane_offset_start = params['lane_offset_start']
         self.lane_offset_end = params['lane_offset_end']
         self.road_split_type = params['road_split_type']
@@ -354,7 +415,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.lock_lanes = False
 
     def print_cross_section(self):
-        print('New cross section:', self.cross_section_preset)
+        print('New cross section set:', self.cross_section_preset)
         sides = []
         widths_start = []
         widths_end = []

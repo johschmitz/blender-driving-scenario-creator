@@ -14,9 +14,19 @@
 import bpy
 import bmesh
 import addon_utils
+import os
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 from mathutils.geometry import intersect_line_plane
 from mathutils import Vector, Matrix
+
+def get_user_cross_sections_path():
+    '''Returns the absolute path to the user's cross sections JSON file.
+    Also ensures the directory exists.
+    '''
+    user_dir = bpy.utils.user_resource('DATAFILES')
+    bdsc_dir = os.path.join(user_dir, 'bdsc')
+    os.makedirs(bdsc_dir, exist_ok=True)
+    return os.path.join(bdsc_dir, 'user_cross_section_presets_v1.json')
 
 from math import pi, inf
 
