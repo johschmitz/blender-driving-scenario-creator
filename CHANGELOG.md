@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.29.0] - 2025-09-22
+
+### Added
+- Possibility to save and delete user road cross section presets. User presets
+  are stored in a JSON file in the user's Blender configuration directory.
+
 ## [0.28.6] - 2025-07-03
 
 ### Fixed
@@ -445,7 +451,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.6...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.0...HEAD
+[0.29.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.6...v0.29.0
 [0.28.6]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.5...v0.28.6
 [0.28.5]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.4...v0.28.5
 [0.28.4]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.3...v0.28.4
