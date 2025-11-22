@@ -277,7 +277,7 @@ class DSC_OT_export(bpy.types.Operator):
                 export_format = 'GLB'
                 file_path = file_path.with_suffix('.glb')
             elif self.mesh_file_type == 'gltf':
-                export_format = 'GLTF_EMBEDDED'
+                export_format = 'GLTF_SEPARATE'
                 file_path = file_path.with_suffix('.gltf')
             file_path.parent.mkdir(parents=True, exist_ok=True)
             bpy.ops.export_scene.gltf(filepath=str(file_path), check_existing=True,
@@ -294,7 +294,7 @@ class DSC_OT_export(bpy.types.Operator):
                                       export_draco_color_quantization=10,
                                       export_draco_generic_quantization=12,
                                       export_tangents=False, export_materials='EXPORT',
-                                      export_original_specular=False, export_colors=True,
+                                      export_original_specular=False,
                                       use_mesh_edges=False, use_mesh_vertices=False,
                                       export_cameras=False, use_selection=True, use_visible=False,
                                       use_renderable=False, use_active_collection=False,
