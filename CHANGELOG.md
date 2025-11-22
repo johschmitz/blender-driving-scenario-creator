@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.29.1] - 2025-11-22
+
+### Fixed
+- Operator `__init__()` not working with newer Blender versions
+- Export of glTF meshes not working with newer Blender versions
+
 ## [0.29.0] - 2025-09-22
 
 ### Added
@@ -451,7 +457,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.1...HEAD
+[0.29.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.0...v0.29.1
 [0.29.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.6...v0.29.0
 [0.28.6]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.5...v0.28.6
 [0.28.5]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.4...v0.28.5
