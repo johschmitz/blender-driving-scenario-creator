@@ -23,5 +23,4 @@ class DSC_OT_road_clothoid(DSC_OT_road):
 
     object_type = 'road_clothoid'
 
-    def __init__(self):
-        self.geometry = DSC_geometry_clothoid()
+    geometry = DSC_geometry_clothoid()

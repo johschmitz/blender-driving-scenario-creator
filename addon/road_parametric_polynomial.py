@@ -23,5 +23,4 @@ class DSC_OT_road_parametric_polynomial(DSC_OT_road):
 
     object_type = 'road_parampoly3'
 
-    def __init__(self):
-        self.geometry = DSC_geometry_parampoly3()
+    geometry = DSC_geometry_parampoly3()
