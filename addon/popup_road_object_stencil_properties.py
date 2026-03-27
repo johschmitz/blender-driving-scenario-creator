@@ -14,6 +14,8 @@
 import bpy
 import os
 
+from . helpers import call_operator_deferred
+
 
 class DSC_OT_popup_road_object_stencil_properties(bpy.types.Operator):
     bl_idname = 'dsc.popup_road_object_stencil_properties'
@@ -29,8 +31,7 @@ class DSC_OT_popup_road_object_stencil_properties(bpy.types.Operator):
     def cancel(self, context):
         bpy.utils.previews.remove(self.preview_collection)
         # Popup closed, call operator for the specified road object operator
-        op = bpy.ops.dsc.road_object_stencil
-        op('INVOKE_DEFAULT')
+        call_operator_deferred(lambda: bpy.ops.dsc.road_object_stencil('INVOKE_DEFAULT'))
         return None
 
     def invoke(self, context, event):

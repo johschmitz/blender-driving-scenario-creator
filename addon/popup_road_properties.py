@@ -15,7 +15,7 @@ import bpy
 
 import json
 import os
-from . helpers import get_user_cross_sections_path
+from . helpers import get_user_cross_sections_path, call_operator_deferred
 
 
 # Operator to save the current cross-section as a user preset
@@ -179,7 +179,8 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
         else:
             geometry_solver = 'default'
         op = self.operators[self.operator]
-        op('INVOKE_DEFAULT', geometry_solver=geometry_solver)
+        # Defer operator call so the click that closed the popup is not consumed
+        call_operator_deferred(lambda: op('INVOKE_DEFAULT', geometry_solver=geometry_solver))
         return None
 
     def invoke(self, context, event):

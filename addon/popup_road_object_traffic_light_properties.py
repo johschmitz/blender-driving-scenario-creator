@@ -13,6 +13,8 @@
 
 import bpy
 
+from . helpers import call_operator_deferred
+
 
 class DSC_OT_popup_road_object_traffic_light_properties(bpy.types.Operator):
     bl_idname = 'dsc.popup_road_object_traffic_light_properties'
@@ -27,8 +29,7 @@ class DSC_OT_popup_road_object_traffic_light_properties(bpy.types.Operator):
 
     def cancel(self, context):
         # Popup closed, call operator for the specified road object operator
-        op = bpy.ops.dsc.road_object_traffic_light
-        op('INVOKE_DEFAULT')
+        call_operator_deferred(lambda: bpy.ops.dsc.road_object_traffic_light('INVOKE_DEFAULT'))
         return None
 
     def invoke(self, context, event):

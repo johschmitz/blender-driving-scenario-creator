@@ -19,6 +19,22 @@ from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_
 from mathutils.geometry import intersect_line_plane
 from mathutils import Vector, Matrix
 
+def call_operator_deferred(op_func):
+    '''Call an operator function deferred with a proper VIEW_3D context override.
+       This is needed when calling operators from timer callbacks where context.area is None.
+    '''
+    def _call():
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'VIEW_3D':
+                    for region in area.regions:
+                        if region.type == 'WINDOW':
+                            with bpy.context.temp_override(window=window, area=area, region=region):
+                                op_func()
+                            return None
+        return None
+    bpy.app.timers.register(_call, first_interval=0.15)
+
 def get_user_cross_sections_path():
     '''Returns the absolute path to the user's cross sections JSON file.
     Also ensures the directory exists.
