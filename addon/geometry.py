@@ -74,6 +74,22 @@ class DSC_geometry():
         self.sections.append(section)
         self.section_curves.append(None)
 
+    def deserialize_matrix(self, data):
+        '''
+            Reconstruct a Matrix from stored data (IDPropertyArray or Matrix).
+        '''
+        if isinstance(data, Matrix):
+            return data.copy()
+        # Try to interpret as nested rows first (e.g. IDPropertyArray of IDPropertyArrays)
+        try:
+            rows = tuple(tuple(float(v) for v in row) for row in data)
+            return Matrix(rows)
+        except TypeError:
+            # Flat list of floats -> reshape to 4x4
+            flat = [float(v) for v in data]
+            rows = tuple(tuple(flat[i:i+4]) for i in range(0, 16, 4))
+            return Matrix(rows)
+
     def load_sections(self, section_data):
         '''
             Load sections from stored data.
@@ -101,7 +117,7 @@ class DSC_geometry():
             'coefficients_v': section_new['coefficients_v'],
             'elevation': section_new['elevation'],
             'valid': section_new['valid'],
-            'matrix_local': Matrix(section_new['matrix_local']), # Matrix for section to local transformation
+            'matrix_local': self.deserialize_matrix(section_new['matrix_local']), # Matrix for section to local transformation
         }
         self.sections.append(section)
         # Set matrix world based on first section
