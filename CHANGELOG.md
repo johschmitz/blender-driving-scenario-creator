@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-04-06
+
+### Added
+- Guardrail support for road cross sections
+
+### Fixed
+- Material export for osgconv in Blender 5.x
+- Crash due to export options not present in Blender 5.x
+
 ## [0.29.2] - 2026-03-27
 
 ### Fixed
@@ -463,7 +472,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.2...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.2...v0.30.0
 [0.29.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.1...v0.29.2
 [0.29.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.0...v0.29.1
 [0.29.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.28.6...v0.29.0
