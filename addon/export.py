@@ -230,23 +230,16 @@ class DSC_OT_export(bpy.types.Operator):
                                 node.image.save_render(str(file_path_texture))
                                 print('Exported texture:', file_path_texture)
                                 file_paths_textures.add(file_path_texture)
-            bpy.ops.wm.obj_export(filepath=str(file_path_obj), check_existing=True, filter_blender=False,
-                                  filter_backup=False, filter_image=False, filter_movie=False,
-                                  filter_python=False, filter_font=False, filter_sound=False,
-                                  filter_text=False, filter_archive=False, filter_btx=False,
-                                  filter_collada=False, filter_alembic=False, filter_usd=False,
-                                  filter_obj=False, filter_volume=False, filter_folder=True,
-                                  filter_blenlib=False, filemode=8, display_type='DEFAULT',
-                                  sort_method='DEFAULT', export_animation=False, start_frame=-2147483648,
-                                  end_frame=2147483647, forward_axis='NEGATIVE_Z', up_axis='Y',
+            bpy.ops.wm.obj_export(filepath=str(file_path_obj),
+                                  export_animation=False,
+                                  forward_axis='NEGATIVE_Z', up_axis='Y',
                                   global_scale=1.0, apply_modifiers=True, export_eval_mode='DAG_EVAL_VIEWPORT',
                                   export_selected_objects=True, export_uv=True, export_normals=True,
                                   export_colors=False, export_materials=True, export_pbr_extensions=False,
                                   path_mode='AUTO', export_triangulated_mesh=True,
                                   export_curves_as_nurbs=False, export_object_groups=False,
                                   export_material_groups=False, export_vertex_groups=False,
-                                  export_smooth_groups=False, smooth_group_bitflags=False,
-                                  filter_glob='*.obj;*.mtl')
+                                  export_smooth_groups=False, smooth_group_bitflags=False)
             self.convert_to_osgb(file_path_obj)
             # Remove mtl, obj and texture files
             file_path_obj.unlink()
