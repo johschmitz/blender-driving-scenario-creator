@@ -60,6 +60,8 @@ class DSC_OT_save_cross_section_preset(bpy.types.Operator):
             'road_mark_weights': [],
             'road_mark_widths': [],
             'road_mark_colors': [],
+            'guard_rails': [],
+            'guard_rail_lateral_offsets': [],
             'lane_offset_start': props.lane_offset_start,
             'lane_offset_end': props.lane_offset_end,
             'road_split_type': props.road_split_type,
@@ -76,6 +78,8 @@ class DSC_OT_save_cross_section_preset(bpy.types.Operator):
             data['road_mark_weights'].append(lane.road_mark_weight)
             data['road_mark_widths'].append(lane.road_mark_width)
             data['road_mark_colors'].append(lane.road_mark_color)
+            data['guard_rails'].append(lane.guard_rail)
+            data['guard_rail_lateral_offsets'].append(lane.guard_rail_lateral_offset)
 
         # Get user JSON file path
         user_json_path = get_user_cross_sections_path()
@@ -302,6 +306,9 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
                 split.prop(lane, 'road_mark_weight', text='')
                 split.label(text='Width:')
                 split.prop(lane, 'road_mark_width', text='')
+                split.separator()
+                split.separator()
+                split.separator()
             # Basic lane settings
             if lane.side != 'center':
                 row = box.row(align=True)
@@ -323,6 +330,13 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
                 else:
                     split.separator()
                     split.separator()
+                split.prop(lane, 'guard_rail', text='Rail')
+                lbl = split.row(align=True)
+                lbl.enabled = lane.guard_rail
+                lbl.label(text='Offset:')
+                sub = split.row(align=True)
+                sub.enabled = lane.guard_rail
+                sub.prop(lane, 'guard_rail_lateral_offset', text='Rail offset')
             # Lane marking right side
             if lane.side == 'right' or lane.side == 'center':
                 row = box.row(align=True)
@@ -336,3 +350,6 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
                 split.prop(lane, 'road_mark_weight', text='')
                 split.label(text='Width:')
                 split.prop(lane, 'road_mark_width', text='')
+                split.separator()
+                split.separator()
+                split.separator()

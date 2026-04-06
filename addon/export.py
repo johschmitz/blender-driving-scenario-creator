@@ -428,11 +428,17 @@ class DSC_OT_export(bpy.types.Operator):
                     # Export guard rail objects
                     left_guard_rails = list(obj.get('lanes_left_guard_rails', []))
                     right_guard_rails = list(obj.get('lanes_right_guard_rails', []))
+                    left_guard_rail_offsets = list(obj.get('lanes_left_guard_rail_lateral_offsets', [1.75] * len(left_guard_rails)))
+                    right_guard_rail_offsets = list(obj.get('lanes_right_guard_rail_lateral_offsets', [1.75] * len(right_guard_rails)))
                     from math import pi
                     for idx in range(len(left_guard_rails)):
                         if left_guard_rails[idx]:
-                            t_start = sum(obj['lanes_left_widths_start'][i] for i in range(idx + 1))
-                            t_end = sum(obj['lanes_left_widths_end'][i] for i in range(idx + 1))
+                            offset = left_guard_rail_offsets[idx]
+                            # Inner edge = sum of widths of lanes before this one
+                            inner_start = sum(obj['lanes_left_widths_start'][i] for i in range(idx))
+                            inner_end = sum(obj['lanes_left_widths_end'][i] for i in range(idx))
+                            t_start = inner_start + offset
+                            t_end = inner_end + offset
                             railing = xodr.Object(s=0, t=t_start, Type='railing',
                                                   name='railing', id=guard_rail_object_id,
                                                   zOffset=0.35, height=0.2, hdg=pi)
@@ -446,7 +452,7 @@ class DSC_OT_export(bpy.types.Operator):
                             pole = xodr.Object(s=0, t=t_start, Type='rail-pole',
                                                name='rail-pole', id=guard_rail_object_id,
                                                zOffset=0, height=0.55, hdg=pi)
-                            pole.repeat(repeatLength=length, repeatDistance=4.0,
+                            pole.repeat(repeatLength=length, repeatDistance=2.0,
                                         tStart=t_start, tEnd=t_end,
                                         widthStart=0.04, widthEnd=0.04,
                                         heightStart=0.55, heightEnd=0.55,
@@ -455,8 +461,12 @@ class DSC_OT_export(bpy.types.Operator):
                             guard_rail_object_id += 1
                     for idx in range(len(right_guard_rails)):
                         if right_guard_rails[idx]:
-                            t_start = -sum(obj['lanes_right_widths_start'][i] for i in range(idx + 1))
-                            t_end = -sum(obj['lanes_right_widths_end'][i] for i in range(idx + 1))
+                            offset = right_guard_rail_offsets[idx]
+                            # Inner edge = sum of widths of lanes before this one
+                            inner_start = sum(obj['lanes_right_widths_start'][i] for i in range(idx))
+                            inner_end = sum(obj['lanes_right_widths_end'][i] for i in range(idx))
+                            t_start = -(inner_start + offset)
+                            t_end = -(inner_end + offset)
                             railing = xodr.Object(s=0, t=t_start, Type='railing',
                                                   name='railing', id=guard_rail_object_id,
                                                   zOffset=0.35, height=0.2)
@@ -470,7 +480,7 @@ class DSC_OT_export(bpy.types.Operator):
                             pole = xodr.Object(s=0, t=t_start, Type='rail-pole',
                                                name='rail-pole', id=guard_rail_object_id,
                                                zOffset=0, height=0.55)
-                            pole.repeat(repeatLength=length, repeatDistance=4.0,
+                            pole.repeat(repeatLength=length, repeatDistance=2.0,
                                         tStart=t_start, tEnd=t_end,
                                         widthStart=0.04, widthEnd=0.04,
                                         heightStart=0.55, heightEnd=0.55,

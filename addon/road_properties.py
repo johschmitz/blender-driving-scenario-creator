@@ -30,6 +30,8 @@ def callback_road_mark_weight(self, context):
     self.update_road_mark_weight(context)
 def callback_road_split(self, context):
     self.update_road_split(context)
+def callback_clamp_guard_rail_offset(self, context):
+    self.clamp_guard_rail_offset()
 
 
 class DSC_enum_lane(bpy.types.PropertyGroup):
@@ -43,11 +45,13 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
     )
     width_start: bpy.props.FloatProperty(
         name='Width start',
-        default=3.5, min=0.0, max=20.0, step=1
+        default=3.5, min=0.0, max=20.0, step=1,
+        update=callback_clamp_guard_rail_offset,
     )
     width_end: bpy.props.FloatProperty(
         name='Width end',
-        default=3.5, min=0.0, max=20.0, step=1
+        default=3.5, min=0.0, max=20.0, step=1,
+        update=callback_clamp_guard_rail_offset,
     )
     type: bpy.props.EnumProperty(
         name = 'Type',
@@ -108,6 +112,18 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
         default=0.12, min=0.0, max=10.0, step=1
     )
 
+    guard_rail: bpy.props.BoolProperty(
+        name='Guard rail',
+        description='Add a guard rail on this lane',
+        default=False,
+    )
+    guard_rail_lateral_offset: bpy.props.FloatProperty(
+        name='Guard rail offset',
+        description='Lateral offset of guard rail from inner edge of lane in meters',
+        default=1.75, min=0.0, soft_max=10.0, step=10, unit='LENGTH',
+        update=callback_clamp_guard_rail_offset,
+    )
+
     # False for the lanes/lanes going left, True for those going right
     split_right: bpy.props.BoolProperty(description='Split above here', update=callback_road_split)
 
@@ -131,8 +147,15 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
         }
         self.width_start = mapping_width_type_lane[self.type]
         self.width_end = mapping_width_type_lane[self.type]
+        self.clamp_guard_rail_offset()
         # Unlock updating
         context.scene.dsc_properties.road_properties.lock_lanes = False
+
+    def clamp_guard_rail_offset(self):
+        '''Clamp guard rail offset to not exceed the minimum lane width.'''
+        max_offset = min(self.width_start, self.width_end)
+        if self.guard_rail_lateral_offset > max_offset:
+            self.guard_rail_lateral_offset = max_offset
 
     def update_road_mark_weight(self, context):
         # Avoid updating recursively
@@ -345,7 +368,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
 
     def add_lane(self, side, type, width_start, width_end,
                  road_mark_type, road_mark_weight, road_mark_width, road_mark_color,
-                 split_right=False):
+                 split_right=False, guard_rail=False, guard_rail_lateral_offset=0.5):
         lane = self.lanes.add()
         lane.idx = self.lane_idx_current
         self.lane_idx_current += 1
@@ -358,6 +381,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         lane.road_mark_width = road_mark_width
         lane.road_mark_color = road_mark_color
         lane.split_right = split_right
+        lane.guard_rail = guard_rail
+        lane.guard_rail_lateral_offset = guard_rail_lateral_offset
 
     def update_cross_section(self):
         # Do not update recursively when switching presets
@@ -387,11 +412,14 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         if not found_in_user_presets:
             params = params_cross_section[self.cross_section_preset]
         # Build up cross section
+        guard_rails = params.get('guard_rails', [False] * len(params['sides']))
+        guard_rail_lateral_offsets = params.get('guard_rail_lateral_offsets', [1.75] * len(params['sides']))
         for idx in range(len(params['sides'])):
             self.add_lane(params['sides'][idx], params['types'][idx],
                 params['widths_start'][idx], params['widths_end'][idx], params['road_mark_types'][idx],
                 params['road_mark_weights'][idx], params['road_mark_widths'][idx],
-                params['road_mark_colors'][idx])
+                params['road_mark_colors'][idx], guard_rail=guard_rails[idx],
+                guard_rail_lateral_offset=guard_rail_lateral_offsets[idx])
             if params['sides'][idx] == 'left':
                 num_lanes_left += 1
             if params['sides'][idx] == 'right':

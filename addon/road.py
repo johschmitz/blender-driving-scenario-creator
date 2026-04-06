@@ -59,6 +59,9 @@ class road:
                 elif idx in materials['road_mark_yellow']:
                     obj.data.polygons[idx].material_index = \
                         helpers.get_material_index(obj, 'road_mark_yellow')
+                elif idx in materials['guard_rail_metal']:
+                    obj.data.polygons[idx].material_index = \
+                        helpers.get_material_index(obj, 'guard_rail_metal')
                 else:
                     obj.data.polygons[idx].material_index = \
                         helpers.get_material_index(obj, 'road_asphalt')
@@ -146,6 +149,10 @@ class road:
             obj['lane_center_road_mark_type'] = self.params['lane_center_road_mark_type']
             obj['lane_center_road_mark_weight'] = self.params['lane_center_road_mark_weight']
             obj['lane_center_road_mark_color'] = self.params['lane_center_road_mark_color']
+            obj['lanes_left_guard_rails'] = self.params['lanes_left_guard_rails']
+            obj['lanes_right_guard_rails'] = self.params['lanes_right_guard_rails']
+            obj['lanes_left_guard_rail_lateral_offsets'] = self.params['lanes_left_guard_rail_lateral_offsets']
+            obj['lanes_right_guard_rail_lateral_offsets'] = self.params['lanes_right_guard_rail_lateral_offsets']
 
             return obj
 
@@ -172,6 +179,14 @@ class road:
         road_sample_points = self.get_road_sample_points(lanes, strips_s_boundaries)
         vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
         materials = self.get_face_materials(lanes, strips_s_boundaries)
+        # Add guard rail geometry
+        road_face_count = len(faces)
+        gr_verts, gr_edges, gr_faces, gr_num_faces = \
+            self.get_guard_rail_geometry(len(vertices))
+        vertices += gr_verts
+        edges += gr_edges
+        faces += gr_faces
+        materials['guard_rail_metal'] = list(range(road_face_count, road_face_count + gr_num_faces))
 
         if wireframe:
             # Transform start and end point to local coordinate system then add
@@ -231,6 +246,10 @@ class road:
                        'lanes_right_road_mark_types': [],
                        'lanes_right_road_mark_weights': [],
                        'lanes_right_road_mark_colors': [],
+                       'lanes_left_guard_rails': [],
+                       'lanes_right_guard_rails': [],
+                       'lanes_left_guard_rail_lateral_offsets': [],
+                       'lanes_right_guard_rail_lateral_offsets': [],
                        'lane_center_road_mark_type': [],
                        'lane_center_road_mark_weight': [],
                        'lane_center_road_mark_color': [],
@@ -246,6 +265,8 @@ class road:
                 self.params['lanes_left_road_mark_types'].insert(0, lane.road_mark_type)
                 self.params['lanes_left_road_mark_weights'].insert(0, lane.road_mark_weight)
                 self.params['lanes_left_road_mark_colors'].insert(0, lane.road_mark_color)
+                self.params['lanes_left_guard_rails'].insert(0, lane.guard_rail)
+                self.params['lanes_left_guard_rail_lateral_offsets'].insert(0, lane.guard_rail_lateral_offset)
             elif lane.side == 'right':
                 self.params['lanes_right_widths_start'].append(lane.width_start)
                 self.params['lanes_right_widths_end'].append(lane.width_end)
@@ -253,6 +274,8 @@ class road:
                 self.params['lanes_right_road_mark_types'].append(lane.road_mark_type)
                 self.params['lanes_right_road_mark_weights'].append(lane.road_mark_weight)
                 self.params['lanes_right_road_mark_colors'].append(lane.road_mark_color)
+                self.params['lanes_right_guard_rails'].append(lane.guard_rail)
+                self.params['lanes_right_guard_rail_lateral_offsets'].append(lane.guard_rail_lateral_offset)
             else:
                 # lane.side == 'center'
                 self.params['lane_center_road_mark_type'] = lane.road_mark_type
@@ -661,6 +684,138 @@ class road:
             'yellow': 'road_mark_yellow',
         }
         return mapping_color_material[color]
+
+    def get_guard_rail_geometry(self, vertex_offset):
+        '''
+            Generate guard rail mesh geometry for lanes with guard_rail enabled.
+            Generates a closed box-profile railing and vertical poles every 2m.
+        '''
+        guard_rail_height_bottom = 0.44
+        guard_rail_height_top = 0.75
+        guard_rail_width = 0.08
+        pole_spacing = 2.0
+        pole_width = 0.06
+        pole_length = 0.06
+        vertices = []
+        edges = []
+        faces = []
+        num_faces = 0
+
+        length = self.geometry.total_length
+        if length == 0:
+            return vertices, edges, faces, num_faces
+
+        # Collect (side, lane_idx) for each guarded lane
+        guard_rail_lanes = []
+        for idx in range(len(self.params['lanes_left_guard_rails'])):
+            if self.params['lanes_left_guard_rails'][idx]:
+                guard_rail_lanes.append(('left', idx, self.params['lanes_left_guard_rail_lateral_offsets'][idx]))
+        for idx in range(len(self.params['lanes_right_guard_rails'])):
+            if self.params['lanes_right_guard_rails'][idx]:
+                guard_rail_lanes.append(('right', idx, self.params['lanes_right_guard_rail_lateral_offsets'][idx]))
+
+        if not guard_rail_lanes:
+            return vertices, edges, faces, num_faces
+
+        # Sample s values along road for the railing
+        step = 1.0
+        sample_s_values = []
+        s = 0.0
+        while s < length:
+            sample_s_values.append(s)
+            s += step
+        if sample_s_values[-1] < length:
+            sample_s_values.append(length)
+
+        half_w = guard_rail_width / 2.0
+        half_pw = pole_width / 2.0
+        half_pl = pole_length / 2.0
+
+        for side, lane_idx, lateral_offset in guard_rail_lanes:
+            # Helper to compute t_center for this guard rail at a given s
+            def calc_t_center(s_val):
+                s_norm = s_val / length if length > 0 else 0
+                interp = 3.0 * s_norm**2 - 2.0 * s_norm**3
+                t_c = 0.0
+                if side == 'left':
+                    for i in range(lane_idx):
+                        w_s = self.params['lanes_left_widths_start'][i]
+                        w_e = self.params['lanes_left_widths_end'][i]
+                        t_c += w_s + interp * (w_e - w_s)
+                    t_c += lateral_offset
+                else:
+                    for i in range(lane_idx):
+                        w_s = self.params['lanes_right_widths_start'][i]
+                        w_e = self.params['lanes_right_widths_end'][i]
+                        t_c -= w_s + interp * (w_e - w_s)
+                    t_c -= lateral_offset
+                return t_c
+
+            # --- Railing box (closed: inner, outer, top, bottom walls) ---
+            rail_base = vertex_offset + len(vertices)
+            for s_val in sample_s_values:
+                t_center = calc_t_center(s_val)
+                if side == 'left':
+                    t_inner = t_center - half_w
+                    t_outer = t_center + half_w
+                else:
+                    t_inner = t_center + half_w
+                    t_outer = t_center - half_w
+                xyz, _, _ = self.geometry.sample_cross_section(s_val, [t_inner, t_outer], True)
+                pt_in = xyz[0]
+                pt_out = xyz[1]
+                vertices.append((pt_in[0], pt_in[1], pt_in[2] + guard_rail_height_bottom))
+                vertices.append((pt_out[0], pt_out[1], pt_out[2] + guard_rail_height_bottom))
+                vertices.append((pt_out[0], pt_out[1], pt_out[2] + guard_rail_height_top))
+                vertices.append((pt_in[0], pt_in[1], pt_in[2] + guard_rail_height_top))
+
+            num_samples = len(sample_s_values)
+            for i in range(num_samples - 1):
+                a = rail_base + i * 4
+                b = rail_base + (i + 1) * 4
+                faces.append([a+0, b+0, b+3, a+3])  # Inner wall
+                faces.append([a+1, a+2, b+2, b+1])  # Outer wall
+                faces.append([a+3, b+3, b+2, a+2])  # Top
+                faces.append([a+0, a+1, b+1, b+0])  # Bottom
+                num_faces += 4
+
+            # --- Poles every couple of meters (from ground to top of railing) ---
+            pole_s = 0.0
+            while pole_s <= length:
+                t_center = calc_t_center(pole_s)
+                if side == 'left':
+                    t_p_in = t_center - half_pw
+                    t_p_out = t_center + half_pw
+                else:
+                    t_p_in = t_center + half_pw
+                    t_p_out = t_center - half_pw
+                s_back = max(pole_s - half_pl, 0.0)
+                s_front = min(pole_s + half_pl, length)
+                xyz_b, _, _ = self.geometry.sample_cross_section(s_back, [t_p_in, t_p_out], True)
+                xyz_f, _, _ = self.geometry.sample_cross_section(s_front, [t_p_in, t_p_out], True)
+                pb_in, pb_out = xyz_b[0], xyz_b[1]
+                pf_in, pf_out = xyz_f[0], xyz_f[1]
+                # 8 vertices: back(0-3), front(4-7)
+                pole_base = vertex_offset + len(vertices)
+                vertices += [
+                    pb_in,                                                       # 0 back-bot-in
+                    pb_out,                                                      # 1 back-bot-out
+                    (pb_out[0], pb_out[1], pb_out[2] + guard_rail_height_top),   # 2 back-top-out
+                    (pb_in[0], pb_in[1], pb_in[2] + guard_rail_height_top),      # 3 back-top-in
+                    pf_in,                                                       # 4 front-bot-in
+                    pf_out,                                                      # 5 front-bot-out
+                    (pf_out[0], pf_out[1], pf_out[2] + guard_rail_height_top),   # 6 front-top-out
+                    (pf_in[0], pf_in[1], pf_in[2] + guard_rail_height_top),      # 7 front-top-in
+                ]
+                p = pole_base
+                faces.append([p+0, p+1, p+2, p+3])  # Back
+                faces.append([p+4, p+7, p+6, p+5])  # Front
+                faces.append([p+0, p+3, p+7, p+4])  # Inner
+                faces.append([p+1, p+5, p+6, p+2])  # Outer
+                num_faces += 4
+                pole_s += pole_spacing
+
+        return vertices, edges, faces, num_faces
 
     def get_face_materials(self, lanes, strips_s_boundaries):
         '''
