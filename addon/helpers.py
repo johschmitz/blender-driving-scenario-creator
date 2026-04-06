@@ -898,15 +898,18 @@ def assign_materials(obj):
         'traffic_light_red': [1.0, .0, .0, 1.0],
         'traffic_light_yellow': [1.0, 1.0, .0, 1.0],
         'traffic_light_green': [.0, 1.0, .0, 1.0],
+        'guard_rail_metal': [.7, .7, .7, 1.0],
     }
     for key in default_materials.keys():
         material = bpy.data.materials.get(key)
         if material is None:
             material = bpy.data.materials.new(name=key)
-            material.diffuse_color = (default_materials[key][0],
-                                      default_materials[key][1],
-                                      default_materials[key][2],
-                                      default_materials[key][3])
+            color = default_materials[key]
+            material.diffuse_color = (color[0], color[1], color[2], color[3])
+            material.use_nodes = True
+            principled = material.node_tree.nodes.get('Principled BSDF')
+            if principled:
+                principled.inputs['Base Color'].default_value = color
         obj.data.materials.append(material)
 
 def assign_object_materials(obj, color):
@@ -916,6 +919,10 @@ def assign_object_materials(obj, color):
         # Create material
         material = bpy.data.materials.new(name=get_paint_material_name(color))
         material.diffuse_color = color
+        material.use_nodes = True
+        principled = material.node_tree.nodes.get('Principled BSDF')
+        if principled:
+            principled.inputs['Base Color'].default_value = color
     obj.data.materials.append(material)
 
 def get_paint_material_name(color):

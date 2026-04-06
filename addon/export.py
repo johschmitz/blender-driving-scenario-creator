@@ -316,6 +316,7 @@ class DSC_OT_export(bpy.types.Operator):
         xodr_path.parent.mkdir(parents=True, exist_ok=True)
         odr = xodr.OpenDrive('blender_dsc')
         roads = []
+        guard_rail_object_id = 10000
         # Create OpenDRIVE roads from object collection
         if helpers.collection_exists(['OpenDRIVE']):
             for obj in bpy.data.collections['OpenDRIVE'].objects:
@@ -424,6 +425,58 @@ class DSC_OT_export(bpy.types.Operator):
                     if 'id_direct_junction_end' in obj:
                         # Connect to direction junction attached to the other (split) road
                         road.add_successor(xodr.ElementType.junction, obj['id_direct_junction_end'])
+                    # Export guard rail objects
+                    left_guard_rails = list(obj.get('lanes_left_guard_rails', []))
+                    right_guard_rails = list(obj.get('lanes_right_guard_rails', []))
+                    from math import pi
+                    for idx in range(len(left_guard_rails)):
+                        if left_guard_rails[idx]:
+                            t_start = sum(obj['lanes_left_widths_start'][i] for i in range(idx + 1))
+                            t_end = sum(obj['lanes_left_widths_end'][i] for i in range(idx + 1))
+                            railing = xodr.Object(s=0, t=t_start, Type='railing',
+                                                  name='railing', id=guard_rail_object_id,
+                                                  zOffset=0.35, height=0.2, hdg=pi)
+                            railing.repeat(repeatLength=length, repeatDistance=0,
+                                           tStart=t_start, tEnd=t_end,
+                                           widthStart=0.05, widthEnd=0.05,
+                                           heightStart=0.2, heightEnd=0.2,
+                                           zOffsetStart=0.35, zOffsetEnd=0.35)
+                            road.add_object(railing)
+                            guard_rail_object_id += 1
+                            pole = xodr.Object(s=0, t=t_start, Type='rail-pole',
+                                               name='rail-pole', id=guard_rail_object_id,
+                                               zOffset=0, height=0.55, hdg=pi)
+                            pole.repeat(repeatLength=length, repeatDistance=4.0,
+                                        tStart=t_start, tEnd=t_end,
+                                        widthStart=0.04, widthEnd=0.04,
+                                        heightStart=0.55, heightEnd=0.55,
+                                        zOffsetStart=0, zOffsetEnd=0)
+                            road.add_object(pole)
+                            guard_rail_object_id += 1
+                    for idx in range(len(right_guard_rails)):
+                        if right_guard_rails[idx]:
+                            t_start = -sum(obj['lanes_right_widths_start'][i] for i in range(idx + 1))
+                            t_end = -sum(obj['lanes_right_widths_end'][i] for i in range(idx + 1))
+                            railing = xodr.Object(s=0, t=t_start, Type='railing',
+                                                  name='railing', id=guard_rail_object_id,
+                                                  zOffset=0.35, height=0.2)
+                            railing.repeat(repeatLength=length, repeatDistance=0,
+                                           tStart=t_start, tEnd=t_end,
+                                           widthStart=0.05, widthEnd=0.05,
+                                           heightStart=0.2, heightEnd=0.2,
+                                           zOffsetStart=0.35, zOffsetEnd=0.35)
+                            road.add_object(railing)
+                            guard_rail_object_id += 1
+                            pole = xodr.Object(s=0, t=t_start, Type='rail-pole',
+                                               name='rail-pole', id=guard_rail_object_id,
+                                               zOffset=0, height=0.55)
+                            pole.repeat(repeatLength=length, repeatDistance=4.0,
+                                        tStart=t_start, tEnd=t_end,
+                                        widthStart=0.04, widthEnd=0.04,
+                                        heightStart=0.55, heightEnd=0.55,
+                                        zOffsetStart=0, zOffsetEnd=0)
+                            road.add_object(pole)
+                            guard_rail_object_id += 1
                     print('Add road with ID', obj['id_odr'])
                     odr.add_road(road)
                     roads.append(road)

@@ -137,6 +137,10 @@ class junction:
                 # Create material
                 material = bpy.data.materials.new(name='junction_area')
                 material.diffuse_color = (.1, .1, .1, 1.0)
+                material.use_nodes = True
+                principled = material.node_tree.nodes.get('Principled BSDF')
+                if principled:
+                    principled.inputs['Base Color'].default_value = (.1, .1, .1, 1.0)
             obj.data.materials.append(material)
 
             helpers.select_activate_object(self.context, obj)
