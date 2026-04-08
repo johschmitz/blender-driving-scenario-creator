@@ -792,23 +792,40 @@ class DSC_OT_export(bpy.types.Operator):
         print('WARNING: No road with ID {} found. Maybe a junction?'.format(id))
         return None
 
-    def get_road_mark(self, marking_type, weight, color):
+    def get_road_mark(self, marking_type, weight, color, width=0.12,
+                      line_length=0.0, line_space=0.0):
         '''
             Return road mark based on object lane parameters.
         '''
         if marking_type == 'none':
-            # Make sure to not set a 'none' weight or color
+            # Make sure to not set a 'none' marking type
             return xodr.RoadMark(mapping_road_mark_type['none'])
         else:
-            return xodr.RoadMark(marking_type=mapping_road_mark_type[marking_type],
-                                 color=mapping_road_mark_color[color],
-                                 marking_weight=mapping_road_mark_weight[weight])
+            road_mark = xodr.RoadMark(marking_type=mapping_road_mark_type[marking_type],
+                                      color=mapping_road_mark_color[color],
+                                      marking_weight=mapping_road_mark_weight[weight])
+            if width > 0.0:
+                # Use the <type><line> element to define the road mark width
+                if marking_type == 'broken':
+                    line = xodr.RoadLine(width=width, length=line_length,
+                                         space=line_space, toffset=0, soffset=0)
+                else:
+                    # solid and other types
+                    line = xodr.RoadLine(width=width, length=0, space=0,
+                                         toffset=0, soffset=0)
+                road_mark.add_specific_road_line(line)
+            return road_mark
 
     def create_lanes(self, obj):
         lanes = xodr.Lanes()
+        road_mark_line_length = obj.get('road_mark_line_length', 3.0)
+        road_mark_line_space = obj.get('road_mark_line_space', 6.0)
         road_mark = self.get_road_mark(obj['lane_center_road_mark_type'],
                                        obj['lane_center_road_mark_weight'],
-                                       obj['lane_center_road_mark_color'])
+                                       obj['lane_center_road_mark_color'],
+                                       obj['lane_center_road_mark_width'],
+                                       road_mark_line_length,
+                                       road_mark_line_space)
         lane_center = xodr.standard_lane(rm=road_mark)
         lane_center.add_roadmark
         lanesection = xodr.LaneSection(0,lane_center)
@@ -819,7 +836,10 @@ class DSC_OT_export(bpy.types.Operator):
                 a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_left_road_mark_types'][idx],
                                            obj['lanes_left_road_mark_weights'][idx],
-                                           obj['lanes_left_road_mark_colors'][idx])
+                                           obj['lanes_left_road_mark_colors'][idx],
+                                           obj['lanes_left_road_mark_widths'][idx],
+                                           road_mark_line_length,
+                                           road_mark_line_space)
             lane.add_roadmark(road_mark)
             lanesection.add_left_lane(lane)
         for idx in range(obj['lanes_right_num']):
@@ -829,7 +849,10 @@ class DSC_OT_export(bpy.types.Operator):
                 a=a, b=b, c=c, d=d)
             road_mark = self.get_road_mark(obj['lanes_right_road_mark_types'][idx],
                                            obj['lanes_right_road_mark_weights'][idx],
-                                           obj['lanes_right_road_mark_colors'][idx])
+                                           obj['lanes_right_road_mark_colors'][idx],
+                                           obj['lanes_right_road_mark_widths'][idx],
+                                           road_mark_line_length,
+                                           road_mark_line_space)
             lane.add_roadmark(road_mark)
             lanesection.add_right_lane(lane)
         lanes.add_lanesection(lanesection)

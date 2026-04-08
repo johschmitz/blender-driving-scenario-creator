@@ -210,8 +210,16 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
 class DSC_road_properties(bpy.types.PropertyGroup):
     width_line_standard: bpy.props.FloatProperty(default=0.12, min=0.01, max=10.0, step=1)
     width_line_bold: bpy.props.FloatProperty(default=0.25, min=0.01, max=10.0, step=1)
-    length_broken_line: bpy.props.FloatProperty(default=3.0, min=0.01, max=10.0, step=1)
-    ratio_broken_line_gap: bpy.props.IntProperty(default=1, min=1, max=3)
+    road_mark_line_length: bpy.props.FloatProperty(
+        name='Road mark line length',
+        description='Length of the visible part of a broken line marking in meters',
+        default=3.0, min=0.5, max=20.0, step=10,
+    )
+    road_mark_line_space: bpy.props.FloatProperty(
+        name='Road mark line space',
+        description='Length of the gap between broken line markings in meters',
+        default=6.0, min=0.5, max=30.0, step=10,
+    )
     width_driving: bpy.props.FloatProperty(default=3.5, min=0.01, max=20.0, step=1)
     width_border: bpy.props.FloatProperty(default=0.5, min=0.01, max=1.0, step=1)
     # width_curb: bpy.props.FloatProperty(default=0.16, min=0.10, max=0.30, step=1)
@@ -430,6 +438,8 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.lane_offset_end = params['lane_offset_end']
         self.road_split_type = params['road_split_type']
         self.road_split_lane_idx = params['road_split_lane_idx']
+        self.road_mark_line_length = params.get('road_mark_line_length', 3.0)
+        self.road_mark_line_space = params.get('road_mark_line_space', 6.0)
         for idx, lane in enumerate(self.lanes):
             if idx <= self.road_split_lane_idx:
                 lane.split_right = False

@@ -65,7 +65,9 @@ class DSC_OT_save_cross_section_preset(bpy.types.Operator):
             'lane_offset_start': props.lane_offset_start,
             'lane_offset_end': props.lane_offset_end,
             'road_split_type': props.road_split_type,
-            'road_split_lane_idx': props.road_split_lane_idx
+            'road_split_lane_idx': props.road_split_lane_idx,
+            'road_mark_line_length': props.road_mark_line_length,
+            'road_mark_line_space': props.road_mark_line_space
         }
 
         # Add lane data in correct order
@@ -223,33 +225,33 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
             row.label(text='Width line bold:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_line_bold', text='')
             row = box_params.row(align=True)
-            # row.label(text='Length line broken:')
-            # row.prop(context.scene.dsc_properties.road_properties, 'length_broken_line', text='')
-            # row = box_params.row(align=True)
-            # row.label(text='Ratio broken line gap:')
-            # row.prop(context.scene.dsc_properties.road_properties, 'ratio_broken_line_gap', text='')
+            row.label(text='Broken line length:')
+            row.prop(context.scene.dsc_properties.road_properties, 'road_mark_line_length', text='')
+            row = box_params.row(align=True)
+            row.label(text='Broken line space:')
+            row.prop(context.scene.dsc_properties.road_properties, 'road_mark_line_space', text='')
             row = box_params.row(align=True)
 
             row = box_params.row(align=True)
-            row.label(text='Width driving:')
+            row.label(text='Width driving lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_driving', text='')
             row = box_params.row(align=True)
-            row.label(text='Width border:')
+            row.label(text='Width border lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_border', text='')
             # row = box_params.row(align=True)
             # row.label(text='Width curb:')
             # row.prop(context.scene.dsc_properties.road_properties, 'width_curb', text='')
             row = box_params.row(align=True)
-            row.label(text='Width median:')
+            row.label(text='Width median lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_median', text='')
             row = box_params.row(align=True)
-            row.label(text='Width stop:')
+            row.label(text='Width stop lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_stop', text='')
             row = box_params.row(align=True)
-            row.label(text='Width shoulder:')
+            row.label(text='Width shoulder lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_shoulder', text='')
             row = box_params.row(align=True)
-            row.label(text='Width none (offroad lane):')
+            row.label(text='Width none (offroad) lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_none', text='')
             row = box_params.row(align=True)
 

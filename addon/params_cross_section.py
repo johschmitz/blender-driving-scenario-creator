@@ -27,6 +27,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 4,
+        'road_mark_line_length': 3.0,
+        'road_mark_line_space': 6.0,
     },
     'two_lanes_turning_lane_offset_left_open': {
         'sides': ['left', 'left', 'center', 'right', 'right', 'right'],
@@ -43,6 +45,8 @@ params_cross_section = {
         'lane_offset_end': 1,
         'road_split_type': 'none',
         'road_split_lane_idx': 5,
+        'road_mark_line_length': 3.0,
+        'road_mark_line_space': 6.0,
     },
     # Typical German road cross sections
     # See:
@@ -68,6 +72,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 5,
+        'road_mark_line_length': 4.0,
+        'road_mark_line_space': 8.0,
     },
     'ekl3_rq11': {
         'sides': ['left', 'left', 'left', 'center', 'right', 'right', 'right'],
@@ -84,6 +90,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 6,
+        'road_mark_line_length': 4.0,
+        'road_mark_line_space': 8.0,
     },
     'eka1_rq31': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -100,6 +108,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 14,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq31_exit_lane_right_open': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -116,6 +126,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 15,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq31_exit_lane_right_to_off_ramp': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -132,6 +144,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'end',
         'road_split_lane_idx': 11,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq31_exit_right_continuation_begin_end': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right'],
@@ -148,6 +162,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 11,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq31_exit_right_continuation_shoulder_begin': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -164,6 +180,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'start',
         'road_split_lane_idx': 13,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq31_exit_right_continuation_shoulder_end': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -180,6 +198,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'end',
         'road_split_lane_idx': 13,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq31_entry_right_from_on_ramp': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -196,6 +216,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'start',
         'road_split_lane_idx': 11,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq31_entry_right_close': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -212,6 +234,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 15,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq36': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -228,6 +252,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 16,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'eka1_rq43_5': {
         'sides': ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
@@ -244,6 +270,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 18,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'off_ramp_begin': {
         'sides': ['center', 'right', 'right', 'right', 'right'],
@@ -260,6 +288,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 5,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'off_ramp_shoulder_begin': {
         'sides': ['left', 'left', 'center', 'right', 'right', 'right'],
@@ -276,6 +306,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'start',
         'road_split_lane_idx': 1,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'off_ramp_middle': {
         'sides': ['left', 'left', 'center', 'right', 'right', 'right'],
@@ -292,6 +324,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 6,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'off_ramp_end': {
         'sides': ['left', 'left', 'center', 'right', 'right', 'right'],
@@ -308,6 +342,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 0,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'on_ramp_end': {
         'sides': ['left', 'left', 'left', 'left', 'center'],
@@ -324,6 +360,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 4,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'on_ramp_shoulder_end': {
         'sides': ['left', 'left', 'left', 'center', 'right', 'right'],
@@ -340,6 +378,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'start',
         'road_split_lane_idx': 4,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'on_ramp_middle': {
         'sides': ['left', 'left', 'left', 'center', 'right', 'right'],
@@ -356,6 +396,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 5,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'on_ramp_begin': {
         'sides': ['left', 'left', 'left', 'center', 'right', 'right'],
@@ -372,6 +414,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 5,
+        'road_mark_line_length': 6.0,
+        'road_mark_line_space': 12.0,
     },
     'shoulder_left': {
         'sides': ['left', 'center'],
@@ -388,6 +432,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 1,
+        'road_mark_line_length': 3.0,
+        'road_mark_line_space': 6.0,
     },
     'shoulder_right': {
         'sides': ['center', 'right'],
@@ -404,6 +450,8 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 1,
+        'road_mark_line_length': 3.0,
+        'road_mark_line_space': 6.0,
     },
     'junction_connecting_road': {
         'sides': ['center', 'right'],
@@ -420,5 +468,7 @@ params_cross_section = {
         'lane_offset_end': 0,
         'road_split_type': 'none',
         'road_split_lane_idx': 1,
+        'road_mark_line_length': 3.0,
+        'road_mark_line_space': 6.0,
     },
 }

@@ -16,7 +16,6 @@ from mathutils import Vector
 
 from . import helpers
 
-from math import ceil
 
 class road:
 
@@ -142,17 +141,22 @@ class road:
             obj['lanes_right_widths_end'] = self.params['lanes_right_widths_end']
             obj['lanes_left_road_mark_types'] = self.params['lanes_left_road_mark_types']
             obj['lanes_left_road_mark_weights'] = self.params['lanes_left_road_mark_weights']
+            obj['lanes_left_road_mark_widths'] = self.params['lanes_left_road_mark_widths']
             obj['lanes_left_road_mark_colors'] = self.params['lanes_left_road_mark_colors']
             obj['lanes_right_road_mark_types'] = self.params['lanes_right_road_mark_types']
             obj['lanes_right_road_mark_weights'] = self.params['lanes_right_road_mark_weights']
+            obj['lanes_right_road_mark_widths'] = self.params['lanes_right_road_mark_widths']
             obj['lanes_right_road_mark_colors'] = self.params['lanes_right_road_mark_colors']
             obj['lane_center_road_mark_type'] = self.params['lane_center_road_mark_type']
             obj['lane_center_road_mark_weight'] = self.params['lane_center_road_mark_weight']
+            obj['lane_center_road_mark_width'] = self.params['lane_center_road_mark_width']
             obj['lane_center_road_mark_color'] = self.params['lane_center_road_mark_color']
             obj['lanes_left_guard_rails'] = self.params['lanes_left_guard_rails']
             obj['lanes_right_guard_rails'] = self.params['lanes_right_guard_rails']
             obj['lanes_left_guard_rail_lateral_offsets'] = self.params['lanes_left_guard_rail_lateral_offsets']
             obj['lanes_right_guard_rail_lateral_offsets'] = self.params['lanes_right_guard_rail_lateral_offsets']
+            obj['road_mark_line_length'] = self.params['road_mark_line_length']
+            obj['road_mark_line_space'] = self.params['road_mark_line_space']
 
             return obj
 
@@ -161,20 +165,22 @@ class road:
             Calculate and return the vertices, edges, faces and parameters to create a road mesh.
         '''
         if self.road_type == 'junction_connecting_road':
-            length_broken_line = context.scene.dsc_properties.connecting_road_properties.length_broken_line
-            self.set_lane_params(context.scene.dsc_properties.connecting_road_properties)
-            lanes = context.scene.dsc_properties.connecting_road_properties.lanes
+            road_props = context.scene.dsc_properties.connecting_road_properties
+            self.set_lane_params(road_props)
+            lanes = road_props.lanes
         else:
-            length_broken_line = context.scene.dsc_properties.road_properties.length_broken_line
-            self.set_lane_params(context.scene.dsc_properties.road_properties)
-            lanes = context.scene.dsc_properties.road_properties.lanes
+            road_props = context.scene.dsc_properties.road_properties
+            self.set_lane_params(road_props)
+            lanes = road_props.lanes
+        road_mark_line_length = road_props.road_mark_line_length
+        road_mark_line_space = road_props.road_mark_line_space
         # Update parameters based on selected points
         self.geometry.update(params_input, self.params['lane_offset_start'], self.params['lane_offset_end'],self.geometry_solver)
         if self.geometry.sections[-1]['valid'] == False:
             valid = False
             return valid, None, None, []
         # Get values in t and s direction where the faces of the road start and end
-        strips_s_boundaries = self.get_strips_s_boundaries(lanes, length_broken_line)
+        strips_s_boundaries = self.get_strips_s_boundaries(lanes, road_mark_line_length, road_mark_line_space)
         # Calculate meshes for Blender
         road_sample_points = self.get_road_sample_points(lanes, strips_s_boundaries)
         vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
@@ -242,9 +248,11 @@ class road:
                        'lanes_right_types': [],
                        'lanes_left_road_mark_types': [],
                        'lanes_left_road_mark_weights': [],
+                       'lanes_left_road_mark_widths': [],
                        'lanes_left_road_mark_colors': [],
                        'lanes_right_road_mark_types': [],
                        'lanes_right_road_mark_weights': [],
+                       'lanes_right_road_mark_widths': [],
                        'lanes_right_road_mark_colors': [],
                        'lanes_left_guard_rails': [],
                        'lanes_right_guard_rails': [],
@@ -252,11 +260,14 @@ class road:
                        'lanes_right_guard_rail_lateral_offsets': [],
                        'lane_center_road_mark_type': [],
                        'lane_center_road_mark_weight': [],
+                       'lane_center_road_mark_width': [],
                        'lane_center_road_mark_color': [],
                        'lane_offset_start': road_properties.lane_offset_start,
                        'lane_offset_end': road_properties.lane_offset_end,
                        'road_split_type': road_properties.road_split_type,
-                       'road_split_lane_idx': road_properties.road_split_lane_idx}
+                       'road_split_lane_idx': road_properties.road_split_lane_idx,
+                       'road_mark_line_length': road_properties.road_mark_line_length,
+                       'road_mark_line_space': road_properties.road_mark_line_space}
         for idx, lane in enumerate(road_properties.lanes):
             if lane.side == 'left':
                 self.params['lanes_left_widths_start'].insert(0, lane.width_start)
@@ -264,6 +275,7 @@ class road:
                 self.params['lanes_left_types'].insert(0, lane.type)
                 self.params['lanes_left_road_mark_types'].insert(0, lane.road_mark_type)
                 self.params['lanes_left_road_mark_weights'].insert(0, lane.road_mark_weight)
+                self.params['lanes_left_road_mark_widths'].insert(0, lane.road_mark_width)
                 self.params['lanes_left_road_mark_colors'].insert(0, lane.road_mark_color)
                 self.params['lanes_left_guard_rails'].insert(0, lane.guard_rail)
                 self.params['lanes_left_guard_rail_lateral_offsets'].insert(0, lane.guard_rail_lateral_offset)
@@ -273,6 +285,7 @@ class road:
                 self.params['lanes_right_types'].append(lane.type)
                 self.params['lanes_right_road_mark_types'].append(lane.road_mark_type)
                 self.params['lanes_right_road_mark_weights'].append(lane.road_mark_weight)
+                self.params['lanes_right_road_mark_widths'].append(lane.road_mark_width)
                 self.params['lanes_right_road_mark_colors'].append(lane.road_mark_color)
                 self.params['lanes_right_guard_rails'].append(lane.guard_rail)
                 self.params['lanes_right_guard_rail_lateral_offsets'].append(lane.guard_rail_lateral_offset)
@@ -280,6 +293,7 @@ class road:
                 # lane.side == 'center'
                 self.params['lane_center_road_mark_type'] = lane.road_mark_type
                 self.params['lane_center_road_mark_weight'] = lane.road_mark_weight
+                self.params['lane_center_road_mark_width'] = lane.road_mark_width
                 self.params['lane_center_road_mark_color'] = lane.road_mark_color
         self.params['lane_offset_start'] = self.calculate_lane_offset_start_end_in_m(road_properties.lane_offset_start,
             self.params['lanes_left_widths_start'], self.params['lanes_right_widths_start'])
@@ -432,7 +446,7 @@ class road:
             t_values[idx] += t_left_width_total
         return t_values
 
-    def get_strips_s_boundaries(self, lanes, length_broken_line):
+    def get_strips_s_boundaries(self, lanes, road_mark_line_length, road_mark_line_space):
         '''
             Return list of tuples with a line marking toggle flag and a list
             with the start and stop values of the faces in each strip.
@@ -441,29 +455,26 @@ class road:
         # TODO offset must be provided by predecessor road for each marking
         length = self.geometry.total_length
         offset = 0.5
-        if offset < length_broken_line:
-            offset_first = offset
-            line_toggle_start = True
-        else:
-            offset_first = offset % length_broken_line
-            line_toggle_start = False
+        line_toggle_start = True
         s_values = []
         for lane in lanes:
-            # Calculate broken line parameters
+            # Calculate broken line parameters with separate dash/gap lengths
             if lane.road_mark_type == 'broken':
-                num_faces_strip_line = ceil((length \
-                                        - (length_broken_line - offset_first)) \
-                                       / length_broken_line)
-                # Add one extra step for the shorter first piece
-                if offset_first > 0:
-                    num_faces_strip_line += 1
-                length_first = min(length, length_broken_line - offset_first)
-                if num_faces_strip_line > 1:
-                    length_last = length - length_first - (num_faces_strip_line - 2) * length_broken_line
-                else:
-                    length_last = length_first
+                period = road_mark_line_length + road_mark_line_space
+                s_values_strip = [0]
+                s = 0.0
+                is_dash = True  # Start with a dash
+                while s < length:
+                    if is_dash:
+                        s_next = s + road_mark_line_length
+                    else:
+                        s_next = s + road_mark_line_space
+                    s_next = min(s_next, length)
+                    s_values_strip.append(s_next)
+                    s = s_next
+                    is_dash = not is_dash
             else:
-                num_faces_strip_line = 1
+                s_values_strip = None
 
             # Go in s direction along lane and calculate the start and stop values
             # ASPHALT
@@ -471,26 +482,17 @@ class road:
                 s_values.append((line_toggle_start, [0, length]))
             # ROAD MARK
             if lane.road_mark_type != 'none':
-                s_values_strip = [0]
-                for idx_face_strip in range(num_faces_strip_line):
-                    # Calculate end points of the faces
-                    s_stop = length
-                    if lane.road_mark_type == 'broken':
-                        if idx_face_strip == 0:
-                            # First piece
-                            s_stop = length_first
-                        elif idx_face_strip > 0 and idx_face_strip + 1 == num_faces_strip_line:
-                            # Last piece and more than one piece
-                            s_stop = length_first + (idx_face_strip - 1) * length_broken_line \
-                                    + length_last
-                        else:
-                            # Middle piece
-                            s_stop = length_first + idx_face_strip * length_broken_line
-                    s_values_strip.append(s_stop)
-                if lane.road_mark_type == 'solid_solid':
+                if lane.road_mark_type == 'broken':
+                    if lane.road_mark_type == 'solid_solid':
+                        s_values.append((line_toggle_start, s_values_strip))
+                        s_values.append((line_toggle_start, s_values_strip))
                     s_values.append((line_toggle_start, s_values_strip))
-                    s_values.append((line_toggle_start, s_values_strip))
-                s_values.append((line_toggle_start, s_values_strip))
+                else:
+                    s_values_strip_solid = [0, length]
+                    if lane.road_mark_type == 'solid_solid':
+                        s_values.append((line_toggle_start, s_values_strip_solid))
+                        s_values.append((line_toggle_start, s_values_strip_solid))
+                    s_values.append((line_toggle_start, s_values_strip_solid))
             # ASPHALT
             if lane.side == 'left':
                 s_values.append((line_toggle_start, [0, length]))
