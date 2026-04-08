@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-04-08
+
+### Changed
+- Use OpenDRIVE line element for lane road marking export
+
 ## [0.30.0] - 2026-04-06
 
 ### Added
@@ -472,7 +477,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.30.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.2...v0.30.0
 [0.29.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.1...v0.29.2
 [0.29.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.0...v0.29.1
