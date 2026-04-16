@@ -42,9 +42,19 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
 
     view_memory = view_memory_helper.view_memory_helper()
 
+    script_payload: bpy.props.StringProperty(
+        name='Script payload',
+        description='JSON payload for scripted non-modal execution path',
+        options={'HIDDEN'},
+        default='')
+
     @classmethod
     def poll(cls, context):
-        return context.area.type == 'VIEW_3D'
+        if context.area is None:
+            return True
+        if context.area.type in {'VIEW_3D', 'TEXT_EDITOR', 'CONSOLE'}:
+            return True
+        return False
 
     def create_object_model(self, context):
         '''
@@ -420,6 +430,9 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
+        if context.area is None or context.area.type != 'VIEW_3D':
+            self.report({'ERROR'}, 'Mouse-driven modal junction creation requires a 3D View area.')
+            return {'CANCELLED'}
         # For operator state machine
         # possible states: {'INIT','SELECT_START', 'SELECT_END'}
         self.state = 'INIT'

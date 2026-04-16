@@ -197,6 +197,70 @@ With esmini available the exported scenario can be run with
     cd <export_directory>
     esmini --osc xosc/bdsc_export.xosc --window 50 50 800 400
 
+### Scripted operators
+
+Road and selected junction operators support a non-modal scripted execution path
+through a hidden JSON property called `script_payload`. The same operators can
+still be used interactively from the UI with mouse input.
+
+Supported scripted operators:
+
+- `dsc.road_straight`
+- `dsc.road_arc`
+- `dsc.road_clothoid`
+- `dsc.road_clothoid_triple`
+- `dsc.road_parametric_polynomial`
+- `dsc.junction_connecting_road`
+- `dsc.junction_four_way`
+
+The recommended script API is available as `script_api` inside the add-on
+module. It provides payload builders and wrappers so user scripts usually do
+not need to build JSON manually.
+
+Road payload schema (summary):
+
+- `start` (required):
+    - `point` (required): `[x, y, z]`
+    - `heading` (required): float in radians
+    - `curvature` (optional): float, default `0.0`
+    - `slope` (optional): float, default `0.0`
+    - `connected` (optional): bool, default `false`
+    - `normal` (optional): `[x, y, z]`, default `[0, 0, 1]`
+    - `design_speed` (optional): float
+- `sections` (required): list of one or more section objects
+    - `point` (required): `[x, y, z]`
+    - `heading_end` (optional): float in radians
+    - `curvature_end` (optional): float, default `0.0`
+    - `slope_end` (optional): float, default `0.0`
+    - `connected_end` (optional): bool, default `false`
+    - `link_end` (optional): OpenDRIVE link metadata object
+- `road_properties` (optional): cross-section preset/overrides for regular roads
+- `connecting_road_properties` (optional): cross-section preset/overrides for
+    `junction_connecting_road`
+- `connecting_road_setup` (optional):
+    - `joint_side_start`: `left` or `right`
+    - `road_contact_point`: `start` or `end` (default `start`)
+    - `width_start`, `width_end`: float lane widths
+- `link_start` / `link_end` (optional): link metadata with
+    `cp_type`, `id_obj`, optional `id_extra`, optional `id_lane`
+
+`dsc.junction_four_way` uses a two-point schema with `start` and `end`
+containing at least `point` and optional heading/curvature/slope/connectivity
+and optional `link_start` / `link_end` metadata.
+
+OpenDRIVE links are only created when `link_start`, `link_end`, or
+`sections[*].link_end` are explicitly provided.
+
+Run the included sample script after enabling the add-on:
+
+1. In Blender text editor: open `scripts/create_all_road_geometries.py` and run it.
+2. From command line:
+
+             blender --python scripts/create_all_road_geometries.py
+
+The sample works in a fresh Blender session with only this add-on enabled and
+does not require Blender MCP.
+
 # How to develop
 
 For development of the add-on the [Blender VS Code

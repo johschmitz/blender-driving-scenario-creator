@@ -20,6 +20,7 @@ from . modal_two_point_base import DSC_OT_modal_two_point_base
 from . junction import junction
 from . road import road
 from . geometry_clothoid_triple import DSC_geometry_clothoid_triple
+from . import script_api
 
 from . import helpers
 
@@ -38,6 +39,19 @@ class DSC_OT_junction_four_way(DSC_OT_modal_two_point_base):
         description='Solver used to determine geometry parameters.',
         options={'HIDDEN'},
         default='default')
+
+    def execute(self, context):
+        if self.script_payload.strip() == '':
+            self.report({'ERROR'}, 'script_payload is required for non-modal execute(). Use INVOKE_DEFAULT for mouse-driven creation.')
+            return {'CANCELLED'}
+        self.create_object_model(context)
+        try:
+            normalized = script_api.normalize_two_point_payload(self.script_payload)
+            script_api.execute_scripted_two_point_operator(self, context, normalized)
+        except script_api.ScriptPayloadError as exc:
+            self.report({'ERROR'}, f'Invalid script payload: {exc}')
+            return {'CANCELLED'}
+        return {'FINISHED'}
 
 
     def create_object_model(self, context):

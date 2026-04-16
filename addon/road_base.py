@@ -16,6 +16,7 @@ from mathutils import Vector
 
 from . modal_road_base import DSC_OT_modal_road_base
 from . road import road
+from . import script_api
 
 
 class DSC_OT_road(DSC_OT_modal_road_base):
@@ -29,6 +30,19 @@ class DSC_OT_road(DSC_OT_modal_road_base):
         description='Solver used to determine geometry parameters.',
         options={'HIDDEN'},
         default='default')
+
+    def execute(self, context):
+        if self.script_payload.strip() == '':
+            self.report({'ERROR'}, 'script_payload is required for non-modal execute(). Use INVOKE_DEFAULT for mouse-driven creation.')
+            return {'CANCELLED'}
+        self.create_object_model(context)
+        try:
+            normalized = script_api.normalize_road_payload(self.script_payload)
+            script_api.execute_scripted_road(self, context, normalized)
+        except script_api.ScriptPayloadError as exc:
+            self.report({'ERROR'}, f'Invalid script payload: {exc}')
+            return {'CANCELLED'}
+        return {'FINISHED'}
 
     def create_object_model(self, context):
         '''
