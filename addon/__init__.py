@@ -14,7 +14,9 @@
 import bpy
 import bpy.utils.previews
 
+import json
 import os
+import pathlib
 
 from . export import DSC_OT_export
 from . junction_four_way import DSC_OT_junction_four_way
@@ -50,6 +52,11 @@ from . popup_road_object_sign_properties import DSC_OT_popup_road_object_sign_pr
 from . popup_road_object_stencil_properties import DSC_OT_popup_road_object_stencil_properties
 from . popup_road_object_traffic_light_properties import DSC_OT_popup_road_object_traffic_light_properties
 from . road_object_stop_line_operator import DSC_OT_road_object_stop_line
+from . esmini_preview_operators import DSC_OT_esmini_preview_start
+from . esmini_preview_operators import DSC_OT_esmini_preview_stop
+from . esmini_preview_operators import DSC_OT_esmini_preview_step
+from . esmini_preview_operators import DSC_OT_esmini_open_preferences
+from . import esmini_preview
 
 
 bl_info = {
@@ -70,6 +77,89 @@ bl_info = {
 # Global variables
 dsc_custom_icons = None
 dsc_road_sign_previews = None
+
+_CONFIG_DIR_NAME = 'driving_scenario_creator'
+_CONFIG_FILE_NAME = 'config.json'
+
+
+def _get_config_file_path():
+    config_root = bpy.utils.user_resource('CONFIG', path=_CONFIG_DIR_NAME, create=True)
+    if not config_root:
+        return None
+    return pathlib.Path(config_root) / _CONFIG_FILE_NAME
+
+
+def _save_esmini_library_path_to_config(path):
+    config_file = _get_config_file_path()
+    if config_file is None:
+        return
+
+    payload = {'esmini_library_path': path or ''}
+    try:
+        with config_file.open('w', encoding='utf-8') as handle:
+            json.dump(payload, handle, indent=2)
+    except OSError:
+        pass
+
+
+def _load_esmini_library_path_from_config():
+    config_file = _get_config_file_path()
+    if config_file is None or not config_file.exists():
+        return ''
+
+    try:
+        with config_file.open('r', encoding='utf-8') as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return ''
+
+    value = data.get('esmini_library_path', '') if isinstance(data, dict) else ''
+    return value if isinstance(value, str) else ''
+
+
+def _on_esmini_library_path_update(self, context):
+    del context
+    _save_esmini_library_path_to_config(self.esmini_library_path)
+
+
+def _resolve_addon_preferences(context=None):
+    prefs = context.preferences if context is not None else bpy.context.preferences
+    if prefs is None:
+        return None
+
+    addons = prefs.addons
+    module_candidates = []
+    for candidate in (__package__, __name__.split('.')[0], 'addon'):
+        if candidate and candidate not in module_candidates:
+            module_candidates.append(candidate)
+
+    for module_name in module_candidates:
+        addon_cfg = addons.get(module_name)
+        if addon_cfg is not None and addon_cfg.preferences is not None:
+            return addon_cfg.preferences
+
+    for addon_cfg in addons.values():
+        addon_prefs = getattr(addon_cfg, 'preferences', None)
+        if addon_prefs is not None and hasattr(addon_prefs, 'esmini_library_path'):
+            return addon_prefs
+
+    return None
+
+
+class DSC_AddonPreferences(bpy.types.AddonPreferences):
+    bl_idname = __package__
+
+    esmini_library_path: bpy.props.StringProperty(
+        name='esmini_library_path',
+        description='Path to esmini shared library file (.dll/.so/.dylib) for esmini preview feature',
+        subtype='FILE_PATH',
+        default='',
+        update=_on_esmini_library_path_update)
+
+    def draw(self, context):
+        del context
+        layout = self.layout
+        layout.prop(self, 'esmini_library_path', text='esmini library path (.dll/.so/.dylib)')
 
 class DSC_PT_panel_create(bpy.types.Panel):
     bl_idname = 'DSC_PT_panel_create'
@@ -146,6 +236,20 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.operator('dsc.trajectory_nurbs', icon_value=dsc_custom_icons['trajectory_nurbs'].icon_id)
 
+        layout.label(text='esmini Preview')
+        box = layout.box()
+        row = box.row(align=True)
+        row.operator('dsc.esmini_open_preferences', icon='PREFERENCES')
+        row = box.row(align=True)
+        if esmini_preview.is_preview_running():
+            row.operator('dsc.esmini_preview_start', text='Pause', icon='PAUSE')
+        else:
+            row.operator('dsc.esmini_preview_start', text='Start', icon='PLAY')
+        row.operator('dsc.esmini_preview_step', icon='FRAME_NEXT')
+        row.operator('dsc.esmini_preview_stop', text='■\u00A0\u00A0\u00A0\u00A0\u00A0Stop')
+        row = box.row(align=True)
+        row.label(text='Status: {}'.format(esmini_preview.get_preview_status_text()))
+
         layout.label(text='Export (Track, Scenario, Mesh)')
         box = layout.box()
         row = box.row(align=True)
@@ -171,6 +275,7 @@ class DSC_Properties(bpy.types.PropertyGroup):
         name='entity_properties_pedestrian', type=DSC_entity_properties_pedestrian)
 
 classes = (
+    DSC_AddonPreferences,
     DSC_enum_lane,
     DSC_OT_export,
     DSC_OT_junction_four_way,
@@ -209,6 +314,10 @@ classes = (
     DSC_OT_popup_road_object_stencil_properties,
     DSC_OT_popup_road_object_traffic_light_properties,
     DSC_OT_road_object_stop_line,
+    DSC_OT_esmini_preview_start,
+    DSC_OT_esmini_preview_step,
+    DSC_OT_esmini_open_preferences,
+    DSC_OT_esmini_preview_stop,
     DSC_Properties,
 )
 
@@ -244,8 +353,16 @@ def register():
     # Register addon property group
     bpy.types.Scene.dsc_properties = bpy.props.PointerProperty(type=DSC_Properties)
 
+    # Restore persisted esmini path for current runtime even if preferences were not explicitly saved.
+    addon_prefs = _resolve_addon_preferences(bpy.context)
+    if addon_prefs is not None and not addon_prefs.esmini_library_path:
+        persisted_path = _load_esmini_library_path_from_config()
+        if persisted_path:
+            addon_prefs.esmini_library_path = persisted_path
+
 def unregister():
     global dsc_custom_icons
+    esmini_preview.ensure_preview_stopped_on_unregister()
     # Unregister export menu
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     #  Unregister all addon classes

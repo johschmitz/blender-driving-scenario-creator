@@ -1,4 +1,7 @@
-.vscode/
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.vscode/
 addon/signs/*/*.png
 addon/stencils/*/*.png

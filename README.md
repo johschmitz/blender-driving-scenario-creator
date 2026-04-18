@@ -56,10 +56,9 @@ If you manually install OpenSceneGraph make sure that `osgconv` can be found
 through your `PATH` environment variable, otherwise the export with .osgb 3D
 model files will fail.
 
-Install [esmini](ttps://github.com/esmini/esmini/releases). Preferably to
-`/opt/esmini` and then put `/opt/esmini/bin` it in your `PATH` environment
-variable with an `export PATH=$PATH:/opt/esmini/bin` at the end of the
-`~/.bashrc`.
+Install [esmini](https://github.com/esmini/esmini/releases) to any location.
+Configure the esmini library file path in Blender at
+`Edit -> Preferences -> Add-ons -> Driving Scenario Creator -> esmini_library_path`.
 
 ### Requirements Windows
 
@@ -87,11 +86,13 @@ Download and extract (for example to `C:\Tools\OpenSceneGraph`)
 Also download and extract (for exampe to `C:\Tools\esmini`)
 [esmini](https://github.com/esmini/esmini/releases).
 
-Add the OpenSceneGraph `bin` folder and the esmini `bin` folder to the `PATH`
-environment variable using the "Edit environment variables for your account"
-tool (look for it in the Windows start menu). Note that otherwise the export
-with .osgb 3D model files will fail because `osgconv` can not be found by the
-add-on.
+Add the OpenSceneGraph `bin` folder to the `PATH` environment variable using
+the "Edit environment variables for your account" tool (look for it in the
+Windows start menu). Note that otherwise the export with .osgb 3D model files
+will fail because `osgconv` can not be found by the add-on.
+
+Set the esmini library file path in Blender at
+`Edit -> Preferences -> Add-ons -> Driving Scenario Creator -> esmini_library_path`.
 
 ### Add-on (Linux and Windows)
 
@@ -166,6 +167,21 @@ Before or after adding roads add additional Blender objects as desired. When
 done modelling, export everything together by clicking <kbd>Export driving
 scenario</kbd>. Choose a **directory** and a 3D file format (.fbx, .gltf, .osgb)
 for the export and confirm.
+
+### esmini preview mode (inside Blender)
+
+The add-on includes a preview-only esmini integration in the sidebar panel.
+Use this when you want to preview entity motion in the Blender viewport without
+baking keyframes.
+
+2. Set `Library` to your local esmini shared library file
+   (`esminiLib` / `libesminiLib`).
+1. In the <kbd>Driving Scenario Creator</kbd> panel find the `esmini Preview`
+   section control the preview with the player buttons.
+3. The add-on exports a temporary scenario and starts esmini in headless mode.
+4. Play the timeline forward to update OpenSCENARIO entity transforms from
+   esmini state.
+5. Click <kbd>Stop Preview</kbd> to restore original authored transforms.
 
 ## How to run exported scenarios
 
