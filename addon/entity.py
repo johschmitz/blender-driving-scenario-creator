@@ -60,8 +60,6 @@ class entity:
             obj['entity_subtype'] = self.entity_subtype
 
             # Set OpenSCENARIO custom properties
-            obj['position'] = self.params['position']
-            obj['hdg'] = self.params['heading']
             obj['speed_initial'] = self.params['speed_initial']
 
         return obj

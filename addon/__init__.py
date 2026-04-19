@@ -37,6 +37,7 @@ from . road_clothoid_triple import DSC_OT_road_clothoid_triple
 from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
+from . scenario_object_move import DSC_OT_scenario_object_move
 from . entity_properties import DSC_entity_properties_vehicle
 from . entity_properties import DSC_entity_properties_pedestrian
 from . popup_entity_properties import DSC_OT_popup_entity_properties
@@ -229,6 +230,8 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.operator('dsc.popup_entity_properties', text='Pedestrian').operator = 'entity_pedestrian_pedestrian'
         # TODO implement more pedestrian types
+        row = box.row(align=True)
+        row.operator('dsc.scenario_object_move', text='Move object', icon='ORIENTATION_GIMBAL')
 
         box.label(text='Trajectories')
         row = box.row(align=True)
@@ -297,6 +300,7 @@ classes = (
     DSC_OT_road_straight,
     DSC_OT_trajectory_nurbs,
     DSC_OT_trajectory_polyline,
+    DSC_OT_scenario_object_move,
     DSC_PT_panel_create,
     DSC_road_properties,
     DSC_entity_properties_vehicle,

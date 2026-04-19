@@ -44,7 +44,7 @@ def get_user_cross_sections_path():
     os.makedirs(bdsc_dir, exist_ok=True)
     return os.path.join(bdsc_dir, 'user_cross_section_presets_v1.json')
 
-from math import pi, inf
+from math import pi, inf, atan2
 
 
 def get_new_id_opendrive(context):
@@ -497,6 +497,122 @@ def raycast_mouse_to_dsc_object(context, event):
         # No hit
         return False, point, normal, None
 
+def get_object_world_position_heading(obj):
+    '''
+        Return world-space object position and heading in radians.
+    '''
+    position = obj.matrix_world.translation.copy()
+    vec_forward = obj.matrix_world.to_3x3() @ Vector((1.0, 0.0, 0.0))
+    heading = atan2(vec_forward.y, vec_forward.x)
+    return position, heading
+
+def clear_legacy_entity_transform_properties(obj):
+    '''
+        Remove deprecated entity transform custom properties if present.
+    '''
+    if 'position' in obj:
+        del obj['position']
+    if 'hdg' in obj:
+        del obj['hdg']
+
+def _is_drivable_lane_type(lane_type):
+    return lane_type in {'driving', 'stop', 'onRamp', 'offRamp'}
+
+
+def _interpolate_lane_widths(widths_start, widths_end, s, total_length):
+    '''
+        Interpolate lane widths at longitudinal position s.
+    '''
+    if total_length <= 0.0:
+        return list(widths_start)
+    s_norm = s / total_length
+    alpha = 3.0 * s_norm**2 - 2.0 * s_norm**3
+    return [
+        width_start + alpha * (width_end - width_start)
+        for width_start, width_end in zip(widths_start, widths_end)
+    ]
+
+def get_lane_center_from_road_surface_hit(obj, point):
+    '''
+        Compute closest lane-center point and heading from a road-surface hit.
+    '''
+    if obj['dsc_category'] != 'OpenDRIVE':
+        return None, None
+
+    if obj['dsc_type'].startswith('road_') and obj['dsc_type'] != 'road_object':
+        from .modal_road_object_base import load_geometry
+
+        geometry = load_geometry(obj['dsc_type'], obj['geometry'], obj['lane_offset_coefficients'])
+        if geometry is None:
+            return None, None
+
+        _point_ref_line_local, heading_ref_line_local, s, _t = \
+            geometry.get_closest_ref_line_x_y_heading_s_t(point)
+        contact_point_local = Vector(geometry.sample_cross_section(s, [0.0], False)[0][0])
+        contact_point = geometry.matrix_world @ contact_point_local
+        heading = geometry.sections[0]['heading_start'] + heading_ref_line_local
+
+        lane_offset = calculate_lane_offset(s, obj['lane_offset_coefficients'], obj['geometry_total_length'])
+        lane_widths_left = _interpolate_lane_widths(
+            obj['lanes_left_widths_start'],
+            obj['lanes_left_widths_end'],
+            s,
+            obj['geometry_total_length'],
+        )
+        lane_widths_right = _interpolate_lane_widths(
+            obj['lanes_right_widths_start'],
+            obj['lanes_right_widths_end'],
+            s,
+            obj['geometry_total_length'],
+        )
+        lane_types_left = obj['lanes_left_types']
+        lane_types_right = obj['lanes_right_types']
+
+        vec_lateral = Vector((1.0, 0.0, 0.0))
+        vec_lateral.rotate(Matrix.Rotation(heading + pi/2, 4, 'Z'))
+
+        candidates = []
+        t_left = 0.0
+        for idx, lane_width in enumerate(lane_widths_left):
+            lane_type = lane_types_left[idx]
+            if _is_drivable_lane_type(lane_type):
+                offset = lane_offset + t_left + lane_width / 2.0
+                lane_center_point = contact_point + offset * vec_lateral
+                lane_heading = heading + pi
+                candidates.append((lane_center_point, lane_heading))
+            t_left += lane_width
+
+        t_right = 0.0
+        for idx, lane_width in enumerate(lane_widths_right):
+            lane_type = lane_types_right[idx]
+            if _is_drivable_lane_type(lane_type):
+                offset = lane_offset - t_right - lane_width / 2.0
+                lane_center_point = contact_point + offset * vec_lateral
+                lane_heading = heading
+                candidates.append((lane_center_point, lane_heading))
+            t_right += lane_width
+
+        if len(candidates) == 0:
+            return None, None
+
+        lane_center_point, lane_heading = min(candidates, key=lambda item: (item[0] - point).length)
+        return lane_center_point, lane_heading
+
+    if obj.name.startswith('junction_area'):
+        id_joint, point_type, contact_point, heading, slope, id_lane, lane_width, lane_type = \
+            point_to_junction_joint_interior(obj, point, joint_side='both')
+        del id_joint, point_type, slope
+        if id_lane is None or lane_width is None or not _is_drivable_lane_type(lane_type):
+            return None, None
+        vec_lateral = Vector((1.0, 0.0, 0.0))
+        vec_lateral.rotate(Matrix.Rotation(heading + pi/2, 4, 'Z'))
+        direction = 1.0 if id_lane > 0 else -1.0
+        lane_center_point = contact_point + direction * lane_width / 2.0 * vec_lateral
+        lane_heading = heading + pi if id_lane > 0 else heading
+        return lane_center_point, lane_heading
+
+    return None, None
+
 def point_to_road_connector(obj, point):
     '''
         Get a snapping point and heading from an existing road.
@@ -668,7 +784,14 @@ def point_to_object_connector(obj, point):
     '''
         Get a snapping point and heading from a scenario or road object.
     '''
-    return 'cp_object', Vector(obj['position']), obj['hdg']
+    del point
+    if 'dsc_type' in obj and obj['dsc_type'] == 'entity':
+        position, heading = get_object_world_position_heading(obj)
+        return 'cp_object', position, heading
+    if 'position' in obj and 'hdg' in obj:
+        return 'cp_object', Vector(obj['position']), obj['hdg']
+    position, heading = get_object_world_position_heading(obj)
+    return 'cp_object', position, heading
 
 def project_point_vector_2d(point_start, heading_start, point_selected):
     '''

@@ -676,6 +676,7 @@ class DSC_OT_export(bpy.types.Operator):
                 if 'dsc_type' in obj and obj['dsc_type'] == 'entity':
                     entity_name = obj.name
                     print('Add entity with name', obj.name)
+                    position_world, heading_world = helpers.get_object_world_position_heading(obj)
                     if obj['entity_type'] == 'vehicle':
                         catalog = 'VehicleCatalog'
                     elif obj['entity_type'] == 'pedestrian':
@@ -687,12 +688,14 @@ class DSC_OT_export(bpy.types.Operator):
                     init.add_init_action(entity_name,
                         xosc.TeleportAction(
                             xosc.WorldPosition(
-                                x=obj['position'][0], y=obj['position'][1], z=obj['position'][2], h=obj['hdg'])))
+                                x=position_world.x, y=position_world.y, z=position_world.z,
+                                h=heading_world)))
                     # Get pitch and roll from road
                     init.add_init_action(entity_name,
                         xosc.TeleportAction(
                             xosc.RelativeRoadPosition(0, 0, entity_name,
-                                xosc.Orientation(h=obj['hdg'], p=0, r=0, reference=xosc.ReferenceContext.absolute))))
+                                xosc.Orientation(h=heading_world, p=0, r=0,
+                                    reference=xosc.ReferenceContext.absolute))))
                     # Begin driving/walking
                     init.add_init_action(entity_name,
                         xosc.AbsoluteSpeedAction(helpers.kmh_to_ms(obj['speed_initial']),
