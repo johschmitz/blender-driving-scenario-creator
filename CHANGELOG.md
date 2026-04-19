@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-04-19
+
+### Added
+- esmini (v3.x.x) preview feature for animating scenarios inside Blender
+- Scenario object move tool for constrained repositioning
+
+### Changed
+- OpenSCENARIO object placement to use native Blender pose data as the source of
+  truth to avoid OpenSCENARIO and internal Blender objects to go out-of-sync
+
 ## [0.31.0] - 2026-04-08
 
 ### Changed
@@ -477,7 +487,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.2...v0.30.0
 [0.29.2]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.29.1...v0.29.2
