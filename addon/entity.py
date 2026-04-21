@@ -68,13 +68,17 @@ class entity:
         '''
             Calculate and return the vertices, edges and faces to create a road mesh.
         '''
-        if params_input['point_start'] == params_input['point_end']:
+        heading_override = params_input.get('heading_override')
+        if params_input['point_start'] == params_input['point_end'] and heading_override is None:
             if not wireframe:
                 self.report({'WARNING'}, 'Start and end point can not be the same!')
             valid = False
             return valid, None, {}
-        vector_start_end = params_input['point_end'] - params_input['point_start']
-        heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
+        if heading_override is None:
+            vector_start_end = params_input['point_end'] - params_input['point_start']
+            heading = vector_start_end.to_2d().angle_signed(Vector((1.0, 0.0)))
+        else:
+            heading = heading_override
         if self.entity_type == 'vehicle':
             entity_properties = context.scene.dsc_properties.entity_properties_vehicle
         else:

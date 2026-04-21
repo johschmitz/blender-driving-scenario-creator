@@ -133,7 +133,7 @@ class DSC_OT_scenario_object_move(bpy.types.Operator):
     def modal(self, context, event):
         if self.state == 'INIT':
             context.workspace.status_text_set(
-                'LEFTMOUSE: select object and place repeatedly, hold SHIFT: lane-center snap, '
+                'LEFTMOUSE: select object and place repeatedly, hold SHIFT: lane center and orientation snap, '
                 'hold ALT: heading-only mode, '
                 'RIGHTMOUSE: cancel current move / exit from selection, ESC: exit, '
                 'ALT+MIDDLEMOUSE: move view center'

@@ -12,7 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
-from mathutils import Vector, Euler
+from mathutils import Vector, Euler, Matrix
 
 from math import pi
 
@@ -30,6 +30,10 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
 
     # Elevation adjustment can be 'DISABLED', 'SIDEVIEW', 'GENERIC'
     adjust_elevation = 'DISABLED'
+
+    # Optional usability features for subclasses.
+    lane_center_snap = False
+    alt_heading_mode = False
 
     stencil = None
 
@@ -140,6 +144,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
         self.params_input = {
             'point_start': Vector((0.0,0.0,0.0)),
             'point_end': Vector((0.0,0.0,0.0)),
+            'heading_override': None,
             'heading_start': 0,
             'heading_end': 0,
             'curvature_start': 0,
@@ -169,8 +174,12 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
-            context.workspace.status_text_set(
-                'LEFTMOUSE: place, '
+            status_text = 'LEFTMOUSE: place, '
+            if self.lane_center_snap:
+                status_text += 'hold SHIFT: lane center and orientation snap, '
+            if self.alt_heading_mode:
+                status_text += 'hold ALT: heading-only mode, '
+            status_text += (
                 'hold CTRL: snap to grid, '
                 'hold E: adjust elevation, '
                 'hold S: sideview adjust elevation, '
@@ -178,6 +187,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                 'RIGHTMOUSE: cancel selection, '
                 'ESCAPE: cancel and exit'
             )
+            context.workspace.status_text_set(status_text)
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.reset_params_input()
@@ -202,6 +212,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             return {'PASS_THROUGH'}
         # Update on move
         if event.type == 'MOUSEMOVE':
+            lane_heading_snap = None
             if self.adjust_elevation != 'DISABLED':
                 # Get the selected point
                 self.selected_elevation = helpers.mouse_to_elevation(context, event,
@@ -240,6 +251,18 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.selected_slope = 0
                     self.selected_point = selected_point_new
                     self.selected_normal_start = Vector((0.0,0.0,1.0))
+
+                if self.lane_center_snap and event.shift and self.params_snap['hit_type'] == 'road_surface':
+                    road_obj = bpy.data.objects.get(self.params_snap['id_obj'])
+                    if road_obj is not None:
+                        lane_center_point, lane_heading_snap = \
+                            helpers.get_lane_center_from_road_surface_hit(road_obj, self.selected_point)
+                        if lane_center_point is not None:
+                            self.selected_point = lane_center_point
+                            if self.state == 'SELECT_START':
+                                self.selected_heading_start = lane_heading_snap
+                            elif self.state == 'SELECT_END':
+                                self.selected_heading_end = lane_heading_snap - pi
             context.scene.cursor.location = self.selected_point.copy()
             # Activate grid snapping when holding CTRL
             if not self.only_snapped_to_object and event.ctrl:
@@ -261,6 +284,7 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
             # Always update end parameters to have them set even if mouse is not
             # moved in SELECT_END state
             self.params_input['point_end'] = self.selected_point.copy()
+            self.params_input['heading_override'] = None
             self.params_input['heading_start'] = self.selected_heading_start
             self.params_input['heading_end'] = self.selected_heading_end + pi
             if self.params_snap['point_type'] == None:
@@ -270,6 +294,24 @@ class DSC_OT_modal_two_point_base(bpy.types.Operator):
                     self.params_input['connected_end'] = True
                     self.params_input['curvature_end'] = self.selected_curvature
                     self.params_input['slope_end'] = self.selected_slope
+
+            if self.state == 'SELECT_END':
+                heading_override = None
+                if lane_heading_snap is not None:
+                    heading_override = lane_heading_snap
+                elif self.alt_heading_mode and event.alt:
+                    vec_to_target = self.selected_point - self.params_input['point_start']
+                    if vec_to_target.to_2d().length > 0.0001:
+                        heading_override = vec_to_target.to_2d().angle_signed(Vector((1.0, 0.0)))
+                    else:
+                        heading_override = self.params_input['heading_start']
+                self.params_input['heading_override'] = heading_override
+
+                if heading_override is not None:
+                    vec_heading = Vector((1.0, 0.0, 0.0))
+                    vec_heading.rotate(Matrix.Rotation(heading_override, 4, 'Z'))
+                    self.params_input['point_end'] = self.params_input['point_start'] + vec_heading
+                    self.params_input['point_end'].z = self.params_input['point_start'].z
             if self.state == 'SELECT_END':
                 if self.input_valid(wireframe=True):
                     self.update_stencil(context, update_start=False)
