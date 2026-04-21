@@ -153,16 +153,67 @@ class DSC_OT_export(bpy.types.Operator):
             vehicle_catalog_file_created = False
             pedestrian_catalog_file_created = False
             for obj in bpy.data.collections['OpenSCENARIO'].children['entities'].objects:
+                # Skip child objects (e.g. wheels, body); they are exported with their parent
+                if obj.parent is not None:
+                    continue
+                if 'dsc_type' not in obj or obj['dsc_type'] != 'entity':
+                    continue
                 print('Export entity object model for', obj.name)
                 model_path = pathlib.Path(self.directory) / 'models' / 'entities' / str(obj.name)
-                # Create a temporary copy without transform
-                obj_export = obj.copy()
-                helpers.link_object_openscenario(context, obj_export, subcategory=None)
-                obj_export.select_set(True)
-                bpy.ops.object.location_clear()
-                bpy.ops.object.rotation_clear()
-                # Export then delete copy
+                has_wheel_children = any(
+                    c.name.startswith('wheel_') for c in obj.children)
+                if has_wheel_children:
+                    # Build esmini-compatible hierarchy:
+                    #   empty (root) -> body (mesh) + wheel children
+                    # Create parent empty copy at origin
+                    root_export = bpy.data.objects.new(obj.name, None)
+                    helpers.link_object_openscenario(context, root_export, subcategory=None)
+                    # Copy body mesh, rename to "body"
+                    body_export = obj.copy()
+                    body_export.data = obj.data.copy()
+                    body_export.name = 'body'
+                    body_export.data.name = 'body'
+                    helpers.link_object_openscenario(context, body_export, subcategory=None)
+                    body_export.parent = root_export
+                    body_export.matrix_parent_inverse.identity()
+                    body_export.location = (0, 0, 0)
+                    body_export.rotation_euler = (0, 0, 0)
+                    copies = [root_export, body_export]
+                    # Copy wheel children
+                    for child in obj.children:
+                        child_export = child.copy()
+                        if child_export.data is not None:
+                            child_export.data = child_export.data.copy()
+                        helpers.link_object_openscenario(context, child_export, subcategory=None)
+                        child_export.parent = root_export
+                        child_export.matrix_parent_inverse.identity()
+                        # Keep the wheel's local offset
+                        child_export.location = child.location.copy()
+                        child_export.rotation_euler = child.rotation_euler.copy()
+                        copies.append(child_export)
+                    # Select all copies for export
+                    bpy.ops.object.select_all(action='DESELECT')
+                    for c in copies:
+                        c.select_set(True)
+                    bpy.context.view_layer.objects.active = root_export
+                else:
+                    # No children — simple single-mesh entity (pedestrian, etc.)
+                    copies = []
+                    obj_export = obj.copy()
+                    if obj_export.data is not None:
+                        obj_export.data = obj_export.data.copy()
+                    helpers.link_object_openscenario(context, obj_export, subcategory=None)
+                    copies.append(obj_export)
+                    bpy.ops.object.select_all(action='DESELECT')
+                    obj_export.select_set(True)
+                    bpy.context.view_layer.objects.active = obj_export
+                    bpy.ops.object.location_clear()
+                    bpy.ops.object.rotation_clear()
+                # Export then delete copies
                 self.export_mesh(model_path)
+                bpy.ops.object.select_all(action='DESELECT')
+                for c in copies:
+                    c.select_set(True)
                 bpy.ops.object.delete()
                 if obj['entity_type'] == 'vehicle':
                     # Add vehicle to vehicle catalog
@@ -673,6 +724,9 @@ class DSC_OT_export(bpy.types.Operator):
         entities = xosc.Entities()
         if helpers.collection_exists(['OpenSCENARIO','entities']):
             for obj in bpy.data.collections['OpenSCENARIO'].children['entities'].objects:
+                # Skip child objects (e.g. wheels, body); they belong to their parent entity
+                if obj.parent is not None:
+                    continue
                 if 'dsc_type' in obj and obj['dsc_type'] == 'entity':
                     entity_name = obj.name
                     print('Add entity with name', obj.name)

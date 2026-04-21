@@ -21,11 +21,13 @@ from . import helpers
 
 class entity:
 
-    def __init__(self, context, entity_type, entity_subtype, get_vertices_edges_faces):
+    def __init__(self, context, entity_type, entity_subtype, get_vertices_edges_faces,
+                 get_wheel_configs=None):
         self.context = context
         self.entity_type = entity_type
         self.entity_subtype = entity_subtype
         self.get_vertices_edges_faces = get_vertices_edges_faces
+        self.get_wheel_configs = get_wheel_configs
         self.params = {}
 
     def create_object_3d(self, context, params_input):
@@ -61,6 +63,27 @@ class entity:
 
             # Set OpenSCENARIO custom properties
             obj['speed_initial'] = self.params['speed_initial']
+
+            # Create wheel child objects if provided by the entity subclass
+            if self.get_wheel_configs is not None:
+                wheel_configs = self.get_wheel_configs()
+                # Wheels are parented directly to the body mesh.
+                # The esmini-compatible hierarchy (empty -> body + wheels)
+                # is created at export time only.
+                wheel_color = (0.15, 0.15, 0.15, 1.0)
+                for w_name, w_pos, w_verts, w_edges, w_faces in wheel_configs:
+                    w_mesh = bpy.data.meshes.new(w_name)
+                    w_mesh.from_pydata(w_verts, w_edges, w_faces)
+                    w_obj = bpy.data.objects.new(w_name, w_mesh)
+                    w_obj.parent = obj
+                    w_obj.location = w_pos
+                    helpers.link_object_openscenario(context, w_obj,
+                        subcategory='entities')
+                    helpers.assign_object_materials(w_obj, wheel_color)
+                    for poly_idx in range(len(w_obj.data.polygons)):
+                        w_obj.data.polygons[poly_idx].material_index = \
+                            helpers.get_material_index(w_obj,
+                                helpers.get_paint_material_name(wheel_color))
 
         return obj
 
