@@ -850,9 +850,7 @@ class road:
                         materials[material].append(idx_face)
                         idx_face += 1
             else:
-                if lanes[idx_lane].type == 'median':
-                    materials['grass'].append(idx_face)
-                elif lanes[idx_lane].type == 'shoulder':
+                if lanes[idx_lane].type == 'shoulder':
                     materials['grass'].append(idx_face)
                 else:
                     materials['asphalt'].append(idx_face)
