@@ -516,8 +516,18 @@ def clear_legacy_entity_transform_properties(obj):
         del obj['hdg']
 
 def _is_drivable_lane_type(lane_type):
-    return lane_type in {'driving', 'stop', 'onRamp', 'offRamp'}
-
+    return lane_type in {
+        'driving',
+        'stop',
+        'parking',
+        'median',
+        'entry',
+        'exit',
+        'onRamp',
+        'offRamp',
+        'connectingRamp',
+        'slipLane',
+    }
 
 def _interpolate_lane_widths(widths_start, widths_end, s, total_length):
     '''
@@ -710,35 +720,37 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
     d_min = inf
     id_lane_cp = None
     lane_width = None
-    lane_type = None
+    selected_lane_type = None
     contact_point_vec = None
     lane_center_vec = None
     # Left lanes
     for idx_lane, lane_center_point in enumerate(lane_center_points_left):
         lane_type = list(joint['lane_types_left'])[idx_lane]
-        if lane_type == 'driving' or lane_type == 'stop' or lane_type == 'onRamp' or lane_type == 'offRamp':
+        if _is_drivable_lane_type(lane_type):
             distance = (lane_center_point - point).length
             # Take the contact point for the lane with the closest center point
             if distance < d_min:
                 d_min = distance
                 id_lane_cp = lane_ids_left[idx_lane]
                 lane_width = list(joint['lane_widths_left'])[idx_lane]
+                selected_lane_type = lane_type
                 contact_point_vec = lane_contact_points_left[idx_lane]
                 lane_center_vec = lane_center_point
     # Right lanes
     for idx_lane, lane_center_point in enumerate(lane_center_points_right):
         lane_type = joint['lane_types_right'][idx_lane]
-        if lane_type == 'driving' or lane_type == 'stop' or lane_type == 'onRamp' or lane_type == 'offRamp':
+        if _is_drivable_lane_type(lane_type):
             distance = (lane_center_point - point).length
             # Take the contact point for the lane with the closest center point
             if distance < d_min:
                 d_min = distance
                 id_lane_cp = lane_ids_right[idx_lane]
                 lane_width = joint['lane_widths_right'][idx_lane]
+                selected_lane_type = lane_type
                 contact_point_vec = lane_contact_points_right[idx_lane]
                 lane_center_vec = lane_center_point
 
-    return [joint, id_lane_cp, lane_width, lane_type, contact_point_vec, lane_center_vec]
+    return [joint, id_lane_cp, lane_width, selected_lane_type, contact_point_vec, lane_center_vec]
 
 def get_closest_lane_contact_point(lane_contact_points, point):
     '''
