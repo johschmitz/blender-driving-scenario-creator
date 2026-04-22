@@ -192,7 +192,7 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
     def invoke(self, context, event):
         if len(context.scene.dsc_properties.road_properties.lanes) == 0:
             context.scene.dsc_properties.road_properties.init()
-        return context.window_manager.invoke_popup(self, width=700)
+        return context.window_manager.invoke_popup(self, width=950)
 
 
     def draw(self, context):
