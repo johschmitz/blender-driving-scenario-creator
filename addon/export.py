@@ -490,7 +490,7 @@ class DSC_OT_export(bpy.types.Operator):
                             inner_end = sum(obj['lanes_left_widths_end'][i] for i in range(idx))
                             t_start = inner_start + offset
                             t_end = inner_end + offset
-                            railing = xodr.Object(s=0, t=t_start, Type='railing',
+                            railing = xodr.Object(s=0, t=t_start, Type='barrier', subtype='guardRail',
                                                   name='railing', id=guard_rail_object_id,
                                                   zOffset=0.35, height=0.2, hdg=pi)
                             railing.repeat(repeatLength=length, repeatDistance=0,
@@ -500,7 +500,7 @@ class DSC_OT_export(bpy.types.Operator):
                                            zOffsetStart=0.35, zOffsetEnd=0.35)
                             road.add_object(railing)
                             guard_rail_object_id += 1
-                            pole = xodr.Object(s=0, t=t_start, Type='rail-pole',
+                            pole = xodr.Object(s=0, t=t_start, Type='pole',
                                                name='rail-pole', id=guard_rail_object_id,
                                                zOffset=0, height=0.55, hdg=pi)
                             pole.repeat(repeatLength=length, repeatDistance=2.0,
