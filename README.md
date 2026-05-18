@@ -170,18 +170,25 @@ for the export and confirm.
 
 ### esmini preview mode (inside Blender)
 
-The add-on includes a preview-only esmini integration in the sidebar panel.
-Use this when you want to preview entity motion in the Blender viewport without
-baking keyframes.
+The addon includes a preview-only esmini integration in the sidebar panel. Use
+this when you want to preview entity motion in the Blender viewport. Note that
+this does not bake any keyframes in Blender. To use the preview
 
-2. Set `Library` to your local esmini shared library file
-   (`esminiLib` / `libesminiLib`).
-1. In the <kbd>Driving Scenario Creator</kbd> panel find the `esmini Preview`
-   section control the preview with the player buttons.
-3. The add-on exports a temporary scenario and starts esmini in headless mode.
+1. Point `esmini library path` in the addon preferences to your local esmini
+   shared library file (`esminiLib` / `libesminiLib`).
+2. In the <kbd>Driving Scenario Creator</kbd> panel find the `esmini Preview`
+   section control with the player buttons.
+3. When clicking <kbd>Play</kbd>, the add-on exports a temporary scenario and
+   starts esmini in headless mode.
 4. Play the timeline forward to update OpenSCENARIO entity transforms from
    esmini state.
-5. Click <kbd>Stop Preview</kbd> to restore original authored transforms.
+5. Click <kbd>Stop</kbd> to stop the preview and restore original authored
+   transforms.
+
+For preview on MacOS note that you need to run it once such that you get the
+Gatekeeper popup message, then allow the execution of the dylib in the system
+security settings and finally run it again in Blender while making sure to allow
+it in the popup message as well.
 
 ## How to run exported scenarios
 
