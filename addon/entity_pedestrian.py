@@ -27,8 +27,21 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
     bl_options = {'REGISTER', 'UNDO'}
 
     entity_type = 'pedestrian'
-    # There are multiple types of pedestrians, this is the default one
-    entity_subtype = 'pedestrian'
+    entity_subtype = 'adult'
+
+    pedestrian_category: bpy.props.EnumProperty(
+        name='Pedestrian category',
+        description='OpenSCENARIO pedestrian category',
+        items=(
+            ('adult', 'Adult', 'Create an adult pedestrian entity'),
+            ('child', 'Child', 'Create a child pedestrian entity'),
+        ),
+        default='adult',
+    )
+
+    def invoke(self, context, event):
+        self.entity_subtype = self.pedestrian_category
+        return super().invoke(context, event)
 
     def get_vertices_edges_faces(self):
         '''Build a recognisable low-poly human figure.
@@ -41,6 +54,13 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
         verts = []
         edges = []
         faces = []
+        face_materials = []
+
+        legs_material = ('pedestrian_legs', (0.08, 0.10, 0.14, 1.0))
+        skin_material = ('pedestrian_skin', (0.72, 0.48, 0.32, 1.0))
+        hair_material = ('pedestrian_hair', (0.075, 0.038, 0.022, 1.0))
+        eye_material = ('pedestrian_eyes', (0.018, 0.012, 0.008, 1.0))
+        shoe_material = ('pedestrian_shoes', (0.035, 0.04, 0.05, 1.0))
 
         def _add_box_edges(base):
             '''Add the twelve perimeter and corner edges for a box primitive.'''
@@ -53,7 +73,7 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
                 (base+2, base+6), (base+3, base+7),
             ])
 
-        def _box(x0, x1, y0, y1, z0, z1):
+        def _box(x0, x1, y0, y1, z0, z1, material=None):
             '''Axis-aligned box.'''
             b = len(verts)
             verts.extend([
@@ -69,8 +89,10 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
                 (b+4, b+5, b+6, b+7),
                 (b+3, b+2, b+1, b+0),
             ])
+            face_materials.extend([material] * 6)
 
-        def _tbox(x0b, x1b, y0b, y1b, z0, x0t, x1t, y0t, y1t, z1):
+        def _tbox(x0b, x1b, y0b, y1b, z0, x0t, x1t, y0t, y1t, z1,
+                  material=None):
             '''Tapered box – different cross-section at top and bottom.'''
             b = len(verts)
             verts.extend([
@@ -86,12 +108,17 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
                 (b+4, b+5, b+6, b+7),
                 (b+3, b+2, b+1, b+0),
             ])
+            face_materials.extend([material] * 6)
 
         # ---- Legs (separated by a gap) ----
         # Right leg (y < 0)
-        _box(-0.08, 0.10, -0.15, -0.02,  0.0,  0.82)
+        _box(-0.08, 0.10, -0.15, -0.02,  0.045, 0.82, legs_material)
         # Left leg  (y > 0)
-        _box(-0.08, 0.10,  0.02,  0.15,  0.0,  0.82)
+        _box(-0.08, 0.10,  0.02,  0.15,  0.045, 0.82, legs_material)
+
+        # Shoes overlap the lower legs and project forward in the +X direction.
+        _box(-0.08, 0.14, -0.16, -0.01, 0.0, 0.045, shoe_material)
+        _box(-0.08, 0.14,  0.01,  0.16, 0.0, 0.045, shoe_material)
 
         # ---- Pelvis / hips ----
         _box(-0.09, 0.11, -0.17, 0.17,  0.76, 0.95)
@@ -104,11 +131,16 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
         _box(-0.11, 0.13, -0.24, 0.24,  1.35, 1.45)
 
         # ---- Neck ----
-        _box(-0.04, 0.06, -0.06, 0.06,  1.45, 1.55)
+        _box(-0.04, 0.06, -0.06, 0.06,  1.45, 1.55, skin_material)
 
         # ---- Head (slightly tapered towards crown) ----
         _tbox(-0.08, 0.10, -0.10, 0.10, 1.55,
-              -0.07, 0.09, -0.09, 0.09, 1.75)
+              -0.07, 0.09, -0.09, 0.09, 1.75, skin_material)
+
+        # A simple dark cap of hair, with two eyes on the forward-facing side.
+        _box(-0.10, 0.12, -0.11, 0.11, 1.70, 1.77, hair_material)
+        _box(0.092, 0.112, -0.052, -0.028, 1.655, 1.679, eye_material)
+        _box(0.092, 0.112,  0.028,  0.052, 1.655, 1.679, eye_material)
 
         # ---- Arms (tapered from shoulder to hand) ----
         # Right arm
@@ -118,4 +150,18 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
         _tbox(-0.05, 0.03,  0.24,  0.32, 0.72,
               -0.07, 0.05,  0.24,  0.34, 1.38)
 
+        # Hands attach at the lower ends of the sleeves.
+        _box(-0.02, 0.10, -0.325, -0.235, 0.66, 0.78, skin_material)
+        _box(-0.02, 0.10,  0.235,  0.325, 0.66, 0.78, skin_material)
+
+        # Keep adult as the reference model and scale child down.
+        if self.entity_subtype == 'child':
+            child_scale = 0.72
+            verts = [(x * child_scale, y * child_scale, z * child_scale)
+                     for x, y, z in verts]
+
+        self.face_materials = face_materials
         return verts, edges, faces
+
+    def get_face_materials(self):
+        return getattr(self, 'face_materials', [])

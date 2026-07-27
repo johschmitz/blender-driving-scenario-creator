@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="256" height="128" fill="#4d4d4d" stroke="none"/>
+  <!-- Projected from the current bus side profile (13.115 m body, 6.090 m wheelbase, 1.350 m tandem spacing). -->
+  <g transform="translate(16 99) scale(17.08 -17.08) translate(6.5575 0)" stroke-width="0.176">
+    <path d="M-6.5575 0.24L-4.3725 0.24L-4.3725 0.5L-4.2921 0.8L-4.0725 1.0196L-3.7725 1.102L-3.4725 1.0196L-3.2529 0.8L-3.1725 0.5L-3.1725 0.24L-3.0225 0.24L-3.0225 0.5L-2.9421 0.8L-2.7225 1.0196L-2.4225 1.098L-2.1225 1.0196L-1.9029 0.8L-1.8225 0.5L-1.8225 0.24L3.0675 0.24L3.0675 0.5L3.1479 0.8L3.3675 1.0196L3.6675 1.102L3.9675 1.0196L4.1871 0.8L4.2675 0.5L4.2675 0.24L6.5575 0.24L6.5575 0.9625L6.2075 3.1525L-6.0075 3.1525L-6.5575 2.99Z"/>
+    <circle cx="3.6675" cy="0.5" r="0.5"/>
+    <circle cx="-2.4225" cy="0.5" r="0.5"/>
+    <circle cx="-3.7725" cy="0.5" r="0.5"/>
+  </g>
+</svg>

@@ -23,7 +23,7 @@ class entity:
 
     def __init__(self, context, entity_type, entity_subtype, get_vertices_edges_faces,
                  get_wheel_configs=None, get_face_materials=None,
-                 setup_entity_object=None):
+                 setup_entity_object=None, get_additional_meshes=None):
         self.context = context
         self.entity_type = entity_type
         self.entity_subtype = entity_subtype
@@ -31,6 +31,7 @@ class entity:
         self.get_wheel_configs = get_wheel_configs
         self.get_face_materials = get_face_materials
         self.setup_entity_object = setup_entity_object
+        self.get_additional_meshes = get_additional_meshes
         self.params = {}
 
     def create_object_3d(self, context, params_input):
@@ -99,15 +100,56 @@ class entity:
                         material = bpy.data.materials.get(material_name)
                         if material is None:
                             material = bpy.data.materials.new(name=material_name)
+                        material.diffuse_color = color
+                        material.use_nodes = True
+                        shader = material.node_tree.nodes.get('Principled BSDF')
+                        if shader:
+                            shader.inputs['Base Color'].default_value = color
+                            shader.inputs['Roughness'].default_value = 0.28
+                        obj.data.materials.append(material)
+                        material_indices[material_name] = len(obj.data.materials) - 1
+                    obj.data.polygons[index].material_index = material_indices[material_name]
+
+            if self.get_additional_meshes is not None:
+                for component in self.get_additional_meshes() or ():
+                    if component is None:
+                        continue
+                    component_name, component_data = component
+                    component_vertices, component_edges, component_faces, component_materials = component_data
+                    component_mesh = bpy.data.meshes.new(component_name)
+                    component_mesh.from_pydata(
+                        component_vertices, component_edges, component_faces)
+                    component_obj = bpy.data.objects.new(component_name, component_mesh)
+                    component_obj.parent = obj
+                    component_obj.location = (0.0, 0.0, 0.0)
+                    helpers.link_object_openscenario(
+                        context, component_obj, subcategory='entities')
+                    component_obj['dsc_component'] = component_name
+                    helpers.assign_object_materials(component_obj, obj['color'])
+                    for polygon in component_obj.data.polygons:
+                        polygon.material_index = helpers.get_material_index(
+                            component_obj,
+                            helpers.get_paint_material_name(obj['color']))
+                    material_indices = {}
+                    for index, assignment in enumerate(component_materials):
+                        if assignment is None:
+                            continue
+                        name, color = assignment
+                        material_name = 'entity_detail_' + name
+                        if material_name not in material_indices:
+                            material = bpy.data.materials.get(material_name)
+                            if material is None:
+                                material = bpy.data.materials.new(name=material_name)
                             material.diffuse_color = color
                             material.use_nodes = True
                             shader = material.node_tree.nodes.get('Principled BSDF')
                             if shader:
                                 shader.inputs['Base Color'].default_value = color
                                 shader.inputs['Roughness'].default_value = 0.28
-                        obj.data.materials.append(material)
-                        material_indices[material_name] = len(obj.data.materials) - 1
-                    obj.data.polygons[index].material_index = material_indices[material_name]
+                            component_mesh.materials.append(material)
+                            material_indices[material_name] = len(component_mesh.materials) - 1
+                        component_mesh.polygons[index].material_index = \
+                            material_indices[material_name]
 
             if self.setup_entity_object is not None:
                 self.setup_entity_object(context, obj)

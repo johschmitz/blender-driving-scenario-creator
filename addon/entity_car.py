@@ -1,4 +1,9 @@
-# This program is free software; you can redistribute it and/or modify
+"""Backward-compatible import for the generalized vehicle operator."""
+
+from .entity_vehicle import DSC_OT_entity_vehicle
+
+
+DSC_OT_entity_car = DSC_OT_entity_vehicle# This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.

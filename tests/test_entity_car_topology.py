@@ -1,15 +1,31 @@
 import bmesh
 import bpy
+from types import MethodType, SimpleNamespace
 
 from collections import Counter
 
-from addon.entity_car import DSC_OT_entity_car
+from addon.entity_vehicle import DSC_OT_entity_vehicle
 
 
-def test_car_cut_regions_are_one_connected_manifold_mesh():
-    car = DSC_OT_entity_car
-    vertices, edges, faces = car.get_vertices_edges_faces(car)
-    face_materials = car.get_face_materials(car)
+def vehicle_probe(subtype):
+    vehicle = SimpleNamespace(entity_subtype=subtype)
+    for name, descriptor in DSC_OT_entity_vehicle.__dict__.items():
+        if isinstance(descriptor, staticmethod):
+            setattr(vehicle, name, descriptor.__func__)
+        elif callable(descriptor):
+            setattr(vehicle, name, MethodType(descriptor, vehicle))
+        elif not name.startswith('__') and not hasattr(vehicle, name):
+            try:
+                setattr(vehicle, name, descriptor)
+            except (AttributeError, TypeError):
+                pass
+    return vehicle
+
+
+def test_car_cut_regions_and_mirror_parts_are_closed_manifold_meshes():
+    car = vehicle_probe('car')
+    vertices, edges, faces = car.get_vertices_edges_faces()
+    face_materials = car.get_face_materials()
     mesh = bpy.data.meshes.new('CarTopologyTest')
     bm = bmesh.new()
     try:
@@ -33,7 +49,9 @@ def test_car_cut_regions_are_one_connected_manifold_mesh():
                     if other in remaining:
                         remaining.remove(other)
                         stack.append(other)
-        assert components == 1
+        # The body is one shell; each side has a separate stem and housing
+        # shell, all positioned to contact the body/each other in the model.
+        assert components == 5
 
         regions = Counter(name for assignment in face_materials if assignment
                           for name, _color in [assignment])
@@ -42,10 +60,11 @@ def test_car_cut_regions_are_one_connected_manifold_mesh():
             'headlight': 2,
             'taillight': 2,
             'indicator': 4,
+            'trim': 24,
         }
 
         wheel_x = {name: position[0]
-                   for name, position, *_rest in car.get_wheel_configs(car)}
+               for name, position, *_rest in car.get_wheel_configs()}
         assert wheel_x['wheel_rl'] == 0.0
         assert wheel_x['wheel_rr'] == 0.0
         assert wheel_x['wheel_fl'] == 2.9

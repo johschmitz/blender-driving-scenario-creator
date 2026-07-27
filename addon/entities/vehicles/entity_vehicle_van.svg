@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="256" height="128" fill="#4d4d4d" stroke="none"/>
+  <path d="M16.00 102.44L45.09 102.44L45.09 97.91L47.41 89.22L53.77 82.86L62.46 80.53L71.15 82.86L77.51 89.22L79.84 97.91L79.84 102.44L183.53 102.44L183.53 97.91L185.86 89.22L192.22 82.86L200.90 80.53L209.59 82.86L215.95 89.22L218.28 97.91L218.28 102.44L240.00 102.44L240.00 64.00L206.76 18.47L24.31 16.50L16.00 21.44L16.00 100.55Z"/>
+  <circle cx="200.90" cy="97.91" r="13.60"/>
+  <circle cx="62.46" cy="97.91" r="13.60"/>
+</svg>

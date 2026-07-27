@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="160" viewBox="0 0 256 160"
+     fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="256" height="160" fill="#4d4d4d" stroke="none"/>
+  <!-- Front projection of the adult's actual Y/Z mesh coordinates. -->
+  <g transform="translate(128 146) scale(75 -75)" stroke-width="0.04">
+    <!-- Legs: source boxes at Y=-0.15..-0.02 and Y=0.02..0.15. -->
+    <path d="M-0.15 0L-0.02 0L-0.02 0.76L-0.15 0.76Z"/>
+    <path d="M0.02 0L0.15 0L0.15 0.76L0.02 0.76Z"/>
+    <!-- Pelvis, tapered torso, and shoulders as a continuous outer contour. -->
+    <path d="M-0.17 0.76L0.17 0.76L0.17 0.95L0.21 1.35L0.24 1.35L0.24 1.45L-0.24 1.45L-0.24 1.35L-0.21 1.35L-0.17 0.95Z"/>
+    <!-- Neck and head follow their source box/taper bounds. -->
+    <path d="M-0.06 1.45L0.06 1.45L0.06 1.55L-0.06 1.55Z"/>
+    <path d="M-0.10 1.55L0.10 1.55L0.09 1.75L-0.09 1.75Z"/>
+    <!-- Arms: source tapered boxes, clipped at the shoulder join. -->
+    <path d="M-0.32 0.72L-0.24 0.72L-0.24 1.35L-0.34 1.35Z"/>
+    <path d="M0.24 0.72L0.32 0.72L0.34 1.35L0.24 1.35Z"/>
+  </g>
+</svg>
