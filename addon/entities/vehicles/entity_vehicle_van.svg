@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">
+  <!-- Van: MPV/minivan side view (Sharan/Galaxy style) -->
+  <!-- Body -->
+  <path d="M30,75 L30,48 L48,32 L160,32 L170,48 L170,75 Z" fill="#6688aa" stroke="#222" stroke-width="2"/>
+  <!-- Roof line -->
+  <path d="M48,32 L160,32" fill="none" stroke="#557799" stroke-width="2"/>
+  <!-- Windshield -->
+  <path d="M33,48 L50,34 L62,34 L62,52 L33,52 Z" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- Front side window -->
+  <path d="M65,34 L90,34 L90,52 L65,52 Z" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- Rear side window -->
+  <path d="M93,34 L122,34 L122,52 L93,52 Z" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- Small rear quarter window -->
+  <path d="M125,34 L142,34 L142,52 L125,52 Z" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- Rear hatch window -->
+  <path d="M155,36 L164,48 L164,52 L155,52 Z" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- Door line front -->
+  <line x1="62" y1="34" x2="62" y2="75" stroke="#557799" stroke-width="1"/>
+  <!-- Sliding door line -->
+  <line x1="93" y1="34" x2="93" y2="75" stroke="#557799" stroke-width="1"/>
+  <!-- Door handle -->
+  <rect x="84" y="50" width="6" height="2" rx="1" fill="#445566"/>
+  <rect x="96" y="50" width="6" height="2" rx="1" fill="#445566"/>
+  <!-- Bumper front -->
+  <rect x="27" y="72" width="22" height="6" rx="2" fill="#444"/>
+  <!-- Bumper rear -->
+  <rect x="155" y="72" width="18" height="6" rx="2" fill="#444"/>
+  <!-- Side skirt -->
+  <rect x="48" y="72" width="108" height="4" rx="1" fill="#557799"/>
+  <!-- Headlight -->
+  <path d="M28,50 L30,48 L30,58 L28,56 Z" fill="#ff0" stroke="#cc0" stroke-width="0.5"/>
+  <!-- Tail light -->
+  <rect x="168" y="50" width="4" height="12" rx="1" fill="#f33"/>
+  <!-- Front wheel -->
+  <circle cx="55" cy="80" r="14" fill="#333"/>
+  <circle cx="55" cy="80" r="7" fill="#888"/>
+  <!-- Rear wheel -->
+  <circle cx="148" cy="80" r="14" fill="#333"/>
+  <circle cx="148" cy="80" r="7" fill="#888"/>
+  <!-- Wing mirror -->
+  <rect x="26" y="42" width="4" height="6" rx="1" fill="#557799" stroke="#333" stroke-width="0.5"/>
+</svg>

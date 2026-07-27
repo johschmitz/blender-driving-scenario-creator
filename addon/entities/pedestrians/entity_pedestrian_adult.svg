@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">
+  <!-- Adult pedestrian: front view stick figure -->
+  <!-- Head -->
+  <circle cx="100" cy="18" r="10" fill="#e8b89d" stroke="#333" stroke-width="1.5"/>
+  <!-- Body -->
+  <line x1="100" y1="28" x2="100" y2="68" stroke="#444" stroke-width="4"/>
+  <!-- Arms -->
+  <line x1="100" y1="38" x2="72" y2="55" stroke="#444" stroke-width="3"/>
+  <line x1="100" y1="38" x2="128" y2="55" stroke="#444" stroke-width="3"/>
+  <!-- Legs -->
+  <line x1="100" y1="68" x2="80" y2="100" stroke="#444" stroke-width="3"/>
+  <line x1="100" y1="68" x2="120" y2="100" stroke="#444" stroke-width="3"/>
+  <!-- Feet -->
+  <line x1="80" y1="100" x2="72" y2="100" stroke="#444" stroke-width="3"/>
+  <line x1="120" y1="100" x2="128" y2="100" stroke="#444" stroke-width="3"/>
+  <!-- Shirt -->
+  <path d="M92,30 L92,55 L108,55 L108,30 Z" fill="#3a7abf" opacity="0.7"/>
+</svg>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">
+  <!-- Bicycle: side view -->
+  <!-- Rear wheel -->
+  <circle cx="50" cy="82" r="22" fill="none" stroke="#444" stroke-width="3"/>
+  <circle cx="50" cy="82" r="3" fill="#444"/>
+  <!-- Front wheel -->
+  <circle cx="142" cy="82" r="22" fill="none" stroke="#444" stroke-width="3"/>
+  <circle cx="142" cy="82" r="3" fill="#444"/>
+  <!-- Front triangle: top tube, down tube, seat tube -->
+  <polygon points="78,38 128,40 88,86" fill="none" stroke="#c44" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Rear triangle: seat stay + chain stay -->
+  <line x1="78" y1="38" x2="50" y2="82" stroke="#c44" stroke-width="3"/>
+  <line x1="88" y1="86" x2="50" y2="82" stroke="#c44" stroke-width="3"/>
+  <!-- Head tube -->
+  <line x1="128" y1="40" x2="132" y2="54" stroke="#c44" stroke-width="4"/>
+  <!-- Fork (angle matching head tube) -->
+  <line x1="132" y1="54" x2="142" y2="82" stroke="#888" stroke-width="3"/>
+  <!-- Stem (short, extending forward) -->
+  <line x1="128" y1="40" x2="134" y2="36" stroke="#666" stroke-width="2.5"/>
+  <!-- Handlebars -->
+  <path d="M130,32 L134,36 L138,30" fill="none" stroke="#555" stroke-width="2.5"/>
+  <!-- Seat post (extends above seat tube) -->
+  <line x1="78" y1="38" x2="78" y2="26" stroke="#666" stroke-width="2"/>
+  <!-- Saddle -->
+  <rect x="70" y="22" width="16" height="4" rx="2" fill="#333"/>
+  <!-- Bottom bracket (slightly below axle level) -->
+  <circle cx="88" cy="86" r="5" fill="none" stroke="#555" stroke-width="2"/>
+  <!-- Pedal crank + pedals -->
+  <line x1="88" y1="86" x2="82" y2="94" stroke="#555" stroke-width="2"/>
+  <rect x="78" y="93" width="8" height="3" rx="1" fill="#555"/>
+  <line x1="88" y1="86" x2="94" y2="78" stroke="#555" stroke-width="2"/>
+  <rect x="90" y="76" width="8" height="3" rx="1" fill="#555"/>
+  <!-- Spokes hint -->
+  <line x1="50" y1="62" x2="50" y2="102" stroke="#bbb" stroke-width="0.5"/>
+  <line x1="30" y1="82" x2="70" y2="82" stroke="#bbb" stroke-width="0.5"/>
+  <line x1="142" y1="62" x2="142" y2="102" stroke="#bbb" stroke-width="0.5"/>
+  <line x1="122" y1="82" x2="162" y2="82" stroke="#bbb" stroke-width="0.5"/>
+</svg>

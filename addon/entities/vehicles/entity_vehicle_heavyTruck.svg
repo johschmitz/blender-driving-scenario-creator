@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">
+  <!-- Heavy Truck: tractor unit (3 axles) + semi trailer (2 axles), side view -->
+  <!-- === TRACTOR UNIT === -->
+  <!-- Cab body -->
+  <rect x="4" y="28" width="42" height="44" rx="3" fill="#3a7abf" stroke="#222" stroke-width="2"/>
+  <!-- Roof fairing -->
+  <path d="M4,28 Q4,18 16,18 L36,18 Q46,18 46,28" fill="#3a7abf" stroke="#222" stroke-width="1.5"/>
+  <!-- Side window (front half only, back half is sleeper) -->
+  <rect x="8" y="32" width="14" height="16" rx="2" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- B-pillar -->
+  <rect x="22" y="32" width="4" height="38" fill="#3a7abf" stroke="#222" stroke-width="0.5"/>
+  <!-- Sleeper cabin panel (full height behind door) -->
+  <rect x="26" y="32" width="16" height="38" rx="1" fill="#2a6aaf" stroke="#1a5a9f" stroke-width="0.8"/>
+  <!-- Door panel lower -->
+  <rect x="8" y="50" width="14" height="20" rx="1" fill="#2a6aaf" stroke="#1a5a9f" stroke-width="0.5"/>
+  <!-- Door handle -->
+  <rect x="14" y="54" width="5" height="2" rx="1" fill="#445"/>
+  <!-- Step -->
+  <rect x="8" y="68" width="10" height="3" rx="1" fill="#444"/>
+  <!-- Fuel tank (between axles) -->
+  <rect x="26" y="72" width="16" height="6" rx="2" fill="#555" stroke="#444" stroke-width="1"/>
+  <!-- Chassis rail -->
+  <rect x="4" y="70" width="68" height="3" fill="#444"/>
+  <!-- Fifth wheel -->
+  <path d="M58,64 Q62,60 66,64 L66,70 L58,70 Z" fill="#555" stroke="#333" stroke-width="1"/>
+  <!-- Wing mirror -->
+  <rect x="1" y="34" width="3" height="8" rx="1" fill="#333"/>
+  <!-- Tractor front axle (steer) -->
+  <circle cx="16" cy="84" r="11" fill="#333"/>
+  <circle cx="16" cy="84" r="5" fill="#888"/>
+  <!-- Tractor drive axle 1 (spaced apart) -->
+  <circle cx="46" cy="84" r="11" fill="#333"/>
+  <circle cx="46" cy="84" r="5" fill="#888"/>
+  <!-- Tractor drive axle 2 (spaced apart) -->
+  <circle cx="68" cy="84" r="11" fill="#333"/>
+  <circle cx="68" cy="84" r="5" fill="#888"/>
+  <!-- === SEMI TRAILER (sits higher) === -->
+  <!-- Trailer body -->
+  <rect x="64" y="16" width="134" height="50" rx="2" fill="#ddd" stroke="#222" stroke-width="2"/>
+  <!-- Trailer ribs -->
+  <line x1="90" y1="18" x2="90" y2="64" stroke="#ccc" stroke-width="0.8"/>
+  <line x1="116" y1="18" x2="116" y2="64" stroke="#ccc" stroke-width="0.8"/>
+  <line x1="142" y1="18" x2="142" y2="64" stroke="#ccc" stroke-width="0.8"/>
+  <line x1="168" y1="18" x2="168" y2="64" stroke="#ccc" stroke-width="0.8"/>
+  <!-- Trailer undercarriage -->
+  <rect x="64" y="64" width="134" height="4" fill="#555"/>
+  <!-- Trailer landing gear -->
+  <line x1="74" y1="66" x2="74" y2="78" stroke="#555" stroke-width="2"/>
+  <line x1="71" y1="78" x2="77" y2="78" stroke="#555" stroke-width="2"/>
+  <!-- Tail light -->
+  <rect x="196" y="50" width="3" height="10" rx="1" fill="#f33"/>
+  <!-- Reflector -->
+  <rect x="196" y="40" width="3" height="4" rx="1" fill="#fa0"/>
+  <!-- Rear bumper -->
+  <rect x="192" y="66" width="6" height="4" rx="1" fill="#555"/>
+  <!-- Trailer bogie frame -->
+  <rect x="156" y="68" width="40" height="4" rx="1" fill="#555" stroke="#444" stroke-width="0.5"/>
+  <line x1="160" y1="72" x2="160" y2="80" stroke="#555" stroke-width="3"/>
+  <line x1="192" y1="72" x2="192" y2="80" stroke="#555" stroke-width="3"/>
+  <!-- Trailer axle 1 (spaced apart) -->
+  <circle cx="164" cy="84" r="11" fill="#333"/>
+  <circle cx="164" cy="84" r="5" fill="#888"/>
+  <!-- Trailer axle 2 (spaced apart) -->
+  <circle cx="188" cy="84" r="11" fill="#333"/>
+  <circle cx="188" cy="84" r="5" fill="#888"/>
+  <!-- Mud flaps -->
+  <rect x="152" y="78" width="2" height="12" fill="#333"/>
+  <rect x="176" y="78" width="2" height="12" fill="#333"/>
+</svg>

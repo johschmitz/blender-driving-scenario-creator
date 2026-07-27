@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">
+  <!-- Bus: side view -->
+  <!-- Body -->
+  <rect x="15" y="25" width="170" height="55" rx="4" fill="#e8a820" stroke="#222" stroke-width="2"/>
+  <!-- Window band -->
+  <rect x="25" y="32" width="148" height="22" rx="2" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- Window dividers -->
+  <line x1="55" y1="32" x2="55" y2="54" stroke="#bbb" stroke-width="1.5"/>
+  <line x1="85" y1="32" x2="85" y2="54" stroke="#bbb" stroke-width="1.5"/>
+  <line x1="115" y1="32" x2="115" y2="54" stroke="#bbb" stroke-width="1.5"/>
+  <line x1="145" y1="32" x2="145" y2="54" stroke="#bbb" stroke-width="1.5"/>
+  <!-- Door -->
+  <rect x="28" y="42" width="15" height="33" rx="1" fill="#555" stroke="#333" stroke-width="1"/>
+  <!-- Bumper strip -->
+  <rect x="15" y="68" width="170" height="5" fill="#666"/>
+  <!-- Front wheel -->
+  <circle cx="48" cy="85" r="14" fill="#333"/>
+  <circle cx="48" cy="85" r="7" fill="#888"/>
+  <!-- Rear wheel -->
+  <circle cx="155" cy="85" r="14" fill="#333"/>
+  <circle cx="155" cy="85" r="7" fill="#888"/>
+  <!-- Headlight -->
+  <rect x="12" y="50" width="5" height="10" rx="1" fill="#ff0"/>
+  <!-- Tail light -->
+  <rect x="183" y="50" width="5" height="10" rx="1" fill="#f33"/>
+  <!-- Roof -->
+  <rect x="15" y="22" width="170" height="5" rx="2" fill="#d09010"/>
+</svg>

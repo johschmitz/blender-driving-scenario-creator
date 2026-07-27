@@ -96,12 +96,45 @@ mapping_road_mark_color = {
     'yellow': xodr.RoadMarkColor.yellow,
 }
 
+
+def _resolve_vehicle_category(category_key, *candidate_names):
+    for name in candidate_names:
+        if hasattr(xosc.VehicleCategory, name):
+            return getattr(xosc.VehicleCategory, name)
+
+    # Keep addon load robust across scenariogeneration versions.
+    # If a category is missing, fall back to a generic vehicle enum.
+    if hasattr(xosc.VehicleCategory, 'car'):
+        print("[DSC] VehicleCategory '{}' not available (checked: {}). Falling back to 'car'."
+              .format(category_key, ', '.join(candidate_names)))
+        return xosc.VehicleCategory.car
+
+    # Last-resort fallback for very old/unknown enum layouts.
+    first_attr = next(
+        (name for name in dir(xosc.VehicleCategory)
+         if not name.startswith('_') and not callable(getattr(xosc.VehicleCategory, name))),
+        None)
+    if first_attr is not None:
+        print("[DSC] VehicleCategory '{}' not available. Falling back to '{}'."
+              .format(category_key, first_attr))
+        return getattr(xosc.VehicleCategory, first_attr)
+
+    raise AttributeError("VehicleCategory has no usable enum members.")
+
+
 mapping_vehicle_type = {
-    'car': xosc.VehicleCategory.car,
+    'car': _resolve_vehicle_category('car', 'car'),
+    'motorcycle': _resolve_vehicle_category('motorcycle', 'motorcycle', 'motorbike'),
+    'bicycle': _resolve_vehicle_category('bicycle', 'bicycle'),
+    'bus': _resolve_vehicle_category('bus', 'bus'),
+    'heavyTruck': _resolve_vehicle_category('heavyTruck', 'heavyTruck', 'heavy_truck', 'truck'),
+    'van': _resolve_vehicle_category('van', 'van', 'car'),
 }
 
 mapping_pedestrian_type = {
     'pedestrian': xosc.PedestrianCategory.pedestrian,
+    'adult': xosc.PedestrianCategory.pedestrian,
+    'child': xosc.PedestrianCategory.pedestrian,
 }
 
 mapping_contact_point = {

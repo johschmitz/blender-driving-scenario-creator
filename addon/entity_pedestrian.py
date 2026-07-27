@@ -27,8 +27,21 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
     bl_options = {'REGISTER', 'UNDO'}
 
     entity_type = 'pedestrian'
-    # There are multiple types of pedestrians, this is the default one
-    entity_subtype = 'pedestrian'
+    entity_subtype = 'adult'
+
+    pedestrian_category: bpy.props.EnumProperty(
+        name='Pedestrian category',
+        description='OpenSCENARIO pedestrian category',
+        items=(
+            ('adult', 'Adult', 'Create an adult pedestrian entity'),
+            ('child', 'Child', 'Create a child pedestrian entity'),
+        ),
+        default='adult',
+    )
+
+    def invoke(self, context, event):
+        self.entity_subtype = self.pedestrian_category
+        return super().invoke(context, event)
 
     def get_vertices_edges_faces(self):
         '''Build a recognisable low-poly human figure.
@@ -104,5 +117,11 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
         # Left arm
         _tbox(-0.05, 0.03,  0.24,  0.32, 0.72,
               -0.07, 0.05,  0.24,  0.34, 1.38)
+
+        # Keep adult as the reference model and scale child down.
+        if self.entity_subtype == 'child':
+            child_scale = 0.72
+            verts = [(x * child_scale, y * child_scale, z * child_scale)
+                     for x, y, z in verts]
 
         return verts, edges, faces

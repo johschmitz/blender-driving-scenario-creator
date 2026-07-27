@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">
+  <!-- Car: sedan side view -->
+  <!-- Body -->
+  <path d="M30,75 L30,55 L55,55 L70,35 L140,35 L160,55 L175,55 L175,75 Z" fill="#444" stroke="#222" stroke-width="2"/>
+  <!-- Windows -->
+  <path d="M76,37 L65,53 L95,53 L95,37 Z" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <path d="M98,37 L98,53 L138,53 L130,37 Z" fill="#8cf" stroke="#333" stroke-width="1"/>
+  <!-- Front wheel -->
+  <circle cx="55" cy="80" r="15" fill="#333"/>
+  <circle cx="55" cy="80" r="8" fill="#888"/>
+  <!-- Rear wheel -->
+  <circle cx="150" cy="80" r="15" fill="#333"/>
+  <circle cx="150" cy="80" r="8" fill="#888"/>
+  <!-- Headlight -->
+  <rect x="27" y="58" width="5" height="8" rx="1" fill="#ff0"/>
+  <!-- Tail light -->
+  <rect x="173" y="58" width="4" height="8" rx="1" fill="#f33"/>
+</svg>

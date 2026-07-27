@@ -5,3 +5,4 @@ __pycache__/
 .vscode/
 addon/signs/*/*.png
 addon/stencils/*/*.png
+addon/entities/*/*.png

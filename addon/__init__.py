@@ -22,11 +22,8 @@ from . export import DSC_OT_export
 from . junction_four_way import DSC_OT_junction_four_way
 from . modal_junction_generic import DSC_OT_junction_generic
 from . junction_connecting_road import DSC_OT_junction_connecting_road
-from . entity_bicycle import DSC_OT_entity_bicycle
-from . entity_car import DSC_OT_entity_car
-from . entity_motorbike import DSC_OT_entity_motorbike
+from . entity_vehicle import DSC_OT_entity_vehicle
 from . entity_pedestrian import DSC_OT_entity_pedestrian
-from . entity_truck import DSC_OT_entity_truck
 from . road_arc import DSC_OT_road_arc
 from . popup_road_properties import (DSC_OT_popup_road_properties, DSC_OT_save_cross_section_preset,
     DSC_OT_delete_cross_section_preset, DSC_OT_copy_cross_section_preset_name)
@@ -42,6 +39,8 @@ from . scenario_object_move import DSC_OT_scenario_object_move
 from . entity_properties import DSC_entity_properties_vehicle
 from . entity_properties import DSC_entity_properties_pedestrian
 from . popup_entity_properties import DSC_OT_popup_entity_properties
+from . popup_entity_properties import DSC_OT_popup_entity_vehicle_types
+from . popup_entity_properties import DSC_OT_popup_entity_pedestrian_types
 from . road_object_sign_properties import DSC_road_object_sign_property_item
 from . road_object_sign_properties import DSC_road_object_sign_properties
 from . road_object_stencil_properties import DSC_road_object_stencil_property_item
@@ -230,11 +229,11 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box = layout.box()
         box.label(text='Objects')
         row = box.row(align=True)
-        row.operator('dsc.popup_entity_properties', text='Car').operator = 'entity_vehicle_car'
-        # TODO implement more vehicle types
+        row.operator('dsc.popup_entity_vehicle_types', text='Vehicles',
+            icon_value=dsc_custom_icons['entity_vehicle_car'].icon_id)
         row = box.row(align=True)
-        row.operator('dsc.popup_entity_properties', text='Pedestrian').operator = 'entity_pedestrian_pedestrian'
-        # TODO implement more pedestrian types
+        row.operator('dsc.popup_entity_pedestrian_types', text='Pedestrians',
+            icon_value=dsc_custom_icons['entity_pedestrian_adult'].icon_id)
         row = box.row(align=True)
         row.operator('dsc.scenario_object_move', text='Move object', icon='ORIENTATION_GIMBAL')
 
@@ -292,11 +291,8 @@ classes = (
     DSC_OT_junction_four_way,
     DSC_OT_junction_generic,
     DSC_OT_junction_connecting_road,
-    DSC_OT_entity_bicycle,
-    DSC_OT_entity_car,
-    DSC_OT_entity_motorbike,
+    DSC_OT_entity_vehicle,
     DSC_OT_entity_pedestrian,
-    DSC_OT_entity_truck,
     DSC_OT_road_arc,
     DSC_OT_popup_road_properties,
     DSC_OT_save_cross_section_preset,
@@ -314,6 +310,8 @@ classes = (
     DSC_road_properties,
     DSC_entity_properties_vehicle,
     DSC_entity_properties_pedestrian,
+    DSC_OT_popup_entity_vehicle_types,
+    DSC_OT_popup_entity_pedestrian_types,
     DSC_OT_popup_entity_properties,
     DSC_road_object_sign_property_item,
     DSC_road_object_sign_properties,
@@ -358,6 +356,9 @@ def register():
     dsc_custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_clothoid_spline',
                           os.path.join(icons_dir, 'trajectory_clothoid_spline.png'), 'IMAGE')
+    entities_dir = os.path.join(os.path.dirname(__file__), 'entities')
+    dsc_custom_icons.load('entity_vehicle_car', os.path.join(entities_dir, 'vehicles', 'entity_vehicle_car_preview.png'), 'IMAGE')
+    dsc_custom_icons.load('entity_pedestrian_adult', os.path.join(entities_dir, 'pedestrians', 'entity_pedestrian_adult_preview.png'), 'IMAGE')
 
     # Create a new preview collection to use in other modules
     dsc_road_sign_previews = bpy.utils.previews.new()
