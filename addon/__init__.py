@@ -37,6 +37,12 @@ from . road_clothoid_triple import DSC_OT_road_clothoid_triple
 from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
+from . trajectory_properties import DSC_trajectory_vertex_property_item
+from . trajectory_properties import DSC_trajectory_properties
+from . popup_trajectory_polyline_editor import DSC_OT_popup_trajectory_polyline_editor
+from . popup_trajectory_polyline_editor import DSC_OT_pick_trajectory_polyline_editor
+from . popup_trajectory_polyline_editor import DSC_OT_trajectory_vertex_focus_in_view
+from . popup_trajectory_polyline_editor import DSC_OT_trajectory_enter_edit_mode
 from . scenario_object_move import DSC_OT_scenario_object_move
 from . entity_properties import DSC_entity_properties_vehicle
 from . entity_properties import DSC_entity_properties_pedestrian
@@ -236,6 +242,7 @@ class DSC_PT_panel_create(bpy.types.Panel):
         box.label(text='Trajectories')
         row = box.row(align=True)
         row.operator('dsc.trajectory_polyline', icon_value=dsc_custom_icons['trajectory_polyline'].icon_id)
+        row.operator('dsc.pick_trajectory_polyline_editor', text='', icon='GREASEPENCIL')
         row = box.row(align=True)
         row.operator('dsc.trajectory_nurbs', icon_value=dsc_custom_icons['trajectory_nurbs'].icon_id)
 
@@ -276,6 +283,8 @@ class DSC_Properties(bpy.types.PropertyGroup):
         name='entity_properties_vehicle', type=DSC_entity_properties_vehicle)
     entity_properties_pedestrian: bpy.props.PointerProperty(
         name='entity_properties_pedestrian', type=DSC_entity_properties_pedestrian)
+    trajectory_properties: bpy.props.PointerProperty(
+        name='trajectory_properties', type=DSC_trajectory_properties)
 
 classes = (
     DSC_AddonPreferences,
@@ -300,9 +309,15 @@ classes = (
     DSC_OT_road_straight,
     DSC_OT_trajectory_nurbs,
     DSC_OT_trajectory_polyline,
+    DSC_OT_trajectory_vertex_focus_in_view,
+    DSC_OT_trajectory_enter_edit_mode,
+    DSC_OT_pick_trajectory_polyline_editor,
+    DSC_OT_popup_trajectory_polyline_editor,
     DSC_OT_scenario_object_move,
     DSC_PT_panel_create,
     DSC_road_properties,
+    DSC_trajectory_vertex_property_item,
+    DSC_trajectory_properties,
     DSC_entity_properties_vehicle,
     DSC_entity_properties_pedestrian,
     DSC_OT_popup_entity_properties,
