@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-08-05
+
+### Added
+- esmini preview information for macOS in README regarding Gatekeeper
+
+### Changed
+- Autobahn middle lanes now use shoulder lane type instead of median
+- Wider road properties popup to display all fields properly
+- README screenshot
+
+### Fixed
+- Lane snapping support for all drivable lane types
+
 ## [0.33.1] - 2026-05-14
 
 ### Fixed
@@ -502,7 +515,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.1...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.1...v0.34.0
 [0.33.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.31.0...v0.32.0
