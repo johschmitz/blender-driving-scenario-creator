@@ -54,6 +54,7 @@ from . popup_road_object_sign_properties import DSC_OT_popup_road_object_sign_pr
 from . popup_road_object_stencil_properties import DSC_OT_popup_road_object_stencil_properties
 from . popup_road_object_traffic_light_properties import DSC_OT_popup_road_object_traffic_light_properties
 from . road_object_stop_line_operator import DSC_OT_road_object_stop_line
+from . road_object_parking_spots_operator import DSC_OT_road_object_parking_spots
 from . esmini_preview_operators import DSC_OT_esmini_preview_start
 from . esmini_preview_operators import DSC_OT_esmini_preview_stop
 from . esmini_preview_operators import DSC_OT_esmini_preview_step
@@ -219,6 +220,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.road_object_stop_line', text='Stop line',
             icon_value=dsc_custom_icons['road_object_stop_line'].icon_id)
         row = box.row(align=True)
+        row.operator('dsc.road_object_parking_spots', text='Parking spots',
+            icon_value=dsc_custom_icons['road_object_parking_spots'].icon_id)
+        row = box.row(align=True)
         row.operator('dsc.popup_road_object_stencil_properties', text='Stencil',
             icon_value=dsc_custom_icons['road_object_stencil'].icon_id).operator = 'road_object_stencil'
 
@@ -323,6 +327,7 @@ classes = (
     DSC_OT_popup_road_object_stencil_properties,
     DSC_OT_popup_road_object_traffic_light_properties,
     DSC_OT_road_object_stop_line,
+    DSC_OT_road_object_parking_spots,
     DSC_OT_esmini_preview_start,
     DSC_OT_esmini_preview_step,
     DSC_OT_esmini_open_preferences,
@@ -347,6 +352,7 @@ def register():
     dsc_custom_icons.load('road_object_sign', os.path.join(icons_dir, 'road_object_sign.png'), 'IMAGE')
     dsc_custom_icons.load('road_object_traffic_light', os.path.join(icons_dir, 'road_object_traffic_light.png'), 'IMAGE')
     dsc_custom_icons.load('road_object_stop_line', os.path.join(icons_dir, 'road_object_stop_line.png'), 'IMAGE')
+    dsc_custom_icons.load('road_object_parking_spots', os.path.join(icons_dir, 'road_object_parking_spots.png'), 'IMAGE')
     dsc_custom_icons.load('road_object_stencil', os.path.join(icons_dir, 'road_object_stencil.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')

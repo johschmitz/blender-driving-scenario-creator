@@ -23,6 +23,35 @@ from math import pi, copysign, isfinite
 import pathlib
 import subprocess
 import json
+import xml.etree.ElementTree as ET
+
+
+class DSC_ParkingSpaceObject(xodr.Object):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.marking_corner_pairs = []
+
+    def add_marking(self, corner_start, corner_end, width=0.12):
+        self.marking_corner_pairs.append((corner_start, corner_end, width))
+
+    def get_element(self):
+        element = super().get_element()
+        markings = ET.SubElement(element, 'markings')
+        for corner_start, corner_end, width in self.marking_corner_pairs:
+            marking = ET.SubElement(markings, 'marking', {
+                'width': str(width),
+                'color': 'white',
+                'zOffset': '0.005',
+                'spaceLength': '0.0',
+                'lineLength': '1.0',
+                'startOffset': '0.0',
+                'stopOffset': '0.0',
+            })
+            ET.SubElement(marking, 'cornerReference', {'id': str(corner_start)})
+            ET.SubElement(marking, 'cornerReference', {'id': str(corner_end)})
+        ET.SubElement(element, 'parkingSpace', {'access': 'all'})
+        return element
 
 from scenariogeneration.xosc.position import ClothoidSpline, ClothoidSplineSegment
 
@@ -550,7 +579,75 @@ class DSC_OT_export(bpy.types.Operator):
                     print('Add road with ID', obj['id_odr'])
                     odr.add_road(road)
                     roads.append(road)
-                if obj.name.startswith('sign') or obj.name.startswith('stop_line') or obj.name.startswith('stencil'):
+                if obj.name.startswith('parking_spots'):
+                    road_obj = helpers.get_object_xodr_by_id(obj['id_road'])
+                    if road_obj is None and isinstance(obj['id_road'], str):
+                        road_obj = bpy.data.objects.get(obj['id_road'])
+                    road_id = road_obj['id_odr'] if road_obj is not None else obj['id_road']
+                    road_to_attach = self.get_road_by_id(roads, road_id)
+                    if road_to_attach is None or road_obj is None:
+                        self.report({'WARNING'}, 'Parking spots {} reference missing road {}'.format(
+                            obj.name, obj['id_road']))
+                        continue
+
+                    lane_side = obj['lane_side']
+                    lane_index = obj['lane_index']
+                    lane_inset = obj['lane_inset']
+                    spot_length = obj['length']
+                    num_spots = obj['num_spots']
+                    total_length = road_obj['geometry_total_length']
+                    center_s = obj['position_s']
+                    start_s = max(0.0, center_s - num_spots * spot_length / 2.0)
+                    end_s = min(total_length, start_s + num_spots * spot_length)
+                    start_s = max(0.0, end_s - num_spots * spot_length)
+
+                    def lane_edges(s):
+                        widths_start = road_obj['lanes_left_widths_start'] if lane_side == 'left' else road_obj['lanes_right_widths_start']
+                        widths_end = road_obj['lanes_left_widths_end'] if lane_side == 'left' else road_obj['lanes_right_widths_end']
+                        widths = helpers._interpolate_lane_widths(
+                            widths_start, widths_end, s, total_length)
+                        lane_offset = helpers.calculate_lane_offset(
+                            s, road_obj['lane_offset_coefficients'], total_length)
+                        width = widths[lane_index]
+                        if lane_side == 'left':
+                            inner = lane_offset + sum(widths[:lane_index])
+                            return inner + lane_inset, inner + width - lane_inset
+                        inner = lane_offset - sum(widths[:lane_index])
+                        return inner - lane_inset, inner - width + lane_inset
+
+                    for spot_index in range(num_spots):
+                        s0 = start_s + spot_index * spot_length
+                        s1 = min(start_s + (spot_index + 1) * spot_length, end_s)
+                        t0, t1 = lane_edges(s0)
+                        t2, t3 = lane_edges(s1)
+                        spot_s = (s0 + s1) / 2.0
+                        spot_t = (t0 + t1 + t2 + t3) / 4.0
+                        spot_width = abs((t1 - t0 + t3 - t2) / 2.0)
+                        parking_space = DSC_ParkingSpaceObject(
+                            s=spot_s,
+                            t=spot_t,
+                            Type='parkingSpace',
+                            subtype='openSpace',
+                            name='parkingSpace_{}_{}'.format(obj['id_odr'], spot_index),
+                            id='{}_{}'.format(obj['id_odr'], spot_index),
+                            zOffset=0.0,
+                            orientation=xodr.Orientation.positive if lane_side == 'left' else xodr.Orientation.negative,
+                            length=s1 - s0,
+                            width=spot_width,
+                            height=0.0,
+                            hdg=0.0)
+                        outline = xodr.Outline(closed=True, id=spot_index)
+                        outline.add_corner(xodr.CornerRoad(s0, t0, 0.001, 0.0, id=0))
+                        outline.add_corner(xodr.CornerRoad(s0, t1, 0.001, 0.0, id=1))
+                        outline.add_corner(xodr.CornerRoad(s1, t3, 0.001, 0.0, id=2))
+                        outline.add_corner(xodr.CornerRoad(s1, t2, 0.001, 0.0, id=3))
+                        parking_space.add_outline(outline)
+                        parking_space.add_marking(0, 1)
+                        parking_space.add_marking(1, 2)
+                        parking_space.add_marking(2, 3)
+                        parking_space.add_marking(3, 0)
+                        road_to_attach.add_object(parking_space)
+                elif obj.name.startswith('sign') or obj.name.startswith('stop_line') or obj.name.startswith('stencil'):
                     road_to_attach = self.get_road_by_id(roads, obj['id_road'])
                     print("Add signal with ID", obj['id_odr'])
                     # Calculate orientation based on road side
