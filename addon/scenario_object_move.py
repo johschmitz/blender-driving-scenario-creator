@@ -85,7 +85,7 @@ class DSC_OT_scenario_object_move(bpy.types.Operator):
 
         target_point = point.copy()
         heading_lane = None
-        if event.shift and road_obj is not None:
+        if not event.shift and not event.alt and road_obj is not None:
             lane_center_point, lane_heading = helpers.get_lane_center_from_road_surface_hit(road_obj, point)
             if lane_center_point is not None:
                 target_point = lane_center_point
@@ -133,7 +133,8 @@ class DSC_OT_scenario_object_move(bpy.types.Operator):
     def modal(self, context, event):
         if self.state == 'INIT':
             context.workspace.status_text_set(
-                'LEFTMOUSE: select object and place repeatedly, hold SHIFT: lane center and orientation snap, '
+                'LEFTMOUSE: select object and place repeatedly, lane center and orientation snap, '
+                'hold SHIFT: disable lane snapping, '
                 'hold ALT: heading-only mode, '
                 'RIGHTMOUSE: cancel current move / exit from selection, ESC: exit, '
                 'ALT+MIDDLEMOUSE: move view center'

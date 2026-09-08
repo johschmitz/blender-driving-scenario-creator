@@ -62,7 +62,8 @@ class DSC_OT_entity(DSC_OT_modal_two_point_base):
         if self.state == 'INIT':
             context.workspace.status_text_set(
                 'LEFTMOUSE: place entity, '
-                'hold SHIFT: lane center and orientation snap, '
+                'lane center and orientation snap, '
+                'hold SHIFT: disable lane snapping, '
                 'hold ALT: heading-only mode, '
                 'ALT+MIDDLEMOUSE: move view center, '
                 'RIGHTMOUSE/ESCAPE: exit'
@@ -108,8 +109,8 @@ class DSC_OT_entity(DSC_OT_modal_two_point_base):
 
             lane_heading = None
 
-            # Lane-center snapping with SHIFT
-            if (event.shift
+            # Lane-center snapping is enabled by default; SHIFT and ALT disable it.
+            if (not event.shift and not event.alt
                     and self.params_snap['hit_type'] == 'road_surface'):
                 road_obj = bpy.data.objects.get(self.params_snap['id_obj'])
                 if road_obj is not None:
