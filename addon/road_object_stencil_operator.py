@@ -24,6 +24,7 @@ class DSC_OT_road_object_stencil(DSC_OT_modal_road_object_base):
     params = {}
 
     reference_object_mode = False
+    lane_surface_snap = True
 
     # Do not snap to other xodr or xosc objects in scene
     # TODO snap to road contact points, requires a lot of work

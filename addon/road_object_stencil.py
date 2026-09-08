@@ -465,11 +465,6 @@ class road_object_stencil:
         matrix_world = mat_translation @ mat_rotation
         # Create blender mesh
         if wireframe:
-            mat_rotation_inverted = Matrix.Rotation(-heading, 4, 'Z')
-            point_ref_line_rel = mat_rotation_inverted @ (params_input['point_ref_line'] - origin_point)
-            vertices.append((0.0, 0.0, 0.0))
-            vertices.append((point_ref_line_rel.x, point_ref_line_rel.y, 0.0))
-            edges.append((len(vertices)-2, len(vertices)-1))
             faces = []
         mesh = bpy.data.meshes.new('temp')
         mesh.from_pydata(vertices, edges, faces)
