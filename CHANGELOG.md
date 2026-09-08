@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-08
+
+### Added
+- Clothoid spline trajectory tool
+- Lanel typ parking
+- First version of parking spot tool for parallel parking
+- Lane snapping for stop lines and road mark stencils
+
+### Changed
+- SHIFT modifier behavior for vehicle placement and movement lane snapping
+
+### Fixed
+- ALT heading modifier wrongly snapping to lanes
+
 ## [0.34.0] - 2026-08-05
 
 ### Added
@@ -515,7 +529,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.1...v0.34.0
 [0.33.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.32.0...v0.33.0
