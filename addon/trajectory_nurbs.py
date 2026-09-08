@@ -26,12 +26,10 @@ class DSC_OT_trajectory_nurbs(DSC_OT_modal_trajectory_base):
     def create_trajectory_temp(self, context):
         self.trajectory = bpy.data.objects.get('trajectory_temp')
         if self.trajectory is not None:
-            if context.scene.objects.get('trajectory_temp') is None:
-                context.scene.collection.objects.link(self.trajectory)
-        else:
-            curve = self.get_curve()
-            self.trajectory = bpy.data.objects.new('trajectory_temp', curve)
-            helpers.link_object_openscenario(context, self.trajectory, subcategory='trajectories')
+            bpy.data.objects.remove(self.trajectory, do_unlink=True)
+        curve = self.get_curve()
+        self.trajectory = bpy.data.objects.new('trajectory_temp', curve)
+        helpers.link_object_openscenario(context, self.trajectory, subcategory='trajectories')
         # Shift origin to start point below vehicle
         self.trajectory.location = self.point_start
 
@@ -47,13 +45,14 @@ class DSC_OT_trajectory_nurbs(DSC_OT_modal_trajectory_base):
         self.trajectory.data = curve
 
     def get_curve(self):
+        points, _ = self.get_preview_points()
         curve = bpy.data.curves.new('curve_nurbs', 'CURVE')
         curve.dimensions = '3D'
 
         nurbs = curve.splines.new('NURBS')
         nurbs.use_endpoint_u = True
-        nurbs.points.add(len(self.trajectory_points)-1)
-        for idx, point in enumerate(self.trajectory_points):
+        nurbs.points.add(len(points)-1)
+        for idx, point in enumerate(points):
             x, y, z = point - self.point_start
             nurbs.points[idx].co = (x, y, z, 1)
         nurbs.order_u = 3

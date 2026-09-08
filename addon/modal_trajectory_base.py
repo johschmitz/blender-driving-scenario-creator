@@ -12,6 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import json
 
 from . import helpers
 
@@ -25,6 +26,8 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
     trajectory_points = []
     trajectory_owner_name = None
     point_start = None
+    trajectory_backwards = []
+    trajectory_heading_end_extra = []
 
     @classmethod
     def poll(cls, context):
@@ -35,6 +38,7 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
         obj_name = 'trajectory' + '_' + str(id_obj)
         self.trajectory.name = obj_name
         self.set_xosc_properties()
+        self.trajectory['trajectory_backwards'] = json.dumps(self.trajectory_backwards)
 
     def set_xosc_properties(self):
         '''
@@ -61,12 +65,28 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
         '''
         raise NotImplementedError()
 
+    def get_preview_points(self):
+        points = list(self.trajectory_points)
+        backwards = list(self.trajectory_backwards)
+        if self.preview_active and self.trajectory is not None:
+            points.append(self.selected_point.copy())
+            backwards.append(bool(self.preview_backwards))
+        return points, backwards
+
+    def get_preview_heading_end_extra(self):
+        heading_end_extra = list(self.trajectory_heading_end_extra)
+        if self.preview_active and self.trajectory is not None:
+            heading_end_extra.append(self.preview_heading_end_extra)
+        return heading_end_extra
+
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
             context.workspace.status_text_set(
                 'LEFTMOUSE: select entity then place points, '
                 'RIGHTMOUSE: go back, '
+                'hold ALT: reverse segment, '
+                'SHIFT+WHEEL: adjust clothoid end curvature, '
                 'ALT+MIDDLEMOUSE: move view center, '
                 'RETURN/SPACE: finish, '
                 'ESCAPE: exit'
@@ -98,6 +118,9 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             if event.ctrl and self.params_snap['hit_type'] is not None:
                 bpy.ops.view3d.snap_cursor_to_grid()
                 self.selected_point = context.scene.cursor.location
+            if self.state == 'SELECT_POINT':
+                self.preview_backwards = event.alt
+                self.update_trajectory(context)
         # Select object and trajectory points
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
@@ -105,19 +128,28 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
                     if self.params_snap['hit_type'] is not None:
                         self.point_start = self.selected_point
                         self.trajectory_points.append(self.selected_point.copy())
+                        self.trajectory_backwards.append(False)
+                        self.trajectory_heading_end_extra.append(0.0)
                         self.create_trajectory_temp(context)
                         self.trajectory_owner_name = self.params_snap['id_obj']
+                        self.trajectory_heading_start = self.params_snap['heading']
                         helpers.select_activate_object(context, self.trajectory)
                         self.state = 'SELECT_POINT'
+                        self.preview_active = True
                         return {'RUNNING_MODAL'}
                     else:
                         self.report({'INFO'}, "Select dynamic OpenSCENARIO object.")
                 if self.state == 'SELECT_POINT':
                     self.trajectory_points.append(self.selected_point.copy())
+                    self.trajectory_backwards.append(event.alt)
+                    self.trajectory_heading_end_extra.append(self.preview_heading_end_extra)
+                    self.preview_heading_end_extra = 0.0
                     self.update_trajectory(context)
                     return {'RUNNING_MODAL'}
         elif event.type in {'RET'} or event.type in {'SPACE'}:
             if self.state == 'SELECT_POINT':
+                self.preview_active = False
+                self.update_trajectory(context)
                 self.make_trajectory_final(context)
                 self.clean_up(context)
                 return {'FINISHED'}
@@ -127,6 +159,8 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             if self.state == 'SELECT_POINT':
                 if len(self.trajectory_points) > 0:
                     self.trajectory_points.pop()
+                    self.trajectory_backwards.pop()
+                    self.trajectory_heading_end_extra.pop()
                 if len(self.trajectory_points) == 0:
                     self.remove_trajectory_temp(context)
                     self.state = 'SELECT_OBJECT'
@@ -166,9 +200,17 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             return {'FINISHED'}
         # Zoom
         elif event.type in {'WHEELUPMOUSE'}:
-            bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
+            if event.shift and self.state == 'SELECT_POINT':
+                self.preview_heading_end_extra = min(1.0, self.preview_heading_end_extra + 0.2)
+                self.update_trajectory(context)
+            else:
+                bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
         elif event.type in {'WHEELDOWNMOUSE'}:
-            bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
+            if event.shift and self.state == 'SELECT_POINT':
+                self.preview_heading_end_extra = max(-1.0, self.preview_heading_end_extra - 0.2)
+                self.update_trajectory(context)
+            else:
+                bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
         elif event.type in {'MIDDLEMOUSE'}:
             if event.alt:
                 if event.value == 'RELEASE':
@@ -182,6 +224,11 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
         # possible states: {'INIT','SELECT_OBJECT', 'SELECT_POINT'}
         self.state = 'INIT'
         self.trajectory_points.clear()
+        self.trajectory_backwards.clear()
+        self.trajectory_heading_end_extra.clear()
+        self.preview_backwards = False
+        self.preview_heading_end_extra = 0.0
+        self.preview_active = False
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}

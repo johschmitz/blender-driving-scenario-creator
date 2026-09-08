@@ -18,10 +18,13 @@ from scenariogeneration import xosc
 from scenariogeneration import xodr
 
 from mathutils import Vector
-from math import pi, copysign
+from math import pi, copysign, isfinite
 
 import pathlib
 import subprocess
+import json
+
+from scenariogeneration.xosc.position import ClothoidSpline, ClothoidSplineSegment
 
 mapping_lane_type = {
     'driving': xodr.LaneType.driving,
@@ -382,6 +385,9 @@ class DSC_OT_export(bpy.types.Operator):
                             # Create 3 OpenDRIVE geometries
                             subsections = obj['geometry_subsections'][idx_section]
                             for idx_subsection in range(3):
+                                if not isfinite(subsections[idx_subsection]['length']) \
+                                    or subsections[idx_subsection]['length'] <= 1e-9:
+                                    continue
                                 geometry = xodr.Spiral(subsections[idx_subsection]['curvature_start'],
                                                        subsections[idx_subsection]['curvature_end'],
                                                        length=subsections[idx_subsection]['length'])
@@ -393,6 +399,9 @@ class DSC_OT_export(bpy.types.Operator):
                                 length += subsections[idx_subsection]['length']
                         else:
                             # Create 1 OpenDRIVE geometry
+                            if not isfinite(geometry_section['length']) \
+                                    or geometry_section['length'] <= 1e-9:
+                                continue
                             if geometry_section['curve_type'] == 'line':
                                 geometry = xodr.Line(geometry_section['length'])
                             elif geometry_section['curve_type'] == 'arc':
@@ -652,6 +661,9 @@ class DSC_OT_export(bpy.types.Operator):
                                                                 h_start=obj_jcr['geometry_subsections'][0][0]['heading_start'],)
                                     length = 0
                                     for idx in range(3):
+                                        if not isfinite(obj_jcr['geometry_subsections'][0][idx]['length']) \
+                                            or obj_jcr['geometry_subsections'][0][idx]['length'] <= 1e-9:
+                                            continue
                                         geometry = xodr.Spiral(obj_jcr['geometry_subsections'][0][idx]['curvature_start'],
                                                                obj_jcr['geometry_subsections'][0][idx]['curvature_end'],
                                                                length=obj_jcr['geometry_subsections'][0][idx]['length'],)
@@ -763,12 +775,12 @@ class DSC_OT_export(bpy.types.Operator):
         if helpers.collection_exists(['OpenSCENARIO','trajectories']):
             for obj in bpy.data.collections['OpenSCENARIO'].children['trajectories'].objects:
                 if 'dsc_type' in obj and obj['dsc_type'] == 'trajectory':
+                    speed_kmh = helpers.get_obj_custom_property('OpenSCENARIO', 'entities',
+                        obj['owner_name'], 'speed_initial')
+                    if speed_kmh == None:
+                        self.report({'ERROR'}, 'Trajectory ' + obj.name + ' owner not found!')
+                        break
                     if obj['dsc_subtype'] == 'polyline':
-                        speed_kmh = helpers.get_obj_custom_property('OpenSCENARIO', 'entities',
-                            obj['owner_name'], 'speed_initial')
-                        if speed_kmh == None:
-                            self.report({'ERROR'}, 'Trajectory ' + obj.name + ' owner not found!')
-                            break
                         times, positions = self.calculate_trajectory_values(obj, helpers.kmh_to_ms(speed_kmh))
                         shape = xosc.Polyline(times, positions)
                     if obj['dsc_subtype'] == 'nurbs':
@@ -787,6 +799,29 @@ class DSC_OT_export(bpy.types.Operator):
                                 u += 1
                             knots.append(u)
                         shape.add_knots(knots)
+                    if obj['dsc_subtype'] == 'clothoid_spline':
+                        segment_data = json.loads(obj['clothoid_segments'])
+                        start_global = obj.matrix_world @ Vector((0.0, 0.0, 0.0))
+                        segments = []
+                        time_end = 0.0
+                        for idx, data in enumerate(segment_data):
+                            time_end += data['length'] / helpers.kmh_to_ms(speed_kmh)
+                            position_start = None
+                            if 'position_start' in data:
+                                position_start = [xosc.WorldPosition(
+                                    *(obj.matrix_world @ Vector(data['position_start'])),
+                                    h=data['heading'])]
+                            elif idx == 0:
+                                position_start = [xosc.WorldPosition(
+                                    start_global.x, start_global.y, start_global.z,
+                                    data['heading'])]
+                            segments.append(ClothoidSplineSegment(
+                                curvature_start=data['curvature_start'],
+                                curvature_end=data['curvature_end'],
+                                length=data['length'],
+                                h_offset=0.0,
+                                position_start=position_start))
+                        shape = ClothoidSpline(segments=segments, time_end=time_end)
                     trajectory = xosc.Trajectory(obj.name,False)
                     trajectory.add_shape(shape)
                     action = xosc.FollowTrajectoryAction(trajectory,xosc.FollowingMode.follow,
@@ -821,7 +856,7 @@ class DSC_OT_export(bpy.types.Operator):
         catalogs.add_catalog('VehicleCatalog','../catalogs/vehicles')
         catalogs.add_catalog('PedestrianCatalog','../catalogs/pedestrians')
         scenario = xosc.Scenario('dsc_scenario','blender_dsc',xosc.ParameterDeclarations(),
-            entities,storyboard,road_network,catalogs)
+            entities,storyboard,road_network,catalogs, osc_minor_version=3)
         scenario.write_xml(str(xosc_path))
 
     def get_element_type_by_id(self, id):
@@ -1095,6 +1130,9 @@ class DSC_OT_export(bpy.types.Operator):
         return [ids_in, ids_out]
 
     def calculate_trajectory_values(self, obj, speed):
+        backwards = []
+        if 'trajectory_backwards' in obj:
+            backwards = json.loads(obj['trajectory_backwards'])
         times = [0]
         for idx in range(len(obj.data.vertices)-1):
             distance = (obj.data.vertices[idx].co - obj.data.vertices[idx+1].co).length
@@ -1120,6 +1158,8 @@ class DSC_OT_export(bpy.types.Operator):
                 vert_global_last = obj.matrix_world @ obj.data.vertices[idx-1].co
                 vec_hdg_before = Vector(vert_global - vert_global_last)
                 heading = vec_hdg_before.to_2d().angle_signed(Vector((1.0, 0.0)))
+            if idx < len(backwards) and backwards[idx]:
+                heading += pi
             positions.append(xosc.WorldPosition(vert_global.x, vert_global.y, vert_global.z, heading))
         return times, positions
 

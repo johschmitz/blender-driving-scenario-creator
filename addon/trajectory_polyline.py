@@ -26,12 +26,10 @@ class DSC_OT_trajectory_polyline(DSC_OT_modal_trajectory_base):
     def create_trajectory_temp(self, context):
         self.trajectory = bpy.data.objects.get('trajectory_temp')
         if self.trajectory is not None:
-            if context.scene.objects.get('trajectory_temp') is None:
-                context.scene.collection.objects.link(self.trajectory)
-        else:
-            mesh = self.get_mesh()
-            self.trajectory = bpy.data.objects.new('trajectory_temp', mesh)
-            helpers.link_object_openscenario(context, self.trajectory, subcategory='trajectories')
+            bpy.data.objects.remove(self.trajectory, do_unlink=True)
+        mesh = self.get_mesh()
+        self.trajectory = bpy.data.objects.new('trajectory_temp', mesh)
+        helpers.link_object_openscenario(context, self.trajectory, subcategory='trajectories')
         # Shift origin to start point below vehicle
         self.trajectory.location = self.point_start
 
@@ -47,7 +45,8 @@ class DSC_OT_trajectory_polyline(DSC_OT_modal_trajectory_base):
         helpers.replace_mesh(self.trajectory, mesh)
 
     def get_mesh(self):
-        vertices = [point - self.point_start for point in self.trajectory_points]
+        points, _ = self.get_preview_points()
+        vertices = [point - self.point_start for point in points]
         edges = []
         for idx in range(len(vertices)-1):
             edges.append([idx, idx+1])

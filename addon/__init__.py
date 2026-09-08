@@ -37,6 +37,7 @@ from . road_clothoid_triple import DSC_OT_road_clothoid_triple
 from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
+from . trajectory_clothoid_spline import DSC_OT_trajectory_clothoid_spline
 from . scenario_object_move import DSC_OT_scenario_object_move
 from . entity_properties import DSC_entity_properties_vehicle
 from . entity_properties import DSC_entity_properties_pedestrian
@@ -238,6 +239,9 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.trajectory_polyline', icon_value=dsc_custom_icons['trajectory_polyline'].icon_id)
         row = box.row(align=True)
         row.operator('dsc.trajectory_nurbs', icon_value=dsc_custom_icons['trajectory_nurbs'].icon_id)
+        row = box.row(align=True)
+        row.operator('dsc.trajectory_clothoid_spline',
+                 icon_value=dsc_custom_icons['trajectory_clothoid_spline'].icon_id)
 
         layout.label(text='esmini Preview')
         box = layout.box()
@@ -300,6 +304,7 @@ classes = (
     DSC_OT_road_straight,
     DSC_OT_trajectory_nurbs,
     DSC_OT_trajectory_polyline,
+    DSC_OT_trajectory_clothoid_spline,
     DSC_OT_scenario_object_move,
     DSC_PT_panel_create,
     DSC_road_properties,
@@ -345,6 +350,8 @@ def register():
     dsc_custom_icons.load('road_object_stencil', os.path.join(icons_dir, 'road_object_stencil.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_nurbs', os.path.join(icons_dir, 'trajectory_nurbs.png'), 'IMAGE')
     dsc_custom_icons.load('trajectory_polyline', os.path.join(icons_dir, 'trajectory_polyline.png'), 'IMAGE')
+    dsc_custom_icons.load('trajectory_clothoid_spline',
+                          os.path.join(icons_dir, 'trajectory_clothoid_spline.png'), 'IMAGE')
 
     # Create a new preview collection to use in other modules
     dsc_road_sign_previews = bpy.utils.previews.new()
