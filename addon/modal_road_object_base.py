@@ -57,6 +57,8 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
 
     reference_object_mode = False
     reference_object_name = 'reference object'
+    lane_surface_snap = False
+    adjust_lane_marking_center = False
 
     params_input = {}
     params_snap = {}
@@ -230,6 +232,110 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             'lane_widths_right': [],
         }
 
+    def update_lane_surface_params(self, context, event):
+        params_snap = helpers.mouse_to_road_surface_params(context, event)
+        if params_snap['hit_type'] != 'road_surface':
+            self.selected_road = None
+            self.selected_geometry = None
+            return False
+
+        road_obj = bpy.data.objects.get(params_snap['id_obj'])
+        road_types = {
+            'road_straight', 'road_arc', 'road_clothoid',
+            'road_clothoid_triple', 'road_parampoly3',
+        }
+        if (road_obj is None or road_obj.get('dsc_type') not in road_types
+                or road_obj.get('geometry') is None
+                or road_obj.get('lane_offset_coefficients') is None):
+            self.selected_road = None
+            self.selected_geometry = None
+            return False
+
+        self.params_snap = params_snap
+        self.selected_road = road_obj
+        self.id_road = road_obj['id_odr']
+        self.selected_geometry = load_geometry(
+            road_obj['dsc_type'], road_obj['geometry'], road_obj['lane_offset_coefficients'])
+        selected_point = params_snap['point']
+        lane_heading = None
+        if not event.shift:
+            selected_point, lane_heading = helpers.get_lane_center_from_road_surface_hit(
+                road_obj, selected_point)
+            if selected_point is None:
+                self.selected_road = None
+                self.selected_geometry = None
+                return False
+        point_ref_line_local, heading_ref_line, point_s, point_t = \
+            self.selected_geometry.get_closest_ref_line_x_y_heading_s_t(selected_point)
+        self.params_input['point_s'] = point_s
+        self.params_input['point_t'] = point_t
+        self.params_input['point_ref_line'] = \
+            self.selected_geometry.matrix_world @ point_ref_line_local.to_3d()
+        lane_offset = helpers.calculate_lane_offset(
+            point_s, road_obj['lane_offset_coefficients'], road_obj['geometry_total_length'])
+        relative_t = point_t - lane_offset
+        if relative_t >= 0.0:
+            lane_widths = helpers._interpolate_lane_widths(
+                road_obj['lanes_left_widths_start'], road_obj['lanes_left_widths_end'],
+                point_s, road_obj['geometry_total_length'])
+            lane_position = relative_t
+        else:
+            lane_widths = helpers._interpolate_lane_widths(
+                road_obj['lanes_right_widths_start'], road_obj['lanes_right_widths_end'],
+                point_s, road_obj['geometry_total_length'])
+            lane_position = -relative_t
+        accumulated_width = 0.0
+        lane_index = None
+        lane_width = None
+        for index, current_lane_width in enumerate(lane_widths):
+            if accumulated_width <= lane_position <= accumulated_width + current_lane_width:
+                lane_index = index
+                lane_width = current_lane_width
+                break
+            accumulated_width += current_lane_width
+        if lane_index is not None:
+            self.params_input['lane_width'] = lane_width
+            if relative_t >= 0.0:
+                marking_types = road_obj['lanes_left_road_mark_types']
+                marking_widths = road_obj['lanes_left_road_mark_widths']
+                inner_index = lane_index + 1
+                lateral_direction = 1.0
+            else:
+                marking_types = road_obj['lanes_right_road_mark_types']
+                marking_widths = road_obj['lanes_right_road_mark_widths']
+                inner_index = lane_index - 1
+                lateral_direction = -1.0
+            boundary_marking_widths = []
+            outer_marking_width = 0.0
+            inner_marking_width = 0.0
+            if marking_types[lane_index] != 'none':
+                outer_marking_width = marking_widths[lane_index]
+                boundary_marking_widths.append(outer_marking_width)
+            if 0 <= inner_index < len(marking_types):
+                if marking_types[inner_index] != 'none':
+                    inner_marking_width = marking_widths[inner_index]
+                    boundary_marking_widths.append(inner_marking_width)
+            elif road_obj.get('lane_center_road_mark_type', 'none') != 'none':
+                inner_marking_width = road_obj['lane_center_road_mark_width']
+                boundary_marking_widths.append(inner_marking_width)
+            self.params_input['stop_line_width'] = max(
+                0.0, lane_width - sum(boundary_marking_widths) / 2.0)
+            if self.adjust_lane_marking_center:
+                point_t += lateral_direction * (inner_marking_width - outer_marking_width) / 4.0
+                self.params_input['point_t'] = point_t
+        self.selected_heading = self.selected_geometry.sections[0]['heading_start'] + heading_ref_line
+        if point_t - lane_offset >= 0.0:
+            self.selected_heading += pi
+        if lane_heading is not None:
+            self.selected_heading = lane_heading
+        self.params_input['heading'] = self.selected_heading
+        self.params_input['point'] = self.selected_geometry.matrix_world @ \
+            Vector(self.selected_geometry.sample_cross_section(point_s, [point_t], False)[0][0])
+        self.selected_point = self.params_input['point'].copy()
+        self.selected_elevation = self.selected_point.z
+        context.scene.cursor.location = self.selected_point
+        return True
+
     def create_object_modal(self, context):
         '''
             Helper function to create the object in the modal operator
@@ -240,14 +346,20 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
     def modal(self, context, event):
         # Display help text
         if self.state == 'INIT':
-            context.workspace.status_text_set(
-                'LEFTMOUSE: select road,place, '
-                'hold CTRL: snap to grid, '
-                'hold ALT: change heading, '
-                'ALT+MIDDLEMOUSE: move view center, '
-                'RIGHTMOUSE: cancel selection, '
-                'ESCAPE: cancel and exit'
-            )
+            if self.lane_surface_snap:
+                context.workspace.status_text_set(
+                    'LEFTMOUSE: place, hold SHIFT: disable lane snapping, '
+                    'RIGHTMOUSE: cancel, ESCAPE: exit'
+                )
+            else:
+                context.workspace.status_text_set(
+                    'LEFTMOUSE: select road,place, '
+                    'hold CTRL: snap to grid, '
+                    'hold ALT: change heading, '
+                    'ALT+MIDDLEMOUSE: move view center, '
+                    'RIGHTMOUSE: cancel selection, '
+                    'ESCAPE: cancel and exit'
+                )
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.reset_params_input()
@@ -263,11 +375,14 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             self.selected_heading = 0.0
             self.selected_road = None
             self.selected_geometry = None
+            self.lane_surface_valid = False
             self.id_reference_object = None
             self.id_road = None
             self.id_lane = None
             if self.reference_object_mode == True:
                 self.state = 'SELECT_REFERENCE_OBJECT'
+            elif self.lane_surface_snap:
+                self.state = 'SELECT_LANE'
             else:
                 self.state = 'SELECT_ROAD'
             # Create helper stencil mesh
@@ -296,6 +411,9 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                         self.selected_elevation)
                     self.selected_road = None
                     context.scene.cursor.location = selected_point_new
+            elif self.state == 'SELECT_LANE':
+                self.lane_surface_valid = self.update_lane_surface_params(context, event)
+                selected_point_new = self.selected_point
             elif self.state == 'SELECT_ROAD':
                 # Snap to existing objects if any, otherwise xy plane
                 params_snap = helpers.mouse_to_road_joint_params(
@@ -349,8 +467,9 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             self.params_input['heading'] = self.selected_heading
             if self.state == 'SELECT_ROAD' or self.state == 'SELECT_REFERENCE_OBJECT':
                 self.update_stencil(context, update_start=True)
-            if self.state == 'SELECT_POINT':
-                if self.input_valid(wireframe=True):
+            if self.state == 'SELECT_LANE' or self.state == 'SELECT_POINT':
+                if (self.state == 'SELECT_POINT' or self.lane_surface_valid) \
+                        and self.input_valid(wireframe=True):
                     self.update_stencil(context, update_start=False)
         # Select start, intermediate/end points
         elif event.type == 'LEFTMOUSE':
@@ -359,7 +478,7 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                     if self.params_snap['id_obj'] != None:
                         self.id_reference_object = self.params_snap['id_obj']
                         helpers.select_object(context, self.selected_reference_object)
-                        self.state = 'SELECT_ROAD'
+                        self.state = 'SELECT_LANE' if self.lane_surface_snap else 'SELECT_ROAD'
                     else:
                         self.report({'INFO'}, 'First select a ' + self.reference_object_name + '.')
                     return {'RUNNING_MODAL'}
@@ -374,9 +493,11 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                     else:
                         self.report({'INFO'}, 'First select a road.')
                     return {'RUNNING_MODAL'}
-                if self.state == 'SELECT_POINT':
+                if self.state == 'SELECT_LANE' or self.state == 'SELECT_POINT':
                     self.cp_type_end = self.params_snap['point_type']
-                    if self.input_valid(wireframe=False):
+                    if ((self.state == 'SELECT_POINT'
+                            or (self.state == 'SELECT_LANE' and self.lane_surface_valid))
+                            and self.input_valid(wireframe=False)):
                         # Create the final object
                         obj = self.create_object_modal(context)
                         # Link reference object to object
@@ -395,6 +516,12 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
                     self.remove_stencil()
                     self.state = 'SELECT_ROAD'
                     return {'RUNNING_MODAL'}
+                elif self.state == 'SELECT_LANE':
+                    if self.reference_object_mode == True:
+                        self.state = 'SELECT_REFERENCE_OBJECT'
+                        return {'RUNNING_MODAL'}
+                    self.clean_up(context)
+                    return {'FINISHED'}
                 elif self.state == 'SELECT_ROAD':
                     if self.reference_object_mode == True:
                         self.state = 'SELECT_REFERENCE_OBJECT'
@@ -414,7 +541,8 @@ class DSC_OT_modal_road_object_base(bpy.types.Operator):
             bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
         # Finish
         elif event.type in {'RET'} or event.type in {'SPACE'}:
-            if self.state == 'SELECT_POINT':
+            if (self.state == 'SELECT_POINT'
+                    or (self.state == 'SELECT_LANE' and self.lane_surface_valid)):
                 self.create_object_modal(context)
                 # Remove stencil and go back to initial state to draw again
                 self.remove_stencil()

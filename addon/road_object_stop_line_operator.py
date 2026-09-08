@@ -36,6 +36,8 @@ class DSC_OT_road_object_stop_line(DSC_OT_modal_road_object_base):
 
     reference_object_mode = True
     reference_object_name = 'stop sign'
+    lane_surface_snap = True
+    adjust_lane_marking_center = True
 
     def create_object_model(self, context):
         '''

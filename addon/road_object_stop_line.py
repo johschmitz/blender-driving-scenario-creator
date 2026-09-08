@@ -65,8 +65,7 @@ class road_object_stop_line:
             obj['id_ref_object'] = id_reference_object
             obj['position_s'] = params_input['point_s']
             obj['position_t'] = params_input['point_t']
-            # TODO make width configurable or take it from the lane
-            obj['width'] = 3.5
+            obj['width'] = params_input.get('stop_line_width', 3.5)
             # TODO for now assume 2 mm steel for the signs
             obj['length'] = 0.5
             obj['zOffset'] = 0.0
@@ -85,7 +84,7 @@ class road_object_stop_line:
         origin_point = params_input['point']
         heading = params_input['heading']
         # Build sign plate
-        length = 3.5
+        length = params_input.get('stop_line_width', 3.5)
         vertices, edges, faces, materials = self.get_vertices_edges_faces_materials(length)
         # Raise the stencil a bit above the road surface to workaround z fighting issues
         origin_point.z += 0.005
@@ -95,10 +94,6 @@ class road_object_stop_line:
         # Create blender mesh
         if wireframe:
             mat_rotation_inverted = Matrix.Rotation(-heading, 4, 'Z')
-            point_ref_line_rel = mat_rotation_inverted @ (params_input['point_ref_line'] - origin_point)
-            vertices.append((0.0, 0.0, 0.0))
-            vertices.append((point_ref_line_rel.x, point_ref_line_rel.y, 0.0))
-            edges.append((len(vertices)-2, len(vertices)-1))
             point_ref_object_rel = mat_rotation_inverted @ (params_input['point_ref_object'] - origin_point)
             vertices.append((0.0, 0.0, 0.0))
             vertices.append((point_ref_object_rel.x, point_ref_object_rel.y, 0.0))
