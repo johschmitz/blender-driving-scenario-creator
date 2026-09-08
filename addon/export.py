@@ -31,7 +31,7 @@ mapping_lane_type = {
     #'bidirectional': xodr.LaneType.bidirectional,
     #'bus': xodr.LaneType.bus,
     'stop': xodr.LaneType.stop,
-    #'parking': xodr.LaneType.parking,
+    'parking': xodr.LaneType.parking,
     #'biking': xodr.LaneType.biking,
     #'restricted': xodr.LaneType.restricted,
     #'roadWorks': xodr.LaneType.roadWorks,
