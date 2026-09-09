@@ -9,7 +9,7 @@ assistance systems and autonomous driving functions.
 ## How to install
 
 Prior to installing the add-on inside of Blender some requirements must be
-installed. The process slightly differs for Linux and Windows.
+installed. The process slightly differs for Linux, Windows, and macOS.
 
 ###  Requirements Linux
 
@@ -29,22 +29,17 @@ included Python installation
 
     cd /opt/blender/<blender_version>/python/bin
 
-if pip is not already present in there then run (use sudo only if root is the
-owner)
-
-    sudo ./python<python_version> -m ensurepip
-
 now install the lib(s)
 
-    sudo -E ./python<python_version> -m pip install scenariogeneration
+    ./python<python_version> -m pip install scenariogeneration
 
-where the `-E` makes sudo preserve the exported environment variable. Note again
-that `sudo` is not required in case Blender is installed to the user home
-directory or the user has write access to the directory. Also make sure not to
-not forget the `./` at the beginning such that the Python executable from within
-the directory is used and not another instance on your system.
+Use `sudo -E` if the Blender install directory is owned by root. Note that
+`sudo` is not required in case Blender is installed to the user home directory
+or the user has write access to the directory. Also make sure not to not forget
+the `./` at the beginning such that the Python executable from within the
+directory is used and not another instance on your system.
 
-For the esmini export functionality we also need to install
+For exporting `.osgb` files we also need to install
 [OpenSceneGraph](http://www.openscenegraph.org/) to have the `osgconv` tool
 available. This is necessary because Blender is unable to directly export to the
 .osgb scenegraph format, while esmini can only process this particular format.
@@ -55,10 +50,6 @@ On a Debian/Ubuntu/Mint system this can be achieved with
 If you manually install OpenSceneGraph make sure that `osgconv` can be found
 through your `PATH` environment variable, otherwise the export with .osgb 3D
 model files will fail.
-
-Install [esmini](https://github.com/esmini/esmini/releases) to any location.
-Configure the esmini library file path in Blender at
-`Edit -> Preferences -> Add-ons -> Driving Scenario Creator -> esmini_library_path`.
 
 ### Requirements Windows
 
@@ -83,24 +74,51 @@ of Blender and/or removing any leftovers of Python in your `%appdata%` folder.
 Download and extract (for example to `C:\Tools\OpenSceneGraph`)
 [openscenegraph](https://objexx.com/OpenSceneGraph.html).
 
-Also download and extract (for exampe to `C:\Tools\esmini`)
-[esmini](https://github.com/esmini/esmini/releases).
-
 Add the OpenSceneGraph `bin` folder to the `PATH` environment variable using
 the "Edit environment variables for your account" tool (look for it in the
 Windows start menu). Note that otherwise the export with .osgb 3D model files
 will fail because `osgconv` can not be found by the add-on.
 
-Set the esmini library file path in Blender at
-`Edit -> Preferences -> Add-ons -> Driving Scenario Creator -> esmini_library_path`.
+### Requirements macOS
 
-### Add-on (Linux and Windows)
+Assuming Blender has been [downloaded](https://www.blender.org/download/) and
+installed in `/Applications`, open Terminal and navigate to Blender's bundled
+Python installation. Replace `<blender_version>` and `<python_version>` with
+the values used by your Blender installation.
+
+    cd "/Applications/Blender.app/Contents/Resources/<blender_version>/python/bin"
+
+Then install the scenariogeneration library into Blender's Python environment:
+
+    ./python<python_version> -m pip install scenariogeneration
+
+Install [Homebrew](https://brew.sh/) if it is not already installed, then use
+it to install [OpenSceneGraph](http://www.openscenegraph.org/), which provides
+the `osgconv` tool required for exporting `.osgb` files:
+
+    brew install open-scene-graph
+
+Make sure that the directory containing `osgconv` is available through your
+`PATH` environment variable.
+
+### Add-on (Linux, Windows, and macOS)
 
 Finally download the driving scenario generator [release .zip
 archive](https://github.com/johschmitz/blender-driving-scenario-creator/releases/).
 Open Blender and go to Edit -> Preferences -> Add-ons. Click "Install...".
 Select the .zip archive and confirm. Activate the add-on by ticking the little
 box next to it, in the add-on list.
+
+### Scenario preview (Linux, Windows, and macOS)
+
+Install [esmini](https://github.com/esmini/esmini/releases) to any location and
+set the esmini library file path in Blender at
+`Edit -> Preferences -> Add-ons -> Driving Scenario Creator -> esmini_library_path`.
+
+For macOS, the first time the esmini preview or export uses the library, macOS
+may block the dylib. Run it once to show the Gatekeeper warning, allow it in
+macOS security settings, and then run it again in Blender, allowing it in the
+popup when prompted.
 
 ## How to use
 
@@ -184,11 +202,6 @@ this does not bake any keyframes in Blender. To use the preview
    esmini state.
 5. Click <kbd>Stop</kbd> to stop the preview and restore original authored
    transforms.
-
-For preview on MacOS note that you need to run it once such that you get the
-Gatekeeper popup message, then allow the execution of the dylib in the system
-security settings and finally run it again in Blender while making sure to allow
-it in the popup message as well.
 
 ## How to run exported scenarios
 
