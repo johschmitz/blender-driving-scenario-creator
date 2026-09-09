@@ -171,15 +171,52 @@ holding <kbd>E</kbd>(3D view) or <kbd>S</kbd>(sideview) keys and moving the
 mouse. After placing roads, road signs can be attached to them and placed at the
 side. Finally, vehicles can be placed and a trajectory can be assigned to them.
 
-| Keyboard Shortcut                                     | Function                             |
-| ----------------------------------------------------- | ------------------------------------ |
-| <kbd>N</kbd> (vanilla Blender)                        | Toggle sidebar with add-on main menu |
-| Hold <kbd>Ctrl</kbd>                                  | Activate grid snapping               |
-| Hold <kbd>Shift</kbd> + <kbd>Mouseleft</kbd>          | Add additional geometry section      |
-| Hold <kbd>Alt</kbd>                                   | Change start heading of a road       |
-| Hold <kbd>Shift</kbd> + <kbd>Mousewheel Up/Down</kbd> | Change end heading of a road         |
-| Hold <kbd>E</kbd>                                     | Change road elevation (3D view)      |
-| Hold <kbd>S</kbd>                                     | Change road elevation (sideview)     |
+| Tool / operation | Shortcut or control | Function |
+| --- | --- | --- |
+| Add-on menu | <kbd>N</kbd> (vanilla Blender) | Toggle the sidebar with the add-on menu |
+| Road drawing | <kbd>Mouseleft</kbd> | Place the start/end point; after placing the end point, start another road |
+| Road drawing | Hold <kbd>Shift</kbd> + <kbd>Mouseleft</kbd> | Add another geometry section instead of finishing |
+| Road drawing | Hold <kbd>Ctrl</kbd> | Snap to the 3D grid instead of an existing road |
+| Road drawing | Hold <kbd>Alt</kbd> | Adjust the start heading while placing the end point |
+| Road drawing | Hold <kbd>E</kbd> | Adjust elevation from the current view |
+| Road drawing | Hold <kbd>S</kbd> | Switch to side view while adjusting elevation |
+| Road drawing | Hold <kbd>Shift</kbd> + <kbd>Mousewheel Up/Down</kbd> | Adjust the end heading |
+| 4-way junction | <kbd>Mouseleft</kbd> | Place the two points |
+| 4-way junction | Hold <kbd>Ctrl</kbd> | Snap to the 3D grid |
+| 4-way junction | Hold <kbd>E</kbd> | Adjust elevation from the current view |
+| 4-way junction | Hold <kbd>S</kbd> | Switch to side view while adjusting elevation |
+| Junction connecting road | <kbd>Mouseleft</kbd> | Place the start/end point on incoming road joints |
+| Junction connecting road | Hold <kbd>Shift</kbd> + <kbd>Mouseleft</kbd> | Add another geometry section instead of finishing |
+| Junction connecting road | Hold <kbd>Ctrl</kbd> | Snap to the 3D grid |
+| Junction connecting road | Hold <kbd>Alt</kbd> | Adjust the start heading while placing the end point |
+| Junction connecting road | Hold <kbd>E</kbd> | Adjust elevation from the current view |
+| Junction connecting road | Hold <kbd>S</kbd> | Switch to side view while adjusting elevation |
+| Junction connecting road | Hold <kbd>Shift</kbd> + <kbd>Mousewheel Up/Down</kbd> | Adjust the end heading |
+| Road objects: signs, traffic lights, stop lines, and stencils | <kbd>Mouseleft</kbd> | Select the reference road/object and place the object |
+| Road objects: signs and traffic lights | Hold <kbd>Ctrl</kbd> | Snap to the 3D grid while placing the object |
+| Road objects: signs and traffic lights | Hold <kbd>Alt</kbd> | Adjust the object heading |
+| Road objects: stop lines and stencils | Hold <kbd>Shift</kbd> | Disable lane-surface snapping |
+| Parking spots | <kbd>Mouseleft</kbd> | Place parking spots on the selected road |
+| Parking spots | Hold <kbd>Shift</kbd> + <kbd>Mousewheel Up/Down</kbd> | Increase/decrease the number of parking spots |
+| Entity placement: cars and pedestrians | <kbd>Mouseleft</kbd> | Place an entity; placement remains active for more entities |
+| Entity placement: cars and pedestrians | Hold <kbd>Shift</kbd> | Disable lane-center and orientation snapping |
+| Entity placement: cars and pedestrians | Hold <kbd>Alt</kbd> | Keep the entity position fixed and adjust its heading |
+| Move object | <kbd>Mouseleft</kbd> | Select an OpenSCENARIO entity or trajectory, then confirm its new position |
+| Move object | Hold <kbd>Shift</kbd> | Disable lane-center and orientation snapping |
+| Move object | Hold <kbd>Alt</kbd> | Keep the object position fixed and adjust its heading |
+| Trajectories: polyline, NURBS, and clothoid spline | <kbd>Mouseleft</kbd> | Select an entity, then place trajectory points |
+| Trajectories | Hold <kbd>Alt</kbd> while placing a point | Reverse the trajectory segment from that point |
+| Trajectories | Hold <kbd>Ctrl</kbd> | Snap to the 3D grid when placing a point on a surface |
+| Trajectories | Hold <kbd>E</kbd> | Adjust elevation from the current view |
+| Trajectories | Hold <kbd>S</kbd> | Switch to side view while adjusting elevation |
+| Clothoid spline trajectory | Hold <kbd>Shift</kbd> + <kbd>Mousewheel Up/Down</kbd> | Adjust the end heading |
+| Generic junction (area) | <kbd>Mouseleft</kbd> | Select incoming road ends |
+| All modal tools | <kbd>Mouseleft</kbd> | Confirm the current point or selection |
+| All modal tools | <kbd>Mouse right</kbd> | Cancel the current step or go back one step; exit when at the first step |
+| All modal tools | <kbd>Esc</kbd> | Cancel and exit the active tool |
+| All modal tools | <kbd>Return</kbd> or <kbd>Space</kbd> | Finish the current operation, where supported |
+| All modal tools | <kbd>Mousewheel Up/Down</kbd> | Zoom out/in |
+| All modal tools | Hold <kbd>Alt</kbd> + <kbd>Middlemouse</kbd> | Center the view on the cursor |
 
 Before or after adding roads add additional Blender objects as desired. When
 done modelling, export everything together by clicking <kbd>Export driving
@@ -216,7 +253,7 @@ For development of the add-on the [Blender VS Code
 extension](https://github.com/JacquesLucke/blender_vscode) is very
 recommendable. It allows hot reloading and rapid iterations.
 
-# How to run the test
+# How to run the tests
 
 There is a handful of tests for the geometries in the `tests/` directory. They
 can be run by executing pytest from the Blender python distribution in the
