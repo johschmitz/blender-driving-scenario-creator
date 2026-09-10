@@ -3,4 +3,5 @@ mathutils
 pathlib
 pyclothoids
 scenariogeneration
+numpy
 pytest

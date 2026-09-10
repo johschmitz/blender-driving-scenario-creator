@@ -178,6 +178,7 @@ class EsminiBindings:
         self._bind_symbol('SE_StepDT', argtypes=[ctypes.c_double], restype=ctypes.c_int)
         self._bind_symbol('SE_GetNumberOfObjects', restype=ctypes.c_int)
         self._bind_symbol('SE_GetId', argtypes=[ctypes.c_int], restype=ctypes.c_int)
+        self.fn_get_quit_flag = self._bind_symbol('SE_GetQuitFlag', restype=ctypes.c_int, required=False)
 
         self.fn_get_object_state = self._bind_symbol('SE_GetObjectState',
                                                      argtypes=[ctypes.c_int, ctypes.POINTER(_SEScenarioObjectState)],
@@ -252,6 +253,14 @@ class EsminiBindings:
         if value < 0:
             raise EsminiLibraryError('SE_GetNumberOfObjects returned {}'.format(value))
         return value
+
+    def get_quit_flag(self):
+        if self.fn_get_quit_flag is None:
+            return False
+        value = self.fn_get_quit_flag()
+        if value < 0:
+            raise EsminiLibraryError('SE_GetQuitFlag returned {}'.format(value))
+        return value != 0
 
     def get_object_state(self, object_index):
         state = _SEScenarioObjectState()
@@ -546,6 +555,7 @@ def _apply_preview_step(scene):
         return
 
     _session.bindings.step_dt(dt)
+    simulation_finished = _session.bindings.get_quit_flag()
     _session.last_dt = dt
     _session.total_steps += 1
     _session.elapsed_time += dt
@@ -587,6 +597,7 @@ def _apply_preview_step(scene):
 
     _session.last_matched_count = matched_count
     _set_progress_status(_session)
+    return simulation_finished
 
 
 def _preview_timer_callback():
@@ -606,6 +617,8 @@ def _preview_timer_callback():
         stop_preview_session(restore=True, reason='Preview stopped: {}'.format(exc))
         return None
 
+    if not is_preview_active() or not _session.timer_registered:
+        return None
     return max(0.001, _session.step_interval)
 
 
@@ -613,8 +626,16 @@ def _step_preview_once(scene):
     if not is_preview_active():
         raise RuntimeError('Preview is not running.')
 
-    _apply_preview_step(scene)
+    simulation_finished = _apply_preview_step(scene)
+    if simulation_finished:
+        _finish_preview_session()
+        return
     scene.frame_set(scene.frame_current + 1)
+
+
+def _finish_preview_session():
+    stop_preview_session(restore=True, reason='')
+    _set_status(_STATUS_INACTIVE, 'Simulation finished')
 
 
 def _start_preview_session(context, manual_mode=False):

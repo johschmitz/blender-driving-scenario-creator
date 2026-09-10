@@ -24,6 +24,7 @@ import pathlib
 import subprocess
 import json
 import xml.etree.ElementTree as ET
+from .scenario_nodes import write_node_storyboard
 
 
 class DSC_ParkingSpaceObject(xodr.Object):
@@ -143,7 +144,8 @@ class DSC_OT_export(bpy.types.Operator):
     def execute(self, context):
         self.export_entity_models(context)
         self.export_static_scene_model()
-        self.export_openscenario()
+        if self.export_openscenario() is False:
+            return {'CANCELLED'}
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -955,6 +957,11 @@ class DSC_OT_export(bpy.types.Operator):
         scenario = xosc.Scenario('dsc_scenario','blender_dsc',xosc.ParameterDeclarations(),
             entities,storyboard,road_network,catalogs, osc_minor_version=3)
         scenario.write_xml(str(xosc_path))
+        try:
+            write_node_storyboard(xosc_path)
+        except ValueError as error:
+            self.report({'ERROR'}, str(error))
+            return False
 
     def get_element_type_by_id(self, id):
         '''

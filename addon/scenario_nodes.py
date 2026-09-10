@@ -1,0 +1,683 @@
+"""Blender custom-node editor for OpenSCENARIO action graphs."""
+
+import bpy
+
+from .scenario_node_xml import append_storyboard
+
+
+DSC_NODE_TREE_ID = 'DSC_XOSC_NodeTree'
+DSC_NO_ENTITY = '__NONE__'
+DSC_INITIAL_NODE_EDITOR_ZOOM = 0.3
+
+
+def get_entity_items(self, context):
+    del self, context
+    entity_names = get_entity_names()
+    items = [(DSC_NO_ENTITY, 'Select an entity', 'Choose an existing OpenSCENARIO entity')]
+    items.extend((name, name, 'Use entity {}'.format(name)) for name in entity_names)
+    return items
+
+
+def get_entity_names():
+    return sorted({
+        obj.name for obj in bpy.data.objects
+        if obj.get('dsc_type') == 'entity'
+    })
+
+
+def _node_add_menu(self, context):
+    del context
+    for node_class in NODE_ACTION_CLASSES:
+        operator = self.layout.operator('node.add_node', text=node_class.bl_label)
+        operator.type = node_class.bl_idname
+
+
+class DSC_XOSC_NodeTree(bpy.types.NodeTree):
+    bl_idname = DSC_NODE_TREE_ID
+    bl_label = 'OpenSCENARIO Actions'
+    bl_icon = 'SCENE_DATA'
+
+
+class DSC_XOSC_ActionNode(bpy.types.Node):
+    bl_label = 'OpenSCENARIO Action'
+    bl_icon = 'ACTION'
+    width = 240
+
+    action_type: bpy.props.StringProperty(default='user_defined')
+    action_name: bpy.props.StringProperty(name='Action name', default='Action')
+    entity_ref: bpy.props.EnumProperty(
+        name='Entity',
+        description='Existing OpenSCENARIO entity controlled by this action',
+        items=get_entity_items,
+    )
+    target_entity_ref: bpy.props.EnumProperty(
+        name='Target entity',
+        description='Existing OpenSCENARIO entity used as the distance target',
+        items=get_entity_items,
+    )
+    priority: bpy.props.EnumProperty(
+        name='Priority',
+        items=(
+            ('override', 'Override', ''),
+            ('skip', 'Skip', ''),
+            ('parallel', 'Parallel', ''),
+        ),
+        default='override',
+    )
+    dynamics_shape: bpy.props.EnumProperty(
+        name='Shape',
+        items=(('step', 'Step', ''), ('linear', 'Linear', ''), ('cubic', 'Cubic', '')),
+        default='step',
+    )
+    dynamics_dimension: bpy.props.EnumProperty(
+        name='Dimension',
+        items=(('time', 'Time', ''), ('rate', 'Rate', ''), ('distance', 'Distance', '')),
+        default='time',
+    )
+    dynamics_value: bpy.props.FloatProperty(name='Dynamics value', default=3.0, min=0.0)
+    speed: bpy.props.FloatProperty(name='Speed (m/s)', default=10.0, min=0.0)
+    speed_target_type: bpy.props.EnumProperty(
+        name='Speed target',
+        items=(
+            ('absolute', 'Absolute speed', 'Set a specific speed'),
+            ('relative', 'Relative speed', 'Set speed relative to another entity'),
+        ),
+        default='absolute',
+    )
+    lane_change_target: bpy.props.EnumProperty(
+        name='Lane target',
+        items=(
+            ('absolute', 'Absolute lane', 'Change to a specific lane number'),
+            ('relative', 'Relative lane', 'Change by a lane offset relative to an entity'),
+        ),
+        default='relative',
+    )
+    target_lane: bpy.props.IntProperty(name='Target lane', default=0)
+    offset: bpy.props.FloatProperty(name='Lane offset', default=0.0)
+    max_lateral_acc: bpy.props.FloatProperty(name='Max lateral acceleration', default=2.0, min=0.0)
+    continuous: bpy.props.BoolProperty(name='Continuous', default=False)
+    duration: bpy.props.FloatProperty(name='Duration (s)', default=3.0, min=0.0)
+    distance: bpy.props.FloatProperty(name='Distance', default=10.0, min=0.0)
+    time_gap: bpy.props.FloatProperty(name='Time gap (s)', default=1.5, min=0.0)
+    distance_target_type: bpy.props.EnumProperty(
+        name='Target mode',
+        items=(('distance', 'Distance', ''), ('time_gap', 'Time gap', '')),
+        default='distance',
+    )
+    freespace: bpy.props.BoolProperty(name='Freespace', default=True)
+    coordinate_system: bpy.props.EnumProperty(
+        name='Coordinate system',
+        items=(
+            ('entity', 'Entity', ''),
+            ('lane', 'Lane', ''),
+            ('road', 'Road', ''),
+            ('trajectory', 'Trajectory', ''),
+            ('world', 'World', ''),
+        ),
+        default='entity',
+    )
+    displacement: bpy.props.EnumProperty(
+        name='Displacement',
+        items=(
+            ('any', 'Any', ''),
+            ('leadingReferencedEntity', 'Leading entity', ''),
+            ('trailingReferencedEntity', 'Trailing entity', ''),
+        ),
+        default='any',
+    )
+    max_acceleration: bpy.props.FloatProperty(name='Max acceleration', default=2.0, min=0.0)
+    max_deceleration: bpy.props.FloatProperty(name='Max deceleration', default=4.0, min=0.0)
+    max_speed: bpy.props.FloatProperty(name='Max speed', default=50.0, min=0.0)
+    max_acceleration_rate: bpy.props.FloatProperty(name='Max accel. rate', default=1.0, min=0.0)
+    max_deceleration_rate: bpy.props.FloatProperty(name='Max decel. rate', default=2.0, min=0.0)
+    command_type: bpy.props.StringProperty(name='Command type', default='custom')
+
+    def init(self, context):
+        del context
+        self.width = 240
+        used_names = {
+            node.action_name for node in self.id_data.nodes
+            if isinstance(node, DSC_XOSC_ActionNode) and node is not self
+        }
+        number = 1
+        while 'Action {}'.format(number) in used_names:
+            number += 1
+        self.action_name = 'Action {}'.format(number)
+        self.inputs.new('NodeSocketString', 'Trigger')
+        self.outputs.new('NodeSocketString', 'Complete')
+
+    def draw_buttons(self, context, layout):
+        del context
+        self._draw_property(layout, 'action_name', 'Action name')
+        self._draw_property(layout, 'entity_ref', 'Entity')
+        if self.action_type == 'absolute_speed':
+            self._draw_property(layout, 'speed_target_type', 'Target type')
+            if self.speed_target_type == 'relative':
+                self._draw_property(layout, 'target_entity_ref', 'Target entity')
+            self._draw_property(layout, 'speed', 'Speed (m/s)')
+            self._draw_dynamics(layout)
+        elif self.action_type == 'lane_change':
+            self._draw_property(layout, 'lane_change_target', 'Target type')
+            if self.lane_change_target == 'relative':
+                self._draw_property(layout, 'target_lane', 'Lane offset')
+            else:
+                self._draw_property(layout, 'target_lane', 'Target lane')
+            self._draw_dynamics(layout)
+        elif self.action_type == 'lane_offset':
+            self._draw_property(layout, 'offset', 'Lane offset')
+            self._draw_property(layout, 'max_lateral_acc', 'Max lateral acc.')
+            self._draw_property(layout, 'dynamics_shape', 'Shape')
+            self._draw_property(layout, 'duration', 'Duration (s)')
+        elif self.action_type == 'longitudinal_distance':
+            self._draw_property(layout, 'target_entity_ref', 'Target entity')
+            self._draw_property(layout, 'distance_target_type', 'Target mode')
+            if self.distance_target_type == 'time_gap':
+                self._draw_property(layout, 'time_gap', 'Time gap (s)')
+            else:
+                self._draw_property(layout, 'distance', 'Distance')
+            self._draw_property(layout, 'freespace', 'Freespace')
+            self._draw_property(layout, 'coordinate_system', 'Coordinate system')
+            self._draw_property(layout, 'displacement', 'Displacement')
+            self._draw_property(layout, 'max_acceleration', 'Max acceleration')
+            self._draw_property(layout, 'max_deceleration', 'Max deceleration')
+            self._draw_property(layout, 'max_speed', 'Max speed')
+            self._draw_property(layout, 'max_acceleration_rate', 'Max accel. rate')
+            self._draw_property(layout, 'max_deceleration_rate', 'Max decel. rate')
+            self._draw_property(layout, 'continuous', 'Continuous')
+            if self.continuous:
+                self._draw_property(layout, 'duration', 'Duration (s)')
+        elif self.action_type == 'user_defined':
+            self._draw_property(layout, 'command_type', 'Command type')
+
+    def _draw_dynamics(self, layout):
+        self._draw_property(layout, 'dynamics_shape', 'Shape')
+        self._draw_property(layout, 'dynamics_dimension', 'Dimension')
+        self._draw_property(layout, 'dynamics_value', 'Value')
+
+    def _draw_property(self, layout, property_name, label):
+        row = layout.row(align=True)
+        split = row.split(factor=0.48, align=True)
+        split.label(text=label)
+        split.prop(self, property_name, text='')
+
+    def to_xml_data(self):
+        data = {identifier: getattr(self, identifier) for identifier in (
+            'action_type', 'entity_ref', 'target_entity_ref', 'priority', 'dynamics_shape',
+            'dynamics_dimension', 'dynamics_value', 'speed', 'speed_target_type', 'lane_change_target', 'target_lane', 'offset',
+            'max_lateral_acc', 'continuous', 'duration', 'distance', 'time_gap', 'distance_target_type', 'freespace',
+            'coordinate_system', 'displacement', 'max_acceleration', 'max_deceleration',
+            'max_speed', 'max_acceleration_rate', 'max_deceleration_rate', 'command_type')}
+        data['name'] = self.action_name
+        data['next'] = ''
+        return data
+
+    def trigger_data(self):
+        trigger_socket = self.inputs.get('Trigger')
+        if trigger_socket is None or not trigger_socket.links:
+            return None
+        source = trigger_socket.links[0].from_node
+        if isinstance(source, DSC_XOSC_ActionNode):
+            return {'type': 'event_complete', 'event_ref': source.action_name}
+        if hasattr(source, 'trigger_data'):
+            return source.trigger_data()
+        return None
+
+
+class DSC_XOSC_SimulationTimeTriggerNode(bpy.types.Node):
+    bl_idname = 'DSC_XOSC_SimulationTimeTriggerNode'
+    bl_label = 'Simulation Time Trigger'
+    bl_icon = 'TIME'
+    width = 240
+
+    value: bpy.props.FloatProperty(name='Time (s)', default=0.0, min=0.0)
+    rule: bpy.props.EnumProperty(
+        name='Rule',
+        items=(
+            ('greaterThan', 'Greater than', ''),
+            ('greaterOrEqual', 'Greater or equal', ''),
+            ('equalTo', 'Equal', ''),
+        ),
+        default='greaterOrEqual',
+    )
+
+    def init(self, context):
+        del context
+        self.width = 240
+        self.outputs.new('NodeSocketString', 'Trigger')
+
+    def draw_buttons(self, context, layout):
+        del context
+        self._draw_property(layout, 'value', 'Time (s)')
+        self._draw_property(layout, 'rule', 'Rule')
+
+    def trigger_data(self):
+        return {
+            'type': 'simulation_time',
+            'value': self.value,
+            'rule': self.rule,
+        }
+
+    def _draw_property(self, layout, property_name, label):
+        row = layout.row(align=True)
+        split = row.split(factor=0.48, align=True)
+        split.label(text=label)
+        split.prop(self, property_name, text='')
+
+
+def _condition_from_trigger_source(source):
+    if isinstance(source, DSC_XOSC_ActionNode):
+        return {'type': 'event_complete', 'event_ref': source.action_name}
+    if hasattr(source, 'trigger_data'):
+        return source.trigger_data()
+    return None
+
+
+class DSC_XOSC_OrTriggerNode(bpy.types.Node):
+    bl_idname = 'DSC_XOSC_OrTriggerNode'
+    bl_label = 'Trigger OR'
+    bl_icon = 'ORPHAN_DATA'
+    width = 240
+
+    input_count: bpy.props.IntProperty(
+        name='Input count',
+        description='Number of trigger inputs available on this OR node',
+        default=2,
+        min=2,
+        max=32,
+        update=lambda node, context: node._update_inputs(),
+    )
+
+    def init(self, context):
+        del context
+        self.width = 240
+        self._update_inputs()
+        self.outputs.new('NodeSocketString', 'True')
+
+    def draw_buttons(self, context, layout):
+        del context
+        row = layout.row(align=True)
+        row.label(text='Input count')
+        row.prop(self, 'input_count', text='')
+
+    def _update_inputs(self):
+        for socket in list(self.inputs):
+            self.inputs.remove(socket)
+        for index in range(self.input_count):
+            self.inputs.new('NodeSocketString', 'Trigger {}'.format(index + 1))
+
+    def trigger_data(self):
+        conditions = []
+        for socket in self.inputs:
+            if not socket.links:
+                raise ValueError(
+                    'Trigger OR requires every configured input to be connected'
+                )
+            source = socket.links[0].from_node
+            condition = _condition_from_trigger_source(source)
+            if condition is not None:
+                conditions.append(condition)
+        if not conditions:
+            return None
+        return {'type': 'or', 'conditions': conditions}
+
+
+class DSC_XOSC_AndTriggerNode(bpy.types.Node):
+    bl_idname = 'DSC_XOSC_AndTriggerNode'
+    bl_label = 'Trigger AND'
+    bl_icon = 'ORPHAN_DATA'
+    width = 240
+
+    input_count: bpy.props.IntProperty(
+        name='Input count',
+        description='Number of trigger inputs available on this AND node',
+        default=2,
+        min=2,
+        max=32,
+        update=lambda node, context: node._update_inputs(),
+    )
+
+    def init(self, context):
+        del context
+        self.width = 240
+        self._update_inputs()
+        self.outputs.new('NodeSocketString', 'True')
+
+    def draw_buttons(self, context, layout):
+        del context
+        row = layout.row(align=True)
+        row.label(text='Input count')
+        row.prop(self, 'input_count', text='')
+
+    def _update_inputs(self):
+        for socket in list(self.inputs):
+            self.inputs.remove(socket)
+        for index in range(self.input_count):
+            self.inputs.new('NodeSocketString', 'Trigger {}'.format(index + 1))
+
+    def trigger_data(self):
+        conditions = []
+        for socket in self.inputs:
+            if not socket.links:
+                raise ValueError(
+                    'Trigger AND requires every configured input to be connected'
+                )
+            source = socket.links[0].from_node
+            condition = _condition_from_trigger_source(source)
+            if condition is not None:
+                conditions.append(condition)
+        if not conditions:
+            return None
+        return {'type': 'and', 'conditions': conditions}
+
+
+class DSC_XOSC_ScenarioStopTriggerNode(bpy.types.Node):
+    bl_idname = 'DSC_XOSC_ScenarioStopTriggerNode'
+    bl_label = 'Scenario Stop Trigger'
+    bl_icon = 'TIME'
+    width = 240
+
+    use_time: bpy.props.BoolProperty(name='Use time limit', default=True)
+    value: bpy.props.FloatProperty(name='Time (s)', default=60.0, min=0.0)
+
+    def init(self, context):
+        del context
+        self.width = 240
+        self.inputs.new('NodeSocketString', 'Trigger')
+
+    def draw_buttons(self, context, layout):
+        del context
+        self._draw_property(layout, 'use_time', 'Use time limit')
+        if self.use_time:
+            self._draw_property(layout, 'value', 'Time (s)')
+
+    def _draw_property(self, layout, property_name, label):
+        row = layout.row(align=True)
+        split = row.split(factor=0.48, align=True)
+        split.label(text=label)
+        split.prop(self, property_name, text='')
+
+
+class DSC_XOSC_SpeedNode(DSC_XOSC_ActionNode):
+    bl_idname = 'DSC_XOSC_SpeedNode'
+    bl_label = 'Speed'
+    def init(self, context):
+        super().init(context)
+        self.action_type = 'absolute_speed'
+
+
+class DSC_XOSC_LaneChangeNode(DSC_XOSC_ActionNode):
+    bl_idname = 'DSC_XOSC_LaneChangeNode'
+    bl_label = 'Lane Change'
+    def init(self, context):
+        super().init(context)
+        self.action_type = 'lane_change'
+        self.dynamics_shape = 'cubic'
+
+
+class DSC_XOSC_LaneOffsetNode(DSC_XOSC_ActionNode):
+    bl_idname = 'DSC_XOSC_LaneOffsetNode'
+    bl_label = 'Lane Offset'
+    def init(self, context):
+        super().init(context)
+        self.action_type = 'lane_offset'
+
+
+class DSC_XOSC_DistanceNode(DSC_XOSC_ActionNode):
+    bl_idname = 'DSC_XOSC_DistanceNode'
+    bl_label = 'Longitudinal Distance'
+    def init(self, context):
+        super().init(context)
+        self.action_type = 'longitudinal_distance'
+
+
+class DSC_XOSC_UserDefinedNode(DSC_XOSC_ActionNode):
+    bl_idname = 'DSC_XOSC_UserDefinedNode'
+    bl_label = 'User Defined Action'
+    def init(self, context):
+        super().init(context)
+        self.action_type = 'user_defined'
+
+
+class DSC_OT_create_xosc_node_tree(bpy.types.Operator):
+    bl_idname = 'dsc.create_xosc_node_tree'
+    bl_label = 'Create OpenSCENARIO action graph'
+
+    def execute(self, context):
+        tree = _get_or_create_node_tree()
+        for area in context.screen.areas:
+            if area.type == 'NODE_EDITOR':
+                _configure_node_editor(area, tree)
+        return {'FINISHED'}
+
+
+class DSC_OT_toggle_xosc_node_editor(bpy.types.Operator):
+    bl_idname = 'dsc.toggle_xosc_node_editor'
+    bl_label = 'Toggle node editor'
+    bl_description = 'Show or hide the OpenSCENARIO action node editor'
+
+    def execute(self, context):
+        screen = context.screen
+        tree = _get_or_create_node_tree()
+        existing_area = next(
+            (area for area in screen.areas
+             if area.type == 'NODE_EDITOR' and area.spaces.active.tree_type == DSC_NODE_TREE_ID),
+            None,
+        )
+        if existing_area is not None:
+            target_area = self._find_adjacent_view_area(screen, existing_area)
+            if target_area is None:
+                self.report({'WARNING'}, 'No adjacent 3D View found to join')
+                return {'CANCELLED'}
+            with bpy.context.temp_override(window=context.window, area=existing_area):
+                result = bpy.ops.screen.area_join(
+                    source_xy=(target_area.x + target_area.width // 2,
+                               target_area.y + target_area.height // 2),
+                    target_xy=(existing_area.x + 1, existing_area.y + 1),
+                )
+            if 'FINISHED' not in result:
+                self.report({'WARNING'}, 'Could not join the node editor area')
+                return {'CANCELLED'}
+            return {'FINISHED'}
+
+        view_area = max(
+            (area for area in screen.areas if area.type == 'VIEW_3D'),
+            key=lambda area: area.width * area.height,
+            default=None,
+        )
+        if view_area is None:
+            self.report({'WARNING'}, 'No 3D View is available to split')
+            return {'CANCELLED'}
+
+        before = {area.as_pointer() for area in screen.areas}
+        with bpy.context.temp_override(window=context.window, area=view_area):
+            result = bpy.ops.screen.area_split(direction='HORIZONTAL', factor=0.4)
+        if 'FINISHED' not in result:
+            self.report({'WARNING'}, 'Could not split the 3D View')
+            return {'CANCELLED'}
+
+        new_areas = [area for area in screen.areas if area.as_pointer() not in before]
+        if new_areas:
+            node_area = new_areas[0]
+            _configure_node_editor(node_area, tree)
+            _frame_node_editor(context.window, node_area)
+        return {'FINISHED'}
+
+    @staticmethod
+    def _find_adjacent_view_area(screen, node_area):
+        candidates = [area for area in screen.areas if area.type == 'VIEW_3D']
+        if not candidates:
+            return None
+
+        def score(area):
+            horizontal_overlap = max(
+                0,
+                min(node_area.x + node_area.width, area.x + area.width)
+                - max(node_area.x, area.x),
+            )
+            vertical_gap = min(
+                abs((node_area.y + node_area.height) - area.y),
+                abs((area.y + area.height) - node_area.y),
+            )
+            return (horizontal_overlap, -vertical_gap, area.width * area.height)
+
+        return max(candidates, key=score)
+
+
+def _get_or_create_node_tree():
+    tree = next((tree for tree in bpy.data.node_groups if tree.bl_idname == DSC_NODE_TREE_ID), None)
+    if tree is None:
+        tree = bpy.data.node_groups.new('OpenSCENARIO Actions', DSC_NODE_TREE_ID)
+    return tree
+
+
+def _configure_node_editor(area, tree):
+    area.type = 'NODE_EDITOR'
+    area.spaces.active.tree_type = DSC_NODE_TREE_ID
+    area.spaces.active.pin = True
+    area.spaces.active.node_tree = tree
+
+
+def _frame_node_editor(window, area):
+    region = next((region for region in area.regions if region.type == 'WINDOW'), None)
+    if region is None:
+        return
+    with bpy.context.temp_override(window=window, area=area, region=region):
+        bpy.ops.node.view_all()
+        bpy.ops.view2d.zoom_in(
+            zoomfacx=DSC_INITIAL_NODE_EDITOR_ZOOM,
+            zoomfacy=DSC_INITIAL_NODE_EDITOR_ZOOM,
+        )
+
+
+class DSC_PT_xosc_node_tools(bpy.types.Panel):
+    bl_idname = 'DSC_PT_xosc_node_tools'
+    bl_label = 'OpenSCENARIO Actions'
+    bl_space_type = 'NODE_EDITOR'
+    bl_region_type = 'UI'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.tree_type == DSC_NODE_TREE_ID
+
+    def draw(self, context):
+        del context
+        self.layout.operator('dsc.create_xosc_node_tree', icon='NODETREE')
+
+
+NODE_CLASSES = (
+    DSC_XOSC_NodeTree,
+    DSC_XOSC_SimulationTimeTriggerNode,
+    DSC_XOSC_OrTriggerNode,
+    DSC_XOSC_AndTriggerNode,
+    DSC_XOSC_ScenarioStopTriggerNode,
+    DSC_XOSC_SpeedNode,
+    DSC_XOSC_LaneChangeNode,
+    DSC_XOSC_LaneOffsetNode,
+    DSC_XOSC_DistanceNode,
+    DSC_XOSC_UserDefinedNode,
+    DSC_OT_create_xosc_node_tree,
+    DSC_OT_toggle_xosc_node_editor,
+    DSC_PT_xosc_node_tools,
+)
+
+NODE_ACTION_CLASSES = (
+    DSC_XOSC_SimulationTimeTriggerNode,
+    DSC_XOSC_OrTriggerNode,
+    DSC_XOSC_AndTriggerNode,
+    DSC_XOSC_ScenarioStopTriggerNode,
+    DSC_XOSC_SpeedNode,
+    DSC_XOSC_LaneChangeNode,
+    DSC_XOSC_LaneOffsetNode,
+    DSC_XOSC_DistanceNode,
+    DSC_XOSC_UserDefinedNode,
+)
+
+
+def get_node_data():
+    node_groups = [tree for tree in bpy.data.node_groups if tree.bl_idname == DSC_NODE_TREE_ID]
+    if not node_groups:
+        return []
+    nodes = [node for node in node_groups[0].nodes if isinstance(node, DSC_XOSC_ActionNode)]
+    for logic_node in node_groups[0].nodes:
+        if not isinstance(logic_node, (DSC_XOSC_OrTriggerNode, DSC_XOSC_AndTriggerNode)):
+            continue
+        logic_node.trigger_data()
+    entity_names = set(get_entity_names())
+    invalid_nodes = []
+    data = []
+    action_names = {}
+    for node in nodes:
+        base_name = node.action_name.strip() or node.name
+        count = action_names.get(base_name, 0) + 1
+        action_names[base_name] = count
+        if count > 1:
+            node.action_name = '{}_{}'.format(base_name, count)
+    for node in nodes:
+        if node.entity_ref == DSC_NO_ENTITY and len(entity_names) == 1:
+            node.entity_ref = next(iter(entity_names))
+        if node.entity_ref not in entity_names:
+            invalid_nodes.append('{} ({})'.format(node.name, node.entity_ref or 'no entity'))
+        needs_target_entity = (
+            node.action_type == 'longitudinal_distance'
+            or (node.action_type == 'absolute_speed' and node.speed_target_type == 'relative')
+        )
+        if needs_target_entity and node.target_entity_ref not in entity_names:
+            invalid_nodes.append('{} target ({})'.format(
+                node.name, node.target_entity_ref or 'no entity'))
+        node_data = node.to_xml_data()
+        if node_data['priority'] == 'overwrite':
+            node_data['priority'] = 'override'
+        complete_socket = node.outputs.get('Complete')
+        if complete_socket and complete_socket.links:
+            destination = complete_socket.links[0].to_node
+            if isinstance(destination, DSC_XOSC_ActionNode):
+                node_data['next'] = destination.action_name
+        node_data['trigger'] = node.trigger_data()
+        data.append(node_data)
+    if invalid_nodes:
+        raise ValueError('Select an existing entity for action node(s): {}'.format(
+            ', '.join(invalid_nodes)))
+    return data
+
+
+def get_stop_trigger_data():
+    node_groups = [tree for tree in bpy.data.node_groups if tree.bl_idname == DSC_NODE_TREE_ID]
+    if not node_groups:
+        return None
+    stop_nodes = [node for node in node_groups[0].nodes
+                  if isinstance(node, DSC_XOSC_ScenarioStopTriggerNode)]
+    if len(stop_nodes) > 1:
+        raise ValueError('Only one scenario stop trigger node is supported')
+    if not stop_nodes:
+        return None
+    node = stop_nodes[0]
+    conditions = []
+    if node.use_time:
+        conditions.append({'type': 'simulation_time', 'value': node.value, 'rule': 'greaterOrEqual'})
+    trigger_socket = node.inputs.get('Trigger')
+    if trigger_socket and trigger_socket.links:
+        source = trigger_socket.links[0].from_node
+        trigger_data = _condition_from_trigger_source(source)
+        if trigger_data is not None:
+            conditions.append(trigger_data)
+    return conditions or None
+
+
+def append_node_storyboard(root):
+    return append_storyboard(root, get_node_data(), stop_condition=get_stop_trigger_data())
+
+
+def write_node_storyboard(path):
+    import xml.etree.ElementTree as ET
+    tree = ET.parse(path)
+    append_node_storyboard(tree.getroot())
+    ET.indent(tree, space='  ')
+    tree.write(path, encoding='utf-8', xml_declaration=True)
+
+
+def register_node_menu():
+    bpy.types.NODE_MT_add.append(_node_add_menu)
+
+
+def unregister_node_menu():
+    bpy.types.NODE_MT_add.remove(_node_add_menu)
