@@ -60,6 +60,11 @@ from . esmini_preview_operators import DSC_OT_esmini_preview_stop
 from . esmini_preview_operators import DSC_OT_esmini_preview_step
 from . esmini_preview_operators import DSC_OT_esmini_open_preferences
 from . import esmini_preview
+from .scenario_nodes import (
+    NODE_CLASSES,
+    register_node_menu,
+    unregister_node_menu,
+)
 
 
 bl_info = {
@@ -247,6 +252,10 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.trajectory_clothoid_spline',
                  icon_value=dsc_custom_icons['trajectory_clothoid_spline'].icon_id)
 
+        box.label(text='Actions')
+        row = box.row(align=True)
+        row.operator('dsc.toggle_xosc_node_editor', text='Toggle node editor', icon='NODETREE')
+
         layout.label(text='esmini Preview')
         box = layout.box()
         row = box.row(align=True)
@@ -333,7 +342,7 @@ classes = (
     DSC_OT_esmini_open_preferences,
     DSC_OT_esmini_preview_stop,
     DSC_Properties,
-)
+) + NODE_CLASSES
 
 def register():
     global dsc_custom_icons
@@ -365,6 +374,7 @@ def register():
     # Register all addon classes
     for c in classes:
         bpy.utils.register_class(c)
+    register_node_menu()
     # Register export menu
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     # Register addon property group
@@ -385,6 +395,7 @@ def unregister():
     #  Unregister all addon classes
     for c in reversed(classes):
         bpy.utils.unregister_class(c)
+    unregister_node_menu()
     # Get rid of icon collections
     bpy.utils.previews.remove(dsc_custom_icons)
     bpy.utils.previews.remove(dsc_road_sign_previews)
