@@ -48,6 +48,25 @@ params_cross_section = {
         'road_mark_line_length': 3.0,
         'road_mark_line_space': 6.0,
     },
+    'urban_two_lanes_walkway': {
+        'sides': ['left', 'left', 'left', 'left', 'center', 'right', 'right', 'right', 'right'],
+        'widths_start': [2.0, 0.15, 0.30, 3.5, 0.0, 3.5, 0.30, 0.15, 2.0],
+        'widths_end': [2.0, 0.15, 0.30, 3.5, 0.0, 3.5, 0.30, 0.15, 2.0],
+        'types': ['walking', 'curb', 'border', 'driving', 'center', 'driving', 'border', 'curb', 'walking'],
+        'road_mark_types': ['none', 'none', 'none', 'none', 'broken', 'none', 'none', 'none', 'none'],
+        'road_mark_weights': ['none', 'none', 'none', 'none', 'standard', 'none', 'none', 'none', 'none'],
+        'road_mark_widths': [0.0, 0.0, 0.0, 0.0, 0.12, 0.0, 0.0, 0.0, 0.0],
+        'road_mark_colors': ['none', 'none', 'none', 'none', 'white', 'none', 'none', 'none', 'none'],
+        'guard_rails': [False, False, False, False, False, False, False, False, False],
+        'guard_rail_lateral_offsets': [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+        'lane_offset_start': 0,
+        'lane_offset_end': 0,
+        'road_split_type': 'none',
+        'road_split_lane_idx': 8,
+        'road_mark_line_length': 3.0,
+        'road_mark_line_space': 6.0,
+        'height_curb': 0.12,
+    },
     # Typical German road cross sections
     # See:
     #   https://de.wikipedia.org/wiki/Richtlinien_f%C3%BCr_die_Anlage_von_Stra%C3%9Fen_%E2%80%93_Querschnitt

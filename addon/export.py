@@ -55,18 +55,45 @@ class DSC_ParkingSpaceObject(xodr.Object):
 
 from scenariogeneration.xosc.position import ClothoidSpline, ClothoidSplineSegment
 
+def register_lane_type_walking():
+    """
+        The OpenDRIVE lane type "walking" (which replaces the deprecated
+        "sidewalk") is not part of the LaneType enumeration of the
+        scenariogeneration package (as of version 0.16.5). Register it
+        dynamically so that it can be exported with the correct type name.
+    """
+    if hasattr(xodr.LaneType, 'walking'):
+        return xodr.LaneType.walking
+    try:
+        member = object.__new__(xodr.LaneType)
+        member._name_ = 'walking'
+        member._value_ = max(m.value for m in xodr.LaneType) + 1
+        member.__objclass__ = xodr.LaneType
+        # Needs to be inserted into the class dict before the member map since
+        # the enum metaclass refuses to overwrite existing members
+        type.__setattr__(xodr.LaneType, 'walking', member)
+        xodr.LaneType._member_map_['walking'] = member
+        xodr.LaneType._value2member_map_[member._value_] = member
+        xodr.LaneType._member_names_.append('walking')
+        return member
+    except Exception as e:
+        print('Could not register OpenDRIVE lane type "walking", '
+              'falling back to "sidewalk":', e)
+        return xodr.LaneType.sidewalk
+
 mapping_lane_type = {
     'driving': xodr.LaneType.driving,
     #'bidirectional': xodr.LaneType.bidirectional,
     #'bus': xodr.LaneType.bus,
     'stop': xodr.LaneType.stop,
     'parking': xodr.LaneType.parking,
-    #'biking': xodr.LaneType.biking,
+    'biking': xodr.LaneType.biking,
     #'restricted': xodr.LaneType.restricted,
     #'roadWorks': xodr.LaneType.roadWorks,
     'border': xodr.LaneType.border,
-    # TODO (missing) 'curb': xodr.LaneType.curb,
+    'curb': xodr.LaneType.curb,
     #'sidewalk': xodr.LaneType.sidewalk,
+    'walking': register_lane_type_walking(),
     'shoulder': xodr.LaneType.shoulder,
     'median': xodr.LaneType.median,
     'entry': xodr.LaneType.entry,
@@ -1005,10 +1032,25 @@ class DSC_OT_export(bpy.types.Operator):
                 road_mark.add_specific_road_line(line)
             return road_mark
 
+    def add_lane_height(self, lane, lane_type, height_inner, height_curb):
+        '''
+            Add the height record lifting a lane above the road surface and
+            return the height of its outer edge. Curb lanes ramp up from their
+            inner to their outer edge, all lanes behind them stay lifted.
+        '''
+        if lane_type == 'curb':
+            height_outer = height_inner + height_curb
+        else:
+            height_outer = height_inner
+        if height_inner != 0.0 or height_outer != 0.0:
+            lane.add_height(height_inner, height_outer)
+        return height_outer
+
     def create_lanes(self, obj):
         lanes = xodr.Lanes()
         road_mark_line_length = obj.get('road_mark_line_length', 3.0)
         road_mark_line_space = obj.get('road_mark_line_space', 6.0)
+        height_curb = obj.get('height_curb', 0.0)
         road_mark = self.get_road_mark(obj['lane_center_road_mark_type'],
                                        obj['lane_center_road_mark_weight'],
                                        obj['lane_center_road_mark_color'],
@@ -1018,6 +1060,9 @@ class DSC_OT_export(bpy.types.Operator):
         lane_center = xodr.standard_lane(rm=road_mark)
         lane_center.add_roadmark
         lanesection = xodr.LaneSection(0,lane_center)
+        # Lane heights accumulate from the road center outwards
+        height_left = 0.0
+        height_right = 0.0
         for idx in range(obj['lanes_left_num']):
             a,b,c,d = self.get_lane_width_coefficients(obj['lanes_left_widths_start'][idx],
                 obj['lanes_left_widths_end'][idx], obj['geometry_total_length'])
@@ -1030,6 +1075,8 @@ class DSC_OT_export(bpy.types.Operator):
                                            road_mark_line_length,
                                            road_mark_line_space)
             lane.add_roadmark(road_mark)
+            height_left = self.add_lane_height(lane, obj['lanes_left_types'][idx],
+                                               height_left, height_curb)
             lanesection.add_left_lane(lane)
         for idx in range(obj['lanes_right_num']):
             a,b,c,d = self.get_lane_width_coefficients(obj['lanes_right_widths_start'][idx],
@@ -1043,6 +1090,8 @@ class DSC_OT_export(bpy.types.Operator):
                                            road_mark_line_length,
                                            road_mark_line_space)
             lane.add_roadmark(road_mark)
+            height_right = self.add_lane_height(lane, obj['lanes_right_types'][idx],
+                                                height_right, height_curb)
             lanesection.add_right_lane(lane)
         lanes.add_lanesection(lanesection)
         lanes.add_laneoffset(xodr.LaneOffset(0,

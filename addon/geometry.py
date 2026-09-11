@@ -461,11 +461,13 @@ class DSC_geometry():
             elevation['d'] * s_section**3
         return z, curvature_elevation
 
-    def sample_cross_section(self, s, t_vec, with_lane_offset):
+    def sample_cross_section(self, s, t_vec, with_lane_offset, z_offsets=None):
         '''
             Sample a cross section (multiple t values) in the local coordinate
             system. Also return corresponding curvature and heading of the
-            reference line.
+            reference line. Optionally lift the sampled points above the road
+            surface (e.g. for curbs and the raised lanes behind them) by passing
+            one z offset per t value.
         '''
         x_s, y_s, hdg, curvature_plan_view = self.sample_plan_view(s)
         z, curvature_elevation = self.calculate_elevation(s)
@@ -473,12 +475,16 @@ class DSC_geometry():
         vector_hdg_t = Vector((1.0, 0.0))
         vector_hdg_t.rotate(Matrix.Rotation(hdg + pi/2, 2))
         xyz = []
-        for t in t_vec:
+        for idx_t, t in enumerate(t_vec):
             if with_lane_offset:
                 lane_offset = helpers.calculate_lane_offset(s, self.lane_offset_coefficients, self.total_length)
             else:
                 lane_offset = 0.0
+            if z_offsets is None:
+                z_offset = 0.0
+            else:
+                z_offset = z_offsets[idx_t]
             xy_vec = Vector((x_s, y_s)) + t * vector_hdg_t + lane_offset * vector_hdg_t
-            xyz += [(xy_vec.x, xy_vec.y, z)]
+            xyz += [(xy_vec.x, xy_vec.y, z + z_offset)]
         return xyz, hdg, curvature_abs
 

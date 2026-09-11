@@ -60,11 +60,12 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
                #('bus', 'Bus', '', 2),
                ('stop', 'Stop', '', 3),
                ('parking', 'Parking', '', 4),
-               #('biking', 'Biking', '', 5),
+               ('biking', 'Biking', '', 5),
                #('restricted', 'Restricted', '', 6),
                #('roadWorks', 'Road works', '', 7),
                ('border', 'Border', '', 8),
-               #('curb', 'Curb', '', 9),
+               ('curb', 'Curb', '', 9),
+               # 'sidewalk' is deprecated in OpenDRIVE in favor of 'walking'
                #('sidewalk', 'Sidewalk', '', 10),
                ('shoulder', 'Shoulder', '', 11),
                ('median', 'Median', '', 12),
@@ -75,6 +76,7 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
                #('connectingRamp', 'Connecting ramp', '', 17),
                ('none', 'None', '', 18),
                ('center', 'Center', '', 19),
+               ('walking', 'Walking', '', 20),
               ),
         default='driving',
         update=callback_lane_width,
@@ -139,8 +141,11 @@ class DSC_enum_lane(bpy.types.PropertyGroup):
             'onRamp' : context.scene.dsc_properties.road_properties.width_driving,
             'offRamp' : context.scene.dsc_properties.road_properties.width_driving,
             'stop' : context.scene.dsc_properties.road_properties.width_stop,
-            'parking' : context.scene.dsc_properties.road_properties.width_stop,
+            'parking' : context.scene.dsc_properties.road_properties.width_parking,
+            'biking' : context.scene.dsc_properties.road_properties.width_biking,
+            'walking' : context.scene.dsc_properties.road_properties.width_walking,
             'border' : context.scene.dsc_properties.road_properties.width_border,
+            'curb' : context.scene.dsc_properties.road_properties.width_curb,
             'shoulder' : context.scene.dsc_properties.road_properties.width_shoulder,
             'median' : context.scene.dsc_properties.road_properties.width_median,
             'none' : context.scene.dsc_properties.road_properties.width_none,
@@ -223,9 +228,17 @@ class DSC_road_properties(bpy.types.PropertyGroup):
     )
     width_driving: bpy.props.FloatProperty(default=3.5, min=0.01, max=20.0, step=1)
     width_border: bpy.props.FloatProperty(default=0.5, min=0.01, max=1.0, step=1)
-    # width_curb: bpy.props.FloatProperty(default=0.16, min=0.10, max=0.30, step=1)
+    width_curb: bpy.props.FloatProperty(default=0.15, min=0.01, max=1.0, step=1)
     width_median: bpy.props.FloatProperty(default=2.0, min=0.01, max=10.0, step=1)
     width_stop: bpy.props.FloatProperty(default=2.5, min=0.01, max=10.0, step=1)
+    width_parking: bpy.props.FloatProperty(default=2.5, min=0.01, max=10.0, step=1)
+    width_biking: bpy.props.FloatProperty(default=1.5, min=0.01, max=10.0, step=1)
+    width_walking: bpy.props.FloatProperty(default=2.0, min=0.01, max=10.0, step=1)
+    height_curb: bpy.props.FloatProperty(
+        name='Curb height',
+        description='Height a curb lane lifts the lanes behind it above the road surface in meters',
+        default=0.12, min=0.0, max=1.0, step=1, unit='LENGTH',
+    )
     width_shoulder: bpy.props.FloatProperty(default=1.5, min=0.01, max=10.0, step=1)
     width_none: bpy.props.FloatProperty(default=2.5, min=0.01, max=10.0, step=1)
 
@@ -256,6 +269,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         items = [
                 ('two_lanes_default','Two lanes (default)','Two lanes (default)'),
                 ('two_lanes_turning_lane_offset_left_open','Two lanes with offset left turning lane opening','Two lanes with opening offset left turning lane'),
+                ('urban_two_lanes_walkway','Urban two lanes with curb and walkway','Two driving lanes separated by a broken line with border, curb and walking lanes on each side'),
                 # Typical German road cross sections
                 ('ekl4_rq9', 'EKL 4, RQ 9', 'EKL 4, RQ 9'),
                 ('ekl3_rq11', 'EKL 3, RQ 11', 'EKL 3, RQ 11'),
@@ -441,6 +455,7 @@ class DSC_road_properties(bpy.types.PropertyGroup):
         self.road_split_lane_idx = params['road_split_lane_idx']
         self.road_mark_line_length = params.get('road_mark_line_length', 3.0)
         self.road_mark_line_space = params.get('road_mark_line_space', 6.0)
+        self.height_curb = params.get('height_curb', 0.12)
         for idx, lane in enumerate(self.lanes):
             if idx <= self.road_split_lane_idx:
                 lane.split_right = False

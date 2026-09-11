@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+- Lane types walking, biking and curb
+- Cross section preset "Urban two lanes with curb and walkway" with two driving
+  lanes separated by a broken line and border, curb and walking lanes on each side
+
 ## [0.35.0] - 2026-09-08
 
 ### Added
