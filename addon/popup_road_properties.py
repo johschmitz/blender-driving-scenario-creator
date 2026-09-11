@@ -67,7 +67,8 @@ class DSC_OT_save_cross_section_preset(bpy.types.Operator):
             'road_split_type': props.road_split_type,
             'road_split_lane_idx': props.road_split_lane_idx,
             'road_mark_line_length': props.road_mark_line_length,
-            'road_mark_line_space': props.road_mark_line_space
+            'road_mark_line_space': props.road_mark_line_space,
+            'height_curb': props.height_curb
         }
 
         # Add lane data in correct order
@@ -238,15 +239,27 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
             row = box_params.row(align=True)
             row.label(text='Width border lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_border', text='')
-            # row = box_params.row(align=True)
-            # row.label(text='Width curb:')
-            # row.prop(context.scene.dsc_properties.road_properties, 'width_curb', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width curb lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_curb', text='')
+            row = box_params.row(align=True)
+            row.label(text='Height curb:')
+            row.prop(context.scene.dsc_properties.road_properties, 'height_curb', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width walking lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_walking', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width biking lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_biking', text='')
             row = box_params.row(align=True)
             row.label(text='Width median lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_median', text='')
             row = box_params.row(align=True)
             row.label(text='Width stop lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_stop', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width parking lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_parking', text='')
             row = box_params.row(align=True)
             row.label(text='Width shoulder lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_shoulder', text='')

@@ -38,6 +38,11 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
     params_input = {}
     params_snap = {}
 
+    joint_side_start = None
+    # Lane type group (driving|walking|biking) of the junction joint lane the
+    # connecting road starts at
+    lane_type_group_start = None
+
     geometry = None
 
     view_memory = view_memory_helper.view_memory_helper()
@@ -227,6 +232,16 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
             'design_speed': 130.0,
         }
 
+    def get_snapped_lane_type(self):
+        '''
+            Return the lane type of the currently snapped junction joint lane.
+        '''
+        if len(self.params_snap['lane_types_left']) > 0:
+            return self.params_snap['lane_types_left'][0]
+        if len(self.params_snap['lane_types_right']) > 0:
+            return self.params_snap['lane_types_right'][0]
+        return None
+
     def reset_params_snap(self):
         self.params_snap = {
             'hit_type': None,
@@ -242,6 +257,9 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
             'slope': 0.0,
             'lane_widths_left': [],
             'lane_widths_right': [],
+            'lane_types_left': [],
+            'lane_types_right': [],
+            'height_curb': 0.0,
         }
 
     def create_object_modal(self, context):
@@ -311,6 +329,7 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
             self.selected_curvature = 0.0
             self.selected_slope = 0.0
             self.joint_side_start = None
+            self.lane_type_group_start = None
             self.state = 'SELECT_START'
             if self.object_type == 'junction_connecting_road':
                 self.params_input['design_speed'] = context.scene.dsc_properties.connecting_road_properties.design_speed
@@ -339,8 +358,11 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                         params_snap = helpers.mouse_to_road_joint_params(
                             context, event, road_type='junction_connecting_road', joint_side='right')
                     else:
+                        # Only allow connecting lanes of the same group, e.g. a
+                        # walking lane can only be connected to a walking lane
                         params_snap = helpers.mouse_to_road_joint_params(
-                            context, event, road_type='junction_connecting_road', joint_side='left')
+                            context, event, road_type='junction_connecting_road', joint_side='left',
+                            lane_type_group=self.lane_type_group_start)
                 else:
                     params_snap = helpers.mouse_to_road_joint_params(
                         context, event, road_type='road')
@@ -354,6 +376,8 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                         self.selected_normal_start = self.params_snap['normal']
                         self.joint_side_start = self.params_snap['joint_side']
                         if self.object_type == 'junction_connecting_road':
+                            self.lane_type_group_start = helpers.get_lane_connection_group(
+                                self.get_snapped_lane_type())
                             self.update_road_properties(context, 'start')
                     elif self.state == 'SELECT_POINT':
                         self.selected_heading_end = self.params_snap['heading']

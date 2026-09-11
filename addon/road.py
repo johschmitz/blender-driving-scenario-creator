@@ -55,6 +55,9 @@ class road:
                 elif idx in materials['grass']:
                     obj.data.polygons[idx].material_index = \
                         helpers.get_material_index(obj, 'grass')
+                elif idx in materials['concrete']:
+                    obj.data.polygons[idx].material_index = \
+                        helpers.get_material_index(obj, 'road_concrete')
                 elif idx in materials['road_mark_yellow']:
                     obj.data.polygons[idx].material_index = \
                         helpers.get_material_index(obj, 'road_mark_yellow')
@@ -157,6 +160,7 @@ class road:
             obj['lanes_right_guard_rail_lateral_offsets'] = self.params['lanes_right_guard_rail_lateral_offsets']
             obj['road_mark_line_length'] = self.params['road_mark_line_length']
             obj['road_mark_line_space'] = self.params['road_mark_line_space']
+            obj['height_curb'] = self.params['height_curb']
 
             return obj
 
@@ -262,6 +266,7 @@ class road:
                        'lane_center_road_mark_weight': [],
                        'lane_center_road_mark_width': [],
                        'lane_center_road_mark_color': [],
+                       'height_curb': road_properties.height_curb,
                        'lane_offset_start': road_properties.lane_offset_start,
                        'lane_offset_end': road_properties.lane_offset_end,
                        'road_split_type': road_properties.road_split_type,
@@ -355,18 +360,72 @@ class road:
                         t_cp_split -= self.params['lanes_right_widths_end'][idx]
         return t_cp_split
 
+    def get_lane_height_delta(self, lane):
+        '''
+            Return the height a lane adds between its inner and its outer edge.
+            Only curb lanes lift the road surface (up to the sidewalk level).
+        '''
+        if lane.type == 'curb':
+            return self.params['height_curb']
+        return 0.0
+
+    def get_lane_height_offset(self, side, lane_idx):
+        '''
+            Return the height above the road surface at the inner edge of the
+            lane with the given index, counting from the road center outwards.
+        '''
+        if side == 'left':
+            types = self.params['lanes_left_types']
+        else:
+            types = self.params['lanes_right_types']
+        height = 0.0
+        for idx in range(min(lane_idx, len(types))):
+            if types[idx] == 'curb':
+                height += self.params['height_curb']
+        return height
+
+    def get_lane_heights(self, lanes):
+        '''
+            Return list of tuples with the height of the inner and the outer
+            edge of each lane above the road surface. Heights accumulate from
+            the road center outwards, hence a curb lane also lifts all lanes
+            further outside, e.g. a walking lane behind it.
+        '''
+        heights = [(0.0, 0.0)] * len(lanes)
+        # Right lanes are ordered from the center outwards
+        height = 0.0
+        for idx_lane, lane in enumerate(lanes):
+            if lane.side == 'right':
+                height_inner = height
+                height = height_inner + self.get_lane_height_delta(lane)
+                heights[idx_lane] = (height_inner, height)
+        # Left lanes are ordered from the outside towards the center
+        height = 0.0
+        for idx_lane in range(len(lanes) - 1, -1, -1):
+            if lanes[idx_lane].side == 'left':
+                height_inner = height
+                height = height_inner + self.get_lane_height_delta(lanes[idx_lane])
+                heights[idx_lane] = (height_inner, height)
+        return heights
+
     def get_strips_t_values(self, lanes, s):
         '''
-            Return list of t values of strip borders.
+            Return list of t values of strip borders together with the matching
+            list of z offsets above the road surface.
         '''
         t = 0
         t_left_width_total = 0
         t_values = []
+        z_values = []
         # Make sure the road has a non-zero length
         if self.geometry.total_length == 0:
-            return t_values
+            return t_values, z_values
+        lane_heights = self.get_lane_heights(lanes)
         # Build up t values lane by lane
         for idx_lane, lane in enumerate(lanes):
+            # All strip borders created while stepping through a lane sit on the
+            # outer edge of that lane (in -t direction for right, +t for left)
+            z_outer = lane_heights[idx_lane][1]
             s_norm = s / self.geometry.total_length
             if lane.width_start == lane.width_end:
                 lane_width_s = lane.width_start
@@ -403,6 +462,7 @@ class road:
                     t_values.append(t -       width_line)
                     t_values.append(t - 2.0 * width_line)
                     t_values.append(t - 3.0 * width_line)
+                    z_values += [z_outer] * 4
                     width_double_line = 3.0 * width_line
                     t -= width_double_line
                     if lane.side == 'left':
@@ -412,6 +472,7 @@ class road:
                 else:
                     t_values.append(t)
                     t_values.append(t - width_line)
+                    z_values += [z_outer] * 2
                     t -= width_line
                     if lane.side == 'left':
                         t_left_width_total += width_line
@@ -419,6 +480,7 @@ class road:
                         t_left_width_total += width_line/2
             else:
                 t_values.append(t)
+                z_values.append(z_outer)
             # Add lane width for left side of road AFTER (in t-direction) road mark lines
             if lane.side == 'left':
                 width_left_lines_on_lane = 0
@@ -444,7 +506,7 @@ class road:
                 t_left_width_total += t_lane
         for idx in range(len(t_values)):
             t_values[idx] += t_left_width_total
-        return t_values
+        return t_values, z_values
 
     def get_strips_s_boundaries(self, lanes, road_mark_line_length, road_mark_line_space):
         '''
@@ -504,9 +566,10 @@ class road:
         '''
         length = self.geometry.total_length
         s = 0.0
-        strips_t_values = self.get_strips_t_values(lanes, s)
+        strips_t_values, strips_z_values = self.get_strips_t_values(lanes, s)
         # Obtain first curvature value
-        xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(0.0, strips_t_values, True)
+        xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(
+            0.0, strips_t_values, True, strips_z_values)
         # We need 2 vectors for each strip to later construct the faces with one
         # list per face on each side of each strip
         sample_points = [[[]] for _ in range(2 * (len(strips_t_values) - 1))]
@@ -530,8 +593,9 @@ class road:
                 s = length
 
             # Sample next points along road geometry (all t values for current s value)
-            strips_t_values = self.get_strips_t_values(lanes, s)
-            xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(s, strips_t_values, True)
+            strips_t_values, strips_z_values = self.get_strips_t_values(lanes, s)
+            xyz_samples, hdg, curvature_abs = self.geometry.sample_cross_section(
+                s, strips_t_values, True, strips_z_values)
             point_index = -2
             while point_index < len(sample_points) - 2:
                 point_index = point_index + 2
@@ -556,8 +620,9 @@ class road:
                     while smaller:
                         # Sample the geometry
                         t_values = [strips_t_values[idx_strip], strips_t_values[idx_strip + 1]]
+                        z_values = [strips_z_values[idx_strip], strips_z_values[idx_strip + 1]]
                         xyz_boundary, hdg, curvature_abs = self.geometry.sample_cross_section(
-                            s_boundaries_next[idx_smaller], t_values, True)
+                            s_boundaries_next[idx_smaller], t_values, True, z_values)
                         if idx_smaller == 0:
                             # Append left extra point
                             sample_points[2 * idx_strip][idx_boundaries[1]].append(xyz_boundary[0])
@@ -753,6 +818,9 @@ class road:
                     t_c -= lateral_offset
                 return t_c
 
+            # Lanes behind a curb are lifted above the road surface
+            z_offset = self.get_lane_height_offset(side, lane_idx)
+
             # --- Railing box (closed: inner, outer, top, bottom walls) ---
             rail_base = vertex_offset + len(vertices)
             for s_val in sample_s_values:
@@ -763,7 +831,8 @@ class road:
                 else:
                     t_inner = t_center + half_w
                     t_outer = t_center - half_w
-                xyz, _, _ = self.geometry.sample_cross_section(s_val, [t_inner, t_outer], True)
+                xyz, _, _ = self.geometry.sample_cross_section(
+                    s_val, [t_inner, t_outer], True, [z_offset, z_offset])
                 pt_in = xyz[0]
                 pt_out = xyz[1]
                 vertices.append((pt_in[0], pt_in[1], pt_in[2] + guard_rail_height_bottom))
@@ -793,8 +862,10 @@ class road:
                     t_p_out = t_center - half_pw
                 s_back = max(pole_s - half_pl, 0.0)
                 s_front = min(pole_s + half_pl, length)
-                xyz_b, _, _ = self.geometry.sample_cross_section(s_back, [t_p_in, t_p_out], True)
-                xyz_f, _, _ = self.geometry.sample_cross_section(s_front, [t_p_in, t_p_out], True)
+                xyz_b, _, _ = self.geometry.sample_cross_section(
+                    s_back, [t_p_in, t_p_out], True, [z_offset, z_offset])
+                xyz_f, _, _ = self.geometry.sample_cross_section(
+                    s_front, [t_p_in, t_p_out], True, [z_offset, z_offset])
                 pb_in, pb_out = xyz_b[0], xyz_b[1]
                 pf_in, pf_out = xyz_f[0], xyz_f[1]
                 # 8 vertices: back(0-3), front(4-7)
@@ -823,7 +894,8 @@ class road:
         '''
             Return dictionary with index of faces for each material.
         '''
-        materials = {'asphalt': [], 'road_mark_white': [], 'road_mark_yellow': [], 'grass': []}
+        materials = {'asphalt': [], 'road_mark_white': [], 'road_mark_yellow': [], 'grass': [],
+                     'concrete': []}
         idx_face = 0
         strip_to_lane, strip_is_road_mark = self.get_strip_to_lane_mapping(lanes)
         for idx_strip in range(len(strips_s_boundaries)):
@@ -852,6 +924,8 @@ class road:
             else:
                 if lanes[idx_lane].type == 'shoulder':
                     materials['grass'].append(idx_face)
+                elif lanes[idx_lane].type in ('curb', 'walking', 'sidewalk'):
+                    materials['concrete'].append(idx_face)
                 else:
                     materials['asphalt'].append(idx_face)
                 idx_face += 1

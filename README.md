@@ -158,7 +158,11 @@ create roads and vehicles using the mouse by clicking the buttons in the
 "Driving Scenario Creator" menu. Roads, signs, vehicles and trajectories can be
 placed with the mouse. Junction connecting roads can be build using the mouse
 similar to normal roads after first building a junction area. The cursor will
-snap to the lanes of the incoming roads in this case. Note, that in Blender it
+snap to the lanes of the incoming roads in this case. Besides driving lanes this
+also works for walking and biking lanes so that pedestrians and cyclists can
+cross a junction. A connecting road can only link lanes of the same kind, hence
+after starting on a walking lane the cursor only snaps to the walking lanes of
+the other incoming roads. Note, that in Blender it
 is possible to quickly left click multiple times in order to select objects
 which are located on top of each other. This helps with selecting and deleting
 junction connecting roads. Grid snapping can be activated by holding
