@@ -356,9 +356,12 @@ def create_reference_object_xodr_link(reference_object, id_object):
     reference_object['id_ref_object'] = id_object
 
 
-def set_connecting_road_properties(context, joint_side_start, road_contact_point, width_lane_incoming, width_lane_outgoing):
+def set_connecting_road_properties(context, joint_side_start, road_contact_point,
+                                   width_lane_incoming, width_lane_outgoing, lane_type='driving'):
     '''
-        Set the properties for construction of a connecting road.
+        Set the properties for construction of a connecting road. The lane type
+        is taken over from the connected lanes so that e.g. walking lanes stay
+        walking lanes across a junction.
     '''
     context.scene.dsc_properties.connecting_road_properties.clear_lanes()
     if context.scene.dsc_properties.connecting_road_properties.cross_section_preset != 'junction_connecting_road':
@@ -367,6 +370,8 @@ def set_connecting_road_properties(context, joint_side_start, road_contact_point
     if joint_side_start == 'left':
         context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 1
         context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 0
+        # Set the type before the widths since it resets them to the defaults
+        context.scene.dsc_properties.connecting_road_properties.lanes[0].type = lane_type
         if road_contact_point == 'start':
             # We add lanes from left to right so first left has index 0, center lane index 1
             context.scene.dsc_properties.connecting_road_properties.lanes[0].width_start = width_lane_incoming
@@ -377,6 +382,8 @@ def set_connecting_road_properties(context, joint_side_start, road_contact_point
     else:
         context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 0
         context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 1
+        # Set the type before the widths since it resets them to the defaults
+        context.scene.dsc_properties.connecting_road_properties.lanes[1].type = lane_type
         if road_contact_point == 'start':
             # We add lanes from left to right so center lane has index 0, first right index 1
             context.scene.dsc_properties.connecting_road_properties.lanes[1].width_start = width_lane_incoming
@@ -529,6 +536,56 @@ def _is_drivable_lane_type(lane_type):
         'slipLane',
     }
 
+def get_lane_connection_group(lane_type):
+    '''
+        Return the group of lane types a lane can be connected to through a
+        junction or None if the lane type can not be connected at all. Only
+        lanes of the same group may be linked, e.g. a walking lane connects to
+        a walking lane so that pedestrians can cross a junction.
+    '''
+    if _is_drivable_lane_type(lane_type):
+        return 'driving'
+    if lane_type in {'walking', 'sidewalk'}:
+        return 'walking'
+    if lane_type == 'biking':
+        return 'biking'
+    return None
+
+def _is_connectable_lane_type(lane_type, lane_type_group=None):
+    '''
+        Return True if a connecting road can be attached to a lane of the given
+        type. If a lane type group is given the lane also has to belong to it.
+    '''
+    group = get_lane_connection_group(lane_type)
+    if group is None:
+        return False
+    if lane_type_group is None:
+        return True
+    return group == lane_type_group
+
+def get_joint_lane_height(joint, side, idx_lane):
+    '''
+        Return the height above the road surface of the inner edge of a junction
+        joint lane, i.e. the accumulated height of all curb lanes between the
+        road center and this lane.
+    '''
+    if 'height_curb' in joint:
+        height_curb = joint['height_curb']
+    else:
+        # Junctions created before curb heights were introduced
+        height_curb = 0.0
+    if height_curb == 0.0:
+        return 0.0
+    if side == 'left':
+        lane_types = list(joint['lane_types_left'])
+    else:
+        lane_types = list(joint['lane_types_right'])
+    height = 0.0
+    for idx in range(min(idx_lane, len(lane_types))):
+        if lane_types[idx] == 'curb':
+            height += height_curb
+    return height
+
 def _interpolate_lane_widths(widths_start, widths_end, s, total_length):
     '''
         Interpolate lane widths at longitudinal position s.
@@ -610,7 +667,8 @@ def get_lane_center_from_road_surface_hit(obj, point):
 
     if obj.name.startswith('junction_area'):
         id_joint, point_type, contact_point, heading, slope, id_lane, lane_width, lane_type = \
-            point_to_junction_joint_interior(obj, point, joint_side='both')
+            point_to_junction_joint_interior(obj, point, joint_side='both',
+                                             lane_type_group='driving')
         del id_joint, point_type, slope
         if id_lane is None or lane_width is None or not _is_drivable_lane_type(lane_type):
             return None, None
@@ -675,9 +733,11 @@ def point_to_junction_joint_exterior(obj, point):
     return joints[arg_min_dist]['id_joint'], joints[arg_min_dist]['contact_point_type'], \
         cp_vectors[arg_min_dist], joints[arg_min_dist]['heading'] - pi, joints[arg_min_dist]['slope']
 
-def get_closest_joint_lane_contact_point(joint, point, joint_side):
+def get_closest_joint_lane_contact_point(joint, point, joint_side, lane_type_group=None):
     '''
         Return the contact points for the closest lane of a junction joint.
+        Lanes which can not be connected at all are ignored, if a lane type
+        group is given only lanes of that group are taken into account.
     '''
     lane_center_points_left = []
     lane_center_points_right = []
@@ -690,7 +750,7 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
         # Find all left side lane contact points
         t = 0
         lane_id = 0
-        for width_left in list(joint['lane_widths_left']):
+        for idx_lane, width_left in enumerate(list(joint['lane_widths_left'])):
             lane_id += 1
             t_contact_point = t + joint['lane_offset']
             t_lane_center = t + width_left/2 + joint['lane_offset']
@@ -698,14 +758,18 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
             lane_ids_left.append(lane_id)
             vec_hdg = Vector((1.0, 0.0, 0.0))
             vec_hdg.rotate(Matrix.Rotation(joint['heading'] + pi/2, 4, 'Z'))
-            lane_center_points_left.append(Vector(joint['contact_point_vec']) + t_lane_center * vec_hdg)
-            lane_contact_points_left.append(Vector(joint['contact_point_vec']) + t_contact_point * vec_hdg)
+            # Lanes behind a curb are lifted above the road surface
+            vec_height = Vector((0.0, 0.0, get_joint_lane_height(joint, 'left', idx_lane)))
+            lane_center_points_left.append(
+                Vector(joint['contact_point_vec']) + t_lane_center * vec_hdg + vec_height)
+            lane_contact_points_left.append(
+                Vector(joint['contact_point_vec']) + t_contact_point * vec_hdg + vec_height)
 
     if joint_side == 'right' or joint_side == 'both':
         # Find all right side lane contact points
         t = 0
         lane_id = 0
-        for width_right in joint['lane_widths_right']:
+        for idx_lane, width_right in enumerate(joint['lane_widths_right']):
             lane_id -= 1
             t_contact_point = t + joint['lane_offset']
             t_lane_center = t - width_right/2 + joint['lane_offset']
@@ -713,10 +777,14 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
             lane_ids_right.append(lane_id)
             vec_hdg = Vector((1.0, 0.0, 0.0))
             vec_hdg.rotate(Matrix.Rotation(joint['heading'] + pi/2, 4, 'Z'))
-            lane_center_points_right.append(Vector(joint['contact_point_vec']) + t_lane_center * vec_hdg)
-            lane_contact_points_right.append(Vector(joint['contact_point_vec']) + t_contact_point * vec_hdg)
+            # Lanes behind a curb are lifted above the road surface
+            vec_height = Vector((0.0, 0.0, get_joint_lane_height(joint, 'right', idx_lane)))
+            lane_center_points_right.append(
+                Vector(joint['contact_point_vec']) + t_lane_center * vec_hdg + vec_height)
+            lane_contact_points_right.append(
+                Vector(joint['contact_point_vec']) + t_contact_point * vec_hdg + vec_height)
 
-    # Find the closest contact point, ignore all non-driving lanes
+    # Find the closest contact point, ignore all lanes which can not be connected
     d_min = inf
     id_lane_cp = None
     lane_width = None
@@ -726,7 +794,7 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
     # Left lanes
     for idx_lane, lane_center_point in enumerate(lane_center_points_left):
         lane_type = list(joint['lane_types_left'])[idx_lane]
-        if _is_drivable_lane_type(lane_type):
+        if _is_connectable_lane_type(lane_type, lane_type_group):
             distance = (lane_center_point - point).length
             # Take the contact point for the lane with the closest center point
             if distance < d_min:
@@ -739,7 +807,7 @@ def get_closest_joint_lane_contact_point(joint, point, joint_side):
     # Right lanes
     for idx_lane, lane_center_point in enumerate(lane_center_points_right):
         lane_type = joint['lane_types_right'][idx_lane]
-        if _is_drivable_lane_type(lane_type):
+        if _is_connectable_lane_type(lane_type, lane_type_group):
             distance = (lane_center_point - point).length
             # Take the contact point for the lane with the closest center point
             if distance < d_min:
@@ -770,16 +838,18 @@ def get_closest_lane_contact_point(lane_contact_points, point):
 
         return joint, id_lane_cp, lane_width, lane_type, contact_point_vec
 
-def point_to_junction_joint_interior(obj, point, joint_side):
+def point_to_junction_joint_interior(obj, point, joint_side, lane_type_group=None):
     '''
         Get joint parameters for the interior side from closest joint including
         connecting road ID, lane ID, contact point type, vector and heading from
-        an existing junction.
+        an existing junction. Optionally restrict the search to lanes of a
+        single lane type group, e.g. only walking lanes.
     '''
     joints = obj['joints']
     lane_contact_points = []
     for joint in joints:
-        closest_cp = get_closest_joint_lane_contact_point(joint, point, joint_side=joint_side)
+        closest_cp = get_closest_joint_lane_contact_point(
+            joint, point, joint_side=joint_side, lane_type_group=lane_type_group)
         if closest_cp[1] != None:
             lane_contact_points.append(closest_cp)
 
@@ -817,12 +887,14 @@ def project_point_vector_2d(point_start, heading_start, point_selected):
     else:
         return point_selected
 
-def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
+def mouse_to_road_joint_params(context, event, road_type, joint_side='both', lane_type_group=None):
     '''
         Check if a road is hit and return snapping parameters. The road side
         parameter determines which side to snap to (left|right|both) for
         junction connecting roads. Sides are determined based on incoming
-        direction towards the junction interior.
+        direction towards the junction interior. The lane type group restricts
+        junction joint snapping to lanes which can be connected to each other,
+        e.g. only walking lanes.
     '''
     # Initialize with some defaults in case nothing is hit
     hit_type = None
@@ -841,6 +913,7 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
     lane_widths_right = []
     lane_types_left = []
     lane_types_right = []
+    height_curb = 0.0
     dsc_hit, raycast_point, raycast_normal, obj \
         = raycast_mouse_to_dsc_object(context, event)
     if dsc_hit:
@@ -853,6 +926,7 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
                     lane_widths_left, lane_widths_right, lane_types_left, lane_types_right \
                         = point_to_road_connector(obj, raycast_point)
                     id_obj = obj['id_odr']
+                    height_curb = obj.get('height_curb', 0.0)
                     if obj['road_split_type'] == 'end':
                         if point_type == 'cp_end_l' or point_type == 'cp_end_r':
                             if 'id_direct_junction_end' in obj:
@@ -874,7 +948,8 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
             if obj.name.startswith('junction_area'):
                 # This path is for junction connecting road snapping
                 id_joint, point_type, snapped_point, heading, slope, id_lane, lane_width, lane_type = \
-                    point_to_junction_joint_interior(obj, raycast_point, joint_side=joint_side)
+                    point_to_junction_joint_interior(obj, raycast_point, joint_side=joint_side,
+                                                     lane_type_group=lane_type_group)
                 if id_joint != None:
                     hit_type = 'junction_connecting_road'
                     heading = heading - pi
@@ -911,6 +986,7 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both'):
             'lane_widths_right': lane_widths_right,
             'lane_types_left': lane_types_left,
             'lane_types_right': lane_types_right,
+            'height_curb': height_curb,
             }
 
 def mouse_to_road_object_params(context, event, road_object_type):

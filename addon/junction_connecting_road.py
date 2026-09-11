@@ -31,6 +31,7 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
 
     width_start = 0.0
     width_end = 0.0
+    lane_type = 'driving'
 
     def update_road_properties(self, context, road_contact_point):
         '''
@@ -44,8 +45,14 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
 
         if road_contact_point == 'start':
             self.width_start = width_lane_connecting
+            # The connected lanes determine the type of the connecting road,
+            # the end is restricted to lanes of the same type group
+            lane_type = self.get_snapped_lane_type()
+            if lane_type is not None:
+                self.lane_type = lane_type
         else:
             self.width_end = width_lane_connecting
 
         helpers.set_connecting_road_properties(context, self.joint_side_start,
-                                               road_contact_point, self.width_start, self.width_end)
+                                               road_contact_point, self.width_start, self.width_end,
+                                               self.lane_type)
