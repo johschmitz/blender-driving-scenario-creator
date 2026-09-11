@@ -15,7 +15,7 @@ import bpy
 
 import json
 import os
-from . helpers import get_user_cross_sections_path, call_operator_deferred
+from . helpers import get_user_cross_sections_path, call_operator_deferred, round_float_property
 
 
 # Operator to save the current cross-section as a user preset
@@ -67,21 +67,23 @@ class DSC_OT_save_cross_section_preset(bpy.types.Operator):
             'road_split_type': props.road_split_type,
             'road_split_lane_idx': props.road_split_lane_idx,
             'road_mark_line_length': props.road_mark_line_length,
-            'road_mark_line_space': props.road_mark_line_space
+            'road_mark_line_space': props.road_mark_line_space,
+            'height_curb': round_float_property(props.height_curb)
         }
 
         # Add lane data in correct order
         for lane in props.lanes:
             data['sides'].append(lane.side)
-            data['widths_start'].append(lane.width_start)
-            data['widths_end'].append(lane.width_end)
+            data['widths_start'].append(round_float_property(lane.width_start))
+            data['widths_end'].append(round_float_property(lane.width_end))
             data['types'].append(lane.type)
             data['road_mark_types'].append(lane.road_mark_type)
             data['road_mark_weights'].append(lane.road_mark_weight)
-            data['road_mark_widths'].append(lane.road_mark_width)
+            data['road_mark_widths'].append(round_float_property(lane.road_mark_width))
             data['road_mark_colors'].append(lane.road_mark_color)
             data['guard_rails'].append(lane.guard_rail)
-            data['guard_rail_lateral_offsets'].append(lane.guard_rail_lateral_offset)
+            data['guard_rail_lateral_offsets'].append(
+                round_float_property(lane.guard_rail_lateral_offset))
 
         # Get user JSON file path
         user_json_path = get_user_cross_sections_path()
@@ -238,15 +240,27 @@ class DSC_OT_popup_road_properties(bpy.types.Operator):
             row = box_params.row(align=True)
             row.label(text='Width border lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_border', text='')
-            # row = box_params.row(align=True)
-            # row.label(text='Width curb:')
-            # row.prop(context.scene.dsc_properties.road_properties, 'width_curb', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width curb lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_curb', text='')
+            row = box_params.row(align=True)
+            row.label(text='Height curb:')
+            row.prop(context.scene.dsc_properties.road_properties, 'height_curb', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width walking lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_walking', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width biking lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_biking', text='')
             row = box_params.row(align=True)
             row.label(text='Width median lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_median', text='')
             row = box_params.row(align=True)
             row.label(text='Width stop lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_stop', text='')
+            row = box_params.row(align=True)
+            row.label(text='Width parking lane:')
+            row.prop(context.scene.dsc_properties.road_properties, 'width_parking', text='')
             row = box_params.row(align=True)
             row.label(text='Width shoulder lane:')
             row.prop(context.scene.dsc_properties.road_properties, 'width_shoulder', text='')

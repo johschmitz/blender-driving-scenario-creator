@@ -3,5 +3,6 @@ __pycache__/
 .ruff_cache/
 .venv/
 .vscode/
+.idea/
 addon/signs/*/*.png
 addon/stencils/*/*.png

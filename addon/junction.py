@@ -24,7 +24,8 @@ from math import pi
 
 class junction_joint:
     def __init__(self, id_joint, id_incoming, contact_point_type, contact_point_vec,
-                 heading, curvature, slope, lane_offset, lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
+                 heading, curvature, slope, lane_offset, lane_widths_left, lane_widths_right,
+                 lane_types_left, lane_types_right, height_curb=0.0):
         self.id_joint = id_joint
         self.id_incoming = id_incoming
         self.contact_point_type = contact_point_type
@@ -37,6 +38,8 @@ class junction_joint:
         self.lane_widths_right = lane_widths_right
         self.lane_types_left = lane_types_left
         self.lane_types_right = lane_types_right
+        # Height a curb lane of the incoming road lifts the lanes behind it
+        self.height_curb = height_curb
 
 class junction:
 
@@ -67,7 +70,8 @@ class junction:
 
     def add_joint_incoming(self, id_incoming, contact_point_type, contact_point_vec,
                  heading, curvature, slope, lane_offset,
-                 lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
+                 lane_widths_left, lane_widths_right, lane_types_left, lane_types_right,
+                 height_curb=0.0):
         '''
             Add a new joint, i.e. an incoming road to the junction if it does
             not exist yet.
@@ -78,19 +82,22 @@ class junction:
             id_joint = self.get_new_id_joint()
             joint = junction_joint(id_joint, id_incoming, contact_point_type, contact_point_vec,
                                    heading, curvature, slope, lane_offset,
-                                   lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
+                                   lane_widths_left, lane_widths_right, lane_types_left, lane_types_right,
+                                   height_curb)
             self.joints.append(joint)
             return True
 
     def add_joint_open(self, contact_point_vec, heading, slope, lane_offset,
-                       lane_widths_left, lane_widths_right, lane_types_left, lane_types_right):
+                       lane_widths_left, lane_widths_right, lane_types_left, lane_types_right,
+                       height_curb=0.0):
         '''
             Add a new joint without connecting to an incoming road.
         '''
         id_joint = self.get_new_id_joint()
         joint = junction_joint(id_joint, None, 'junction_joint_open', contact_point_vec,
             heading, 0.0, slope, lane_offset,
-            lane_widths_left, lane_widths_right, lane_types_left, lane_types_right)
+            lane_widths_left, lane_widths_right, lane_types_left, lane_types_right,
+            height_curb)
         self.joints.append(joint)
         return True
 
