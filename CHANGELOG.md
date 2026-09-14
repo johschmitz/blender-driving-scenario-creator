@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-09-14
+
+### Added
+- esmini preview camera following mode for a selected entity
+- OpenSCENARIO XML action node editor with first nodes:
+  - Simulation Time Trigger
+  - Trigger OR
+  - Trigger AND
+  - Scenario Stop Trigger
+  - Speed
+  - Lane Change
+  - Lane Offset
+  - Longitudinal Distance
+  - User Defined Action
+
+### Changed
+- Keyboard modifier documentation
+- macOS installation documentation
+
 ## [0.35.0] - 2026-09-08
 
 ### Added
@@ -529,7 +548,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.36.0...HEAD
+[0.36.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.1...v0.34.0
 [0.33.1]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.0...v0.33.1
