@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from math import atan2, cos, sin
 from mathutils import Euler, Vector
 
+from .scenario_nodes import DSC_NO_ENTITY
+
 
 _EXPORT_BASENAME = 'bdsc_export'
 _STATUS_INACTIVE = 'Inactive'
@@ -311,6 +313,10 @@ class PreviewSession:
         self.object_name_by_index = {}
         self.object_index_by_name = {}
         self.debug_print_each_step = False
+        self.follow_entity_name = DSC_NO_ENTITY
+        self.follow_view = None
+        self.original_view_state = None
+        self.view_relative_location = None
 
     def register_handler(self):
         if not self.timer_registered:
@@ -324,6 +330,18 @@ class PreviewSession:
         for state in self.object_states:
             if state.object_ref.name in bpy.data.objects:
                 state.object_ref.matrix_world = state.original_matrix.copy()
+
+    def restore_viewpoint(self):
+        if self.follow_view is not None and self.original_view_state is not None:
+            region_3d = self.follow_view
+            (view_location, view_rotation, view_distance, view_perspective,
+             view_camera_offset, view_camera_zoom) = self.original_view_state
+            region_3d.view_location = view_location
+            region_3d.view_rotation = view_rotation
+            region_3d.view_distance = view_distance
+            region_3d.view_perspective = view_perspective
+            region_3d.view_camera_offset = view_camera_offset
+            region_3d.view_camera_zoom = view_camera_zoom
 
     def close(self):
         try:
@@ -549,6 +567,51 @@ def _set_progress_status(session):
     _set_status(status, _preview_progress_text(session))
 
 
+def _configure_camera_follow(session, context, entity_name):
+    if entity_name == DSC_NO_ENTITY:
+        return
+
+    entity = session.objects_by_name.get(entity_name)
+    if entity is None:
+        return
+
+    session.follow_entity_name = entity_name
+    area = getattr(context, 'area', None)
+    if area is not None and area.type == 'VIEW_3D':
+        region_3d = area.spaces.active.region_3d
+        session.follow_view = region_3d
+        session.original_view_state = (
+            region_3d.view_location.copy(),
+            region_3d.view_rotation.copy(),
+            region_3d.view_distance,
+            region_3d.view_perspective,
+            tuple(region_3d.view_camera_offset),
+            region_3d.view_camera_zoom,
+        )
+        entity_rotation = entity.matrix_world.to_quaternion()
+        entity_location = entity.matrix_world.translation.copy()
+        entity_forward = entity_rotation @ Vector((1.0, 0.0, 0.0))
+        entity_forward.normalize()
+        view_distance = max(region_3d.view_distance, 1.0)
+        view_height = view_distance * 0.35
+        view_direction = entity_forward * view_distance - Vector((0.0, 0.0, view_height))
+
+        region_3d.view_location = entity_location
+        region_3d.view_distance = view_direction.length
+        region_3d.view_rotation = view_direction.to_track_quat('-Z', 'Y')
+
+        session.view_relative_location = entity.matrix_world.inverted() @ region_3d.view_location
+
+
+def _update_follow_viewpoint(session):
+    entity = session.objects_by_name.get(session.follow_entity_name)
+    if entity is None:
+        return
+
+    if session.follow_view is not None and session.view_relative_location is not None:
+        session.follow_view.view_location = entity.matrix_world @ session.view_relative_location
+
+
 def _apply_preview_step(scene):
     dt = _session.step_interval
     if dt <= 1e-8:
@@ -595,6 +658,7 @@ def _apply_preview_step(scene):
                 )
             )
 
+    _update_follow_viewpoint(_session)
     _session.last_matched_count = matched_count
     _set_progress_status(_session)
     return simulation_finished
@@ -667,6 +731,18 @@ def _start_preview_session(context, manual_mode=False):
         _session.elapsed_time = 0.0
         _calibrate_coordinate_mapping(_session)
         _build_fixed_object_index_mapping(_session)
+        follow_entity_name = getattr(
+            getattr(context.scene, 'dsc_properties', None),
+            'esmini_preview_follow_entity',
+            DSC_NO_ENTITY,
+        )
+        if not getattr(
+                getattr(context.scene, 'dsc_properties', None),
+                'esmini_preview_follow_entity_enabled',
+                False,
+        ):
+            follow_entity_name = DSC_NO_ENTITY
+        _configure_camera_follow(_session, context, follow_entity_name)
 
         if manual_mode:
             if context.screen is not None and context.screen.is_animation_playing:
@@ -767,6 +843,7 @@ def stop_preview_session(restore=True, reason=''):
 
         if restore:
             session.restore_objects()
+            session.restore_viewpoint()
     finally:
         session.close()
 

@@ -62,6 +62,7 @@ from . esmini_preview_operators import DSC_OT_esmini_open_preferences
 from . import esmini_preview
 from .scenario_nodes import (
     NODE_CLASSES,
+    get_entity_items,
     register_node_menu,
     unregister_node_menu,
 )
@@ -261,6 +262,11 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row = box.row(align=True)
         row.operator('dsc.esmini_open_preferences', icon='PREFERENCES')
         row = box.row(align=True)
+        row.prop(context.scene.dsc_properties, 'esmini_preview_follow_entity_enabled', text='Follow entity')
+        if context.scene.dsc_properties.esmini_preview_follow_entity_enabled:
+            entity_row = row.row(align=True)
+            entity_row.prop(context.scene.dsc_properties, 'esmini_preview_follow_entity', text='')
+        row = box.row(align=True)
         if esmini_preview.is_preview_running():
             row.operator('dsc.esmini_preview_start', text='Pause', icon='PAUSE')
         else:
@@ -279,6 +285,16 @@ def menu_func_export(self, context):
     self.layout.operator('dsc.export_driving_scenario', text='Driving Scenario (.xosc, .xodr, .fbx/.gltf/.osgb)')
 
 class DSC_Properties(bpy.types.PropertyGroup):
+    esmini_preview_follow_entity_enabled: bpy.props.BoolProperty(
+        name='Follow entity',
+        description='Follow the selected entity with the active camera during esmini preview',
+        default=False,
+    )
+    esmini_preview_follow_entity: bpy.props.EnumProperty(
+        name='Camera follow',
+        description='Follow an entity with the active camera during esmini preview',
+        items=get_entity_items,
+    )
     road_properties: bpy.props.PointerProperty(
         name='road_properties', type=DSC_road_properties)
     connecting_road_properties: bpy.props.PointerProperty(
