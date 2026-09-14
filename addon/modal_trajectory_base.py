@@ -86,7 +86,7 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
                 'LEFTMOUSE: select entity then place points, '
                 'RIGHTMOUSE: go back, '
                 'hold ALT: reverse segment, '
-                'SHIFT+WHEEL: adjust clothoid end curvature, '
+                'SHIFT+MOUSEWHEEL: adjust clothoid end curvature, '
                 'ALT+MIDDLEMOUSE: move view center, '
                 'RETURN/SPACE: finish, '
                 'ESCAPE: exit'
@@ -199,18 +199,28 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             self.clean_up(context)
             return {'FINISHED'}
         # Zoom
-        elif event.type in {'WHEELUPMOUSE'}:
+        elif event.type in {'WHEELUPMOUSE', 'TRACKPADPAN'}:
+            heading_delta = (event.mouse_prev_y - event.mouse_y) * 0.01 \
+                if event.type == 'TRACKPADPAN' else 0.2
             if event.shift and self.state == 'SELECT_POINT':
-                self.preview_heading_end_extra = min(1.0, self.preview_heading_end_extra + 0.2)
+                self.preview_heading_end_extra = max(
+                    -1.0, min(1.0, self.preview_heading_end_extra + heading_delta))
                 self.update_trajectory(context)
-            else:
+            elif event.type == 'WHEELUPMOUSE':
                 bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
-        elif event.type in {'WHEELDOWNMOUSE'}:
-            if event.shift and self.state == 'SELECT_POINT':
-                self.preview_heading_end_extra = max(-1.0, self.preview_heading_end_extra - 0.2)
-                self.update_trajectory(context)
             else:
+                return {'PASS_THROUGH'}
+        elif event.type in {'WHEELDOWNMOUSE', 'TRACKPADPAN'}:
+            heading_delta = (event.mouse_prev_y - event.mouse_y) * 0.01 \
+                if event.type == 'TRACKPADPAN' else -0.2
+            if event.shift and self.state == 'SELECT_POINT':
+                self.preview_heading_end_extra = max(
+                    -1.0, min(1.0, self.preview_heading_end_extra + heading_delta))
+                self.update_trajectory(context)
+            elif event.type == 'WHEELDOWNMOUSE':
                 bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
+            else:
+                return {'PASS_THROUGH'}
         elif event.type in {'MIDDLEMOUSE'}:
             if event.alt:
                 if event.value == 'RELEASE':

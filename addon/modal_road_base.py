@@ -287,7 +287,7 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                 'hold ALT: change start heading, '
                 'hold E: adjust elevation, '
                 'hold S: sideview adjust elevation, '
-                'SHIFT+MIDDLEMOUSE: adjust heading end, '
+                'SHIFT+MOUSEWHEEL: adjust heading end, '
                 'ALT+MIDDLEMOUSE: move view center, '
                 'RIGHTMOUSE: cancel selection, '
                 'RETURN/SPACE: finish, '
@@ -503,28 +503,22 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
                     self.view_memory.restore_view(context)
                 self.adjust_elevation = 'DISABLED'
         # Zoom / End heading adjustment
-        elif event.type == 'WHEELUPMOUSE':
+        elif event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'TRACKPADPAN'}:
+            if event.type == 'TRACKPADPAN':
+                heading_delta = (event.mouse_prev_y - event.mouse_y) * 0.01
+            else:
+                heading_delta = 0.2 if event.type == 'WHEELUPMOUSE' else -0.2
             if event.shift:
                 # Adjust end heading
-                if self.heading_end_extra < 1.0:
-                    self.heading_end_extra += 0.2
-                else:
-                    self.heading_end_extra = 1.0
+                self.heading_end_extra = max(
+                    -1.0, min(1.0, self.heading_end_extra + heading_delta))
                 self.update_stencil_heading_end(context)
+            elif event.type != 'TRACKPADPAN':
+                zoom_delta = 1 if event.type == 'WHEELUPMOUSE' else -1
+                bpy.ops.view3d.zoom(mx=0, my=0, delta=zoom_delta,
+                                    use_cursor_init=zoom_delta < 0)
             else:
-                # Zoom out
-                bpy.ops.view3d.zoom(mx=0, my=0, delta=1, use_cursor_init=False)
-        elif event.type == 'WHEELDOWNMOUSE':
-            if event.shift:
-                # Adjust end heading
-                if self.heading_end_extra > -1.0:
-                    self.heading_end_extra -= 0.2
-                else:
-                    self.heading_end_extra = -1.0
-                self.update_stencil_heading_end(context)
-            else:
-                # Zoom in
-                bpy.ops.view3d.zoom(mx=0, my=0, delta=-1, use_cursor_init=True)
+                return {'PASS_THROUGH'}
         # Finish
         elif event.type in {'RET'} or event.type in {'SPACE'}:
             if self.state == 'SELECT_POINT':

@@ -25,6 +25,7 @@ class DSC_OT_road_object_parking_spots(DSC_OT_modal_road_object_base):
     def execute(self, context):
         self.state = 'INIT'
         self.anchor_point_s = None
+        self.trackpad_pan_remainder = 0
         self.create_object_model(context)
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
@@ -44,6 +45,7 @@ class DSC_OT_road_object_parking_spots(DSC_OT_modal_road_object_base):
 
     def clean_up(self, context):
         self.num_spots = 1
+        self.trackpad_pan_remainder = 0
         self.anchor_point_s = None
         super().clean_up(context)
 
@@ -53,7 +55,7 @@ class DSC_OT_road_object_parking_spots(DSC_OT_modal_road_object_base):
     def modal(self, context, event):
         if self.state == 'INIT':
             context.workspace.status_text_set(
-                'LEFTMOUSE: place parking spots, SHIFT+WHEEL: change spot count, '
+                'LEFTMOUSE: place parking spots, SHIFT+MOUSEWHEEL: change spot count, '
                 'RIGHTMOUSE/ESCAPE: exit')
             bpy.context.window.cursor_modal_set('CROSSHAIR')
             self.reset_params_input()
@@ -68,8 +70,20 @@ class DSC_OT_road_object_parking_spots(DSC_OT_modal_road_object_base):
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
 
-        if event.shift and event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            spot_count_delta = 1 if event.type == 'WHEELUPMOUSE' else -1
+        if event.type == 'TRACKPADPAN' and not event.shift:
+            return {'PASS_THROUGH'}
+
+        if event.shift and event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'TRACKPADPAN'}:
+            if event.type == 'WHEELUPMOUSE':
+                spot_count_delta = 1
+            elif event.type == 'WHEELDOWNMOUSE':
+                spot_count_delta = -1
+            else:
+                self.trackpad_pan_remainder += event.mouse_prev_y - event.mouse_y
+                spot_count_delta = int(self.trackpad_pan_remainder / 20)
+                self.trackpad_pan_remainder -= spot_count_delta * 20
+                if spot_count_delta == 0:
+                    return {'RUNNING_MODAL'}
             new_num_spots = max(1, min(100, self.num_spots + spot_count_delta))
             if (self.selected_road is not None and self.anchor_point_s is not None
                     and new_num_spots != self.num_spots):
