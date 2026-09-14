@@ -201,9 +201,10 @@ side. Finally, vehicles can be placed and a trajectory can be assigned to them.
 | Entity placement: cars and pedestrians | <kbd>Mouseleft</kbd> | Place an entity; placement remains active for more entities |
 | Entity placement: cars and pedestrians | Hold <kbd>Shift</kbd> | Disable lane-center and orientation snapping |
 | Entity placement: cars and pedestrians | Hold <kbd>Alt</kbd> | Keep the entity position fixed and adjust its heading |
-| Move object | <kbd>Mouseleft</kbd> | Select an OpenSCENARIO entity or trajectory, then confirm its new position |
-| Move object | Hold <kbd>Shift</kbd> | Disable lane-center and orientation snapping |
-| Move object | Hold <kbd>Alt</kbd> | Keep the object position fixed and adjust its heading |
+| Move entity | <kbd>Mouseleft</kbd> | Select an OpenSCENARIO entity or trajectory, then confirm its new position |
+| Move entity | Hold <kbd>Shift</kbd> | Disable lane-center and orientation snapping |
+| Move entity | Hold <kbd>Alt</kbd> | Keep the entity position fixed and adjust its heading |
+| Edit entity | <kbd>Mouseleft</kbd> | Select an OpenSCENARIO entity, then edit its properties in the popup |
 | Trajectories: polyline, NURBS, and clothoid spline | <kbd>Mouseleft</kbd> | Select an entity, then place trajectory points |
 | Trajectories | Hold <kbd>Alt</kbd> while placing a point | Reverse the trajectory segment from that point |
 | Trajectories | Hold <kbd>Ctrl</kbd> | Snap to the 3D grid when placing a point on a surface |

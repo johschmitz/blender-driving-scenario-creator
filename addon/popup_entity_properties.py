@@ -19,7 +19,7 @@ from . helpers import call_operator_deferred
 class DSC_OT_popup_entity_properties(bpy.types.Operator):
     bl_idname = 'dsc.popup_entity_properties'
     bl_label = 'Entity'
-    bl_description = 'Create an OpenSCENARIO entity object'
+    bl_description = 'Create an OpenSCENARIO entity'
 
     operators = {'entity_vehicle_car': bpy.ops.dsc.entity_car,
                  'entity_vehicle_truck': bpy.ops.dsc.entity_truck,

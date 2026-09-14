@@ -93,14 +93,14 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
             )
             # Set custom cursor
             bpy.context.window.cursor_modal_set('CROSSHAIR')
-            self.state = 'SELECT_OBJECT'
+            self.state = 'SELECT_ENTITY'
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
         # Update on move
         if event.type == 'MOUSEMOVE':
             # Snap to existing objects if any, otherwise xy plane
-            if self.state == 'SELECT_OBJECT':
-                # Start of trajectory should be an OpenSCENARIO object
+            if self.state == 'SELECT_ENTITY':
+                # Start of trajectory should be an OpenSCENARIO entity
                 self.params_snap = helpers.mouse_to_entity_params(
                     context, event)
             else:
@@ -124,7 +124,7 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
         # Select object and trajectory points
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
-                if self.state == 'SELECT_OBJECT':
+                if self.state == 'SELECT_ENTITY':
                     if self.params_snap['hit_type'] is not None:
                         self.point_start = self.selected_point
                         self.trajectory_points.append(self.selected_point.copy())
@@ -138,7 +138,7 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
                         self.preview_active = True
                         return {'RUNNING_MODAL'}
                     else:
-                        self.report({'INFO'}, "Select dynamic OpenSCENARIO object.")
+                        self.report({'INFO'}, "Select a dynamic OpenSCENARIO entity.")
                 if self.state == 'SELECT_POINT':
                     self.trajectory_points.append(self.selected_point.copy())
                     self.trajectory_backwards.append(event.alt)
@@ -163,12 +163,12 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
                     self.trajectory_heading_end_extra.pop()
                 if len(self.trajectory_points) == 0:
                     self.remove_trajectory_temp(context)
-                    self.state = 'SELECT_OBJECT'
+                    self.state = 'SELECT_ENTITY'
                 else:
                     self.update_trajectory(context)
                 return {'RUNNING_MODAL'}
             # Exit
-            if self.state == 'SELECT_OBJECT':
+            if self.state == 'SELECT_ENTITY':
                 self.clean_up(context)
                 return {'FINISHED'}
         # Elevation adjustment from current point of view
@@ -221,7 +221,7 @@ class DSC_OT_modal_trajectory_base(bpy.types.Operator):
 
     def invoke(self, context, event):
         # For operator state machine
-        # possible states: {'INIT','SELECT_OBJECT', 'SELECT_POINT'}
+        # possible states: {'INIT','SELECT_ENTITY', 'SELECT_POINT'}
         self.state = 'INIT'
         self.trajectory_points.clear()
         self.trajectory_backwards.clear()

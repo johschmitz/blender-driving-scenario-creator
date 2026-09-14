@@ -19,9 +19,9 @@ from math import atan2
 from . import helpers
 
 
-class DSC_OT_scenario_object_move(bpy.types.Operator):
-    bl_idname = 'dsc.scenario_object_move'
-    bl_label = 'Move scenario object'
+class DSC_OT_scenario_entity_move(bpy.types.Operator):
+    bl_idname = 'dsc.scenario_entity_move'
+    bl_label = 'Move scenario entity or trajectory'
     bl_description = 'Move an existing scenario entity or trajectory with road and lane snapping'
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -39,7 +39,7 @@ class DSC_OT_scenario_object_move(bpy.types.Operator):
     def poll(cls, context):
         return context.area.type == 'VIEW_3D'
 
-    def _raycast_to_movable_object(self, context, event):
+    def _raycast_to_movable_target(self, context, event):
         dsc_hit, raycast_point, raycast_normal, obj = helpers.raycast_mouse_to_dsc_object(context, event)
         del raycast_point, raycast_normal
         if not dsc_hit:
@@ -72,7 +72,7 @@ class DSC_OT_scenario_object_move(bpy.types.Operator):
             heading,
         )
 
-    def _update_object_transform(self, context, event):
+    def _update_transform(self, context, event):
         point, normal, road_obj = self._raycast_to_road_surface(context, event)
         del normal
 
@@ -133,39 +133,39 @@ class DSC_OT_scenario_object_move(bpy.types.Operator):
     def modal(self, context, event):
         if self.state == 'INIT':
             context.workspace.status_text_set(
-                'LEFTMOUSE: select object and place repeatedly, lane center and orientation snap, '
+                'LEFTMOUSE: select entity or trajectory and place repeatedly, lane center and orientation snap, '
                 'hold SHIFT: disable lane snapping, '
                 'hold ALT: heading-only mode, '
                 'RIGHTMOUSE: cancel current move / exit from selection, ESC: exit, '
                 'ALT+MIDDLEMOUSE: move view center'
             )
             bpy.context.window.cursor_modal_set('CROSSHAIR')
-            self.state = 'SELECT_OBJECT'
+            self.state = 'SELECT_TARGET'
 
         if event.type in {'NONE', 'TIMER', 'TIMER_REPORT', 'EVT_TWEAK_L', 'WINDOW_DEACTIVATE'}:
             return {'PASS_THROUGH'}
 
         if event.type == 'MOUSEMOVE':
-            if self.state == 'SELECT_OBJECT':
-                self.hovered_obj = self._raycast_to_movable_object(context, event)
+            if self.state == 'SELECT_TARGET':
+                self.hovered_obj = self._raycast_to_movable_target(context, event)
             elif self.state == 'MOVE':
-                self._update_object_transform(context, event)
+                self._update_transform(context, event)
 
         elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
-            if self.state == 'SELECT_OBJECT':
+            if self.state == 'SELECT_TARGET':
                 if self.hovered_obj is None:
                     self.report({'INFO'}, 'Select an OpenSCENARIO entity or trajectory.')
                     return {'RUNNING_MODAL'}
                 self._start_move(context, event)
                 return {'RUNNING_MODAL'}
             if self.state == 'MOVE':
-                # Keep operator active for multi-object/multi-step placement.
+                # Keep operator active for multi-step placement.
                 self.selected_obj = None
                 self.selected_obj_type = None
                 self.initial_rotation_euler = None
                 self.initial_matrix = None
                 bpy.ops.object.select_all(action='DESELECT')
-                self.state = 'SELECT_OBJECT'
+                self.state = 'SELECT_TARGET'
                 return {'RUNNING_MODAL'}
 
         elif event.type == 'RIGHTMOUSE' and event.value == 'RELEASE':
@@ -176,7 +176,7 @@ class DSC_OT_scenario_object_move(bpy.types.Operator):
                 self.initial_rotation_euler = None
                 self.initial_matrix = None
                 bpy.ops.object.select_all(action='DESELECT')
-                self.state = 'SELECT_OBJECT'
+                self.state = 'SELECT_TARGET'
                 return {'RUNNING_MODAL'}
             self.clean_up(context)
             return {'FINISHED'}

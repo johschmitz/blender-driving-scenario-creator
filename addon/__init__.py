@@ -38,10 +38,12 @@ from . road_straight import DSC_OT_road_straight
 from . trajectory_nurbs import DSC_OT_trajectory_nurbs
 from . trajectory_polyline import DSC_OT_trajectory_polyline
 from . trajectory_clothoid_spline import DSC_OT_trajectory_clothoid_spline
-from . scenario_object_move import DSC_OT_scenario_object_move
+from . scenario_entity_move import DSC_OT_scenario_entity_move
 from . entity_properties import DSC_entity_properties_vehicle
 from . entity_properties import DSC_entity_properties_pedestrian
 from . popup_entity_properties import DSC_OT_popup_entity_properties
+from . popup_entity_edit_properties import (
+    DSC_OT_scenario_entity_edit, DSC_OT_popup_entity_edit_properties)
 from . road_object_sign_properties import DSC_road_object_sign_property_item
 from . road_object_sign_properties import DSC_road_object_sign_properties
 from . road_object_stencil_properties import DSC_road_object_stencil_property_item
@@ -234,7 +236,7 @@ class DSC_PT_panel_create(bpy.types.Panel):
 
         layout.label(text='OpenSCENARIO')
         box = layout.box()
-        box.label(text='Objects')
+        box.label(text='Entities')
         row = box.row(align=True)
         row.operator('dsc.popup_entity_properties', text='Car').operator = 'entity_vehicle_car'
         # TODO implement more vehicle types
@@ -242,7 +244,8 @@ class DSC_PT_panel_create(bpy.types.Panel):
         row.operator('dsc.popup_entity_properties', text='Pedestrian').operator = 'entity_pedestrian_pedestrian'
         # TODO implement more pedestrian types
         row = box.row(align=True)
-        row.operator('dsc.scenario_object_move', text='Move object', icon='ORIENTATION_GIMBAL')
+        row.operator('dsc.scenario_entity_move', text='Move entity', icon='ORIENTATION_GIMBAL')
+        row.operator('dsc.scenario_entity_edit', text='Edit entity', icon='PROPERTIES')
 
         box.label(text='Trajectories')
         row = box.row(align=True)
@@ -334,12 +337,14 @@ classes = (
     DSC_OT_trajectory_nurbs,
     DSC_OT_trajectory_polyline,
     DSC_OT_trajectory_clothoid_spline,
-    DSC_OT_scenario_object_move,
+    DSC_OT_scenario_entity_move,
     DSC_PT_panel_create,
     DSC_road_properties,
     DSC_entity_properties_vehicle,
     DSC_entity_properties_pedestrian,
     DSC_OT_popup_entity_properties,
+    DSC_OT_scenario_entity_edit,
+    DSC_OT_popup_entity_edit_properties,
     DSC_road_object_sign_property_item,
     DSC_road_object_sign_properties,
     DSC_road_object_stencil_property_item,
