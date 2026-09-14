@@ -4,7 +4,7 @@ This [Blender](https://www.blender.org/) add-on lets you create OpenDRIVE and
 OpenSCENARIO based scenarios for development and testing of advanced driver
 assistance systems and autonomous driving functions.
 
-![Screenshot](screenshot.png)
+<img src="screenshot_3d_editor.png" alt="Screenshot" width="800">
 
 ## How to install
 
@@ -222,6 +222,46 @@ Before or after adding roads add additional Blender objects as desired. When
 done modelling, export everything together by clicking <kbd>Export driving
 scenario</kbd>. Choose a **directory** and a 3D file format (.fbx, .gltf, .osgb)
 for the export and confirm.
+
+### OpenSCENARIO XML action node editor
+
+The add-on includes a custom Blender node editor for building the dynamic
+OpenSCENARIO XML action graph. To use it click <kbd>Toggle node editor</kbd> in
+the `Actions` section of the <kbd>OpenSCENARIO</kbd> panel. Click
+</kbd>Add</kbd> to add nodes and then drag them around, configure and connect
+them together with the mouse. The graph is exported together with the rest of
+the scenario every time you export the scenario or start the esmini preview.
+
+<img src="screenshot_node_editor.png" alt="OpenSCENARIO XML action node editor" width="800">
+
+Available action nodes include:
+
+- `Speed`, with absolute and relative speed targets.
+- `Lane Change`, with absolute and relative lane targets.
+- `Lane Offset`, with a calculated transition duration.
+- `Longitudinal Distance`, with distance or time-gap targets, coordinate-system
+    and displacement options, and dynamic acceleration/deceleration constraints.
+- `User Defined Action`, for custom commands.
+
+Action nodes have an `Entity` selector populated from the entities in the scene.
+Longitudinal-distance actions also have a separate `Target entity` selector.
+Action nodes expose a `Trigger` input and a `Complete` output. Unconnected
+action triggers start at simulation time 0.0 and run in parallel. Connecting
+`Complete` to another action's `Trigger` makes the second action wait for the
+first action's completion.
+
+Use `Simulation Time Trigger` for time-based starts. `Trigger OR` and `Trigger
+AND` combine multiple inputs and provide a `True` output that can trigger a
+subsequent action. Set their input count to the number of conditions you need
+and connect every configured input before exporting. `Trigger OR` starts its
+output when any input condition is true. `Trigger AND` waits until all input
+conditions are true. For action outputs, these conditions refer to the source
+action's completion state.
+
+Use `Scenario Stop Trigger` to stop the overall storyboard. It can use a time
+limit, a connected action or logic trigger, or both. When both are enabled, the
+first condition to become true stops the scenario. Disable <kbd>Use time
+limit</kbd> when the stop should be controlled only by its connected trigger.
 
 ### esmini preview mode (inside Blender)
 
