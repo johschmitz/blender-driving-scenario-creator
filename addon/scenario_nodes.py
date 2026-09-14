@@ -230,15 +230,6 @@ class DSC_XOSC_SimulationTimeTriggerNode(bpy.types.Node):
     width = 240
 
     value: bpy.props.FloatProperty(name='Time (s)', default=0.0, min=0.0)
-    rule: bpy.props.EnumProperty(
-        name='Rule',
-        items=(
-            ('greaterThan', 'Greater than', ''),
-            ('greaterOrEqual', 'Greater or equal', ''),
-            ('equalTo', 'Equal', ''),
-        ),
-        default='greaterOrEqual',
-    )
 
     def init(self, context):
         del context
@@ -248,13 +239,12 @@ class DSC_XOSC_SimulationTimeTriggerNode(bpy.types.Node):
     def draw_buttons(self, context, layout):
         del context
         self._draw_property(layout, 'value', 'Time (s)')
-        self._draw_property(layout, 'rule', 'Rule')
 
     def trigger_data(self):
         return {
             'type': 'simulation_time',
             'value': self.value,
-            'rule': self.rule,
+            'rule': 'greaterOrEqual',
         }
 
     def _draw_property(self, layout, property_name, label):
