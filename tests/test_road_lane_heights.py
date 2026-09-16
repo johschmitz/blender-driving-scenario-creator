@@ -26,20 +26,23 @@ class Lane:
     '''
         Minimal stand-in for the DSC_enum_lane property group.
     '''
-    def __init__(self, side, type, width_start, width_end, road_mark_type, road_mark_width):
+    def __init__(self, side, type, width_start, width_end, road_mark_type, road_mark_width,
+                 road_mark_color='none'):
         self.side = side
         self.type = type
         self.width_start = width_start
         self.width_end = width_end
         self.road_mark_type = road_mark_type
         self.road_mark_width = road_mark_width
+        self.road_mark_color = road_mark_color
 
 
 def get_lanes(preset_name):
     params = params_cross_section[preset_name]
     return [Lane(params['sides'][idx], params['types'][idx],
                  params['widths_start'][idx], params['widths_end'][idx],
-                 params['road_mark_types'][idx], params['road_mark_widths'][idx])
+                 params['road_mark_types'][idx], params['road_mark_widths'][idx],
+                 params['road_mark_colors'][idx])
             for idx in range(len(params['sides']))]
 
 
@@ -87,18 +90,65 @@ def test_strips_z_values_urban_cross_section():
     t_values, z_values = road_obj.get_strips_t_values(lanes, 0.0)
     assert len(t_values) == len(z_values)
     # Strip borders from left to right: outer edge of each lane plus the two
-    # borders of the center line marking
+    # borders of the center line marking and the vertical face of each curb
     assert z_values == approx([
         HEIGHT_CURB,  # outer edge left walking
         HEIGHT_CURB,  # outer edge left curb (top of the curb)
-        0.0,          # outer edge left border
+        HEIGHT_CURB,  # inner edge left curb, top of the vertical curb face
+        0.0,          # inner edge left curb, bottom of the vertical curb face
         0.0,          # outer edge left driving
         0.0, 0.0,     # center line marking
         0.0,          # outer edge right driving
-        0.0,          # outer edge right border
+        0.0,          # inner edge right curb, bottom of the vertical curb face
+        HEIGHT_CURB,  # inner edge right curb, top of the vertical curb face
         HEIGHT_CURB,  # outer edge right curb (top of the curb)
         HEIGHT_CURB,  # outer edge right walking
     ])
+
+
+def test_curb_face_is_vertical():
+    road_obj = get_road()
+    lanes = get_lanes('urban_two_lanes_walkway')
+    params = params_cross_section['urban_two_lanes_walkway']
+    width_curb = params['widths_start'][1]
+    t_values, z_values = road_obj.get_strips_t_values(lanes, 0.0)
+    # The two strip borders of the vertical curb face share the same t value,
+    # the curb top spans the curb width at the upper end of that face
+    for idx_face, idx_top in ((2, 1), (8, 10)):
+        assert t_values[idx_face] == approx(t_values[idx_face + 1])
+        assert sorted([z_values[idx_face], z_values[idx_face + 1]]) == \
+            approx([0.0, HEIGHT_CURB])
+        assert abs(t_values[idx_top] - t_values[idx_face]) == approx(width_curb)
+        assert z_values[idx_top] == approx(HEIGHT_CURB)
+
+
+def test_strips_stay_consistent_with_vertical_curb_faces():
+    road_obj = get_road()
+    lanes = get_lanes('urban_two_lanes_walkway')
+    t_values, _ = road_obj.get_strips_t_values(lanes, 0.0)
+    strip_to_lane, strip_is_road_mark = road_obj.get_strip_to_lane_mapping(lanes)
+    strips_s_boundaries = road_obj.get_strips_s_boundaries(lanes, 3.0, 6.0)
+    num_strips = len(t_values) - 1
+    assert len(strip_to_lane) == num_strips
+    assert len(strip_is_road_mark) == num_strips
+    assert len(strips_s_boundaries) == num_strips
+    # Both the top and the vertical face of a curb belong to the curb lane
+    assert [strip_to_lane[idx] for idx in (1, 2)] == [1, 1]
+    assert [strip_to_lane[idx] for idx in (8, 9)] == [7, 7]
+
+
+def test_face_materials_urban_cross_section():
+    road_obj = get_road()
+    lanes = get_lanes('urban_two_lanes_walkway')
+    strips_s_boundaries = road_obj.get_strips_s_boundaries(lanes, 3.0, 6.0)
+    materials = road_obj.get_face_materials(lanes, strips_s_boundaries)
+    # Curbs and walking lanes get their own materials, the curbs contribute
+    # twice as many faces because of their vertical faces
+    num_faces_walking = len(strips_s_boundaries[0][1]) - 1
+    assert len(materials['walking']) == 2 * num_faces_walking
+    assert len(materials['curb']) == 4 * num_faces_walking
+    assert not set(materials['curb']) & set(materials['walking'])
+    assert not set(materials['curb']) & set(materials['asphalt'])
 
 
 def test_sample_cross_section_lifts_curb_and_walkway():

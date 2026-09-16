@@ -55,9 +55,12 @@ class road:
                 elif idx in materials['grass']:
                     obj.data.polygons[idx].material_index = \
                         helpers.get_material_index(obj, 'grass')
-                elif idx in materials['concrete']:
+                elif idx in materials['curb']:
                     obj.data.polygons[idx].material_index = \
-                        helpers.get_material_index(obj, 'road_concrete')
+                        helpers.get_material_index(obj, 'road_curb')
+                elif idx in materials['walking']:
+                    obj.data.polygons[idx].material_index = \
+                        helpers.get_material_index(obj, 'road_walking')
                 elif idx in materials['road_mark_yellow']:
                     obj.data.polygons[idx].material_index = \
                         helpers.get_material_index(obj, 'road_mark_yellow')
@@ -242,6 +245,8 @@ class road:
         '''
             Set the lane parameters dictionary for later export.
         '''
+        # Float properties are stored with single precision, round them to
+        # avoid values like 0.15000000596046448 in the mesh and the export
         self.params = {'lanes_left_num': road_properties.num_lanes_left,
                        'lanes_right_num': road_properties.num_lanes_right,
                        'lanes_left_widths_start': [],
@@ -266,7 +271,7 @@ class road:
                        'lane_center_road_mark_weight': [],
                        'lane_center_road_mark_width': [],
                        'lane_center_road_mark_color': [],
-                       'height_curb': road_properties.height_curb,
+                       'height_curb': helpers.round_float_property(road_properties.height_curb),
                        'lane_offset_start': road_properties.lane_offset_start,
                        'lane_offset_end': road_properties.lane_offset_end,
                        'road_split_type': road_properties.road_split_type,
@@ -275,30 +280,32 @@ class road:
                        'road_mark_line_space': road_properties.road_mark_line_space}
         for idx, lane in enumerate(road_properties.lanes):
             if lane.side == 'left':
-                self.params['lanes_left_widths_start'].insert(0, lane.width_start)
-                self.params['lanes_left_widths_end'].insert(0, lane.width_end)
+                self.params['lanes_left_widths_start'].insert(0, helpers.round_float_property(lane.width_start))
+                self.params['lanes_left_widths_end'].insert(0, helpers.round_float_property(lane.width_end))
                 self.params['lanes_left_types'].insert(0, lane.type)
                 self.params['lanes_left_road_mark_types'].insert(0, lane.road_mark_type)
                 self.params['lanes_left_road_mark_weights'].insert(0, lane.road_mark_weight)
-                self.params['lanes_left_road_mark_widths'].insert(0, lane.road_mark_width)
+                self.params['lanes_left_road_mark_widths'].insert(0, helpers.round_float_property(lane.road_mark_width))
                 self.params['lanes_left_road_mark_colors'].insert(0, lane.road_mark_color)
                 self.params['lanes_left_guard_rails'].insert(0, lane.guard_rail)
-                self.params['lanes_left_guard_rail_lateral_offsets'].insert(0, lane.guard_rail_lateral_offset)
+                self.params['lanes_left_guard_rail_lateral_offsets'].insert(0,
+                    helpers.round_float_property(lane.guard_rail_lateral_offset))
             elif lane.side == 'right':
-                self.params['lanes_right_widths_start'].append(lane.width_start)
-                self.params['lanes_right_widths_end'].append(lane.width_end)
+                self.params['lanes_right_widths_start'].append(helpers.round_float_property(lane.width_start))
+                self.params['lanes_right_widths_end'].append(helpers.round_float_property(lane.width_end))
                 self.params['lanes_right_types'].append(lane.type)
                 self.params['lanes_right_road_mark_types'].append(lane.road_mark_type)
                 self.params['lanes_right_road_mark_weights'].append(lane.road_mark_weight)
-                self.params['lanes_right_road_mark_widths'].append(lane.road_mark_width)
+                self.params['lanes_right_road_mark_widths'].append(helpers.round_float_property(lane.road_mark_width))
                 self.params['lanes_right_road_mark_colors'].append(lane.road_mark_color)
                 self.params['lanes_right_guard_rails'].append(lane.guard_rail)
-                self.params['lanes_right_guard_rail_lateral_offsets'].append(lane.guard_rail_lateral_offset)
+                self.params['lanes_right_guard_rail_lateral_offsets'].append(
+                    helpers.round_float_property(lane.guard_rail_lateral_offset))
             else:
                 # lane.side == 'center'
                 self.params['lane_center_road_mark_type'] = lane.road_mark_type
                 self.params['lane_center_road_mark_weight'] = lane.road_mark_weight
-                self.params['lane_center_road_mark_width'] = lane.road_mark_width
+                self.params['lane_center_road_mark_width'] = helpers.round_float_property(lane.road_mark_width)
                 self.params['lane_center_road_mark_color'] = lane.road_mark_color
         self.params['lane_offset_start'] = self.calculate_lane_offset_start_end_in_m(road_properties.lane_offset_start,
             self.params['lanes_left_widths_start'], self.params['lanes_right_widths_start'])
@@ -369,6 +376,15 @@ class road:
             return self.params['height_curb']
         return 0.0
 
+    def has_vertical_curb_face(self, lane):
+        '''
+            Return True if the lane needs an additional vertical face at its
+            inner edge. Curbs are modelled as a square/vertical curb (form B),
+            i.e. the road surface is lifted by a 90 degree face at the inner
+            edge of the curb lane and the curb itself has a flat top.
+        '''
+        return lane.type == 'curb' and self.get_lane_height_delta(lane) > 0.0
+
     def get_lane_height_offset(self, side, lane_idx):
         '''
             Return the height above the road surface at the inner edge of the
@@ -431,6 +447,11 @@ class road:
                 lane_width_s = lane.width_start
             else:
                 lane_width_s = lane.width_start + (3.0 * s_norm**2 - 2.0 * s_norm**3) * (lane.width_end - lane.width_start)
+            # A curb rises with a vertical (90 degree) face at its inner edge,
+            # hence an additional strip border of zero width is inserted there
+            if lane.side == 'right' and self.has_vertical_curb_face(lane):
+                t_values.append(t)
+                z_values.append(z_outer)
             # Add lane width for right side of road BEFORE (in t-direction) road mark lines
             if lane.side == 'right':
                 width_left_lines_on_lane = 0.0
@@ -504,6 +525,10 @@ class road:
                 t_lane = lane_width_s - width_left_lines_on_lane - width_right_lines_on_lane
                 t -= t_lane
                 t_left_width_total += t_lane
+                # Vertical (90 degree) face at the inner edge of a curb lane
+                if self.has_vertical_curb_face(lane):
+                    t_values.append(t)
+                    z_values.append(z_outer)
         for idx in range(len(t_values)):
             t_values[idx] += t_left_width_total
         return t_values, z_values
@@ -541,6 +566,9 @@ class road:
             # Go in s direction along lane and calculate the start and stop values
             # ASPHALT
             if lane.side == 'right':
+                # Vertical face at the inner edge of a curb lane
+                if self.has_vertical_curb_face(lane):
+                    s_values.append((line_toggle_start, [0, length]))
                 s_values.append((line_toggle_start, [0, length]))
             # ROAD MARK
             if lane.road_mark_type != 'none':
@@ -558,6 +586,9 @@ class road:
             # ASPHALT
             if lane.side == 'left':
                 s_values.append((line_toggle_start, [0, length]))
+                # Vertical face at the inner edge of a curb lane
+                if self.has_vertical_curb_face(lane):
+                    s_values.append((line_toggle_start, [0, length]))
         return s_values
 
     def get_road_sample_points(self, lanes, strips_s_boundaries):
@@ -709,6 +740,10 @@ class road:
                         strip_is_road_mark.append(True)
                 strip_to_lane.append(idx_lane)
                 strip_is_road_mark.append(False)
+                # Vertical face at the inner edge of a curb lane
+                if self.has_vertical_curb_face(lane):
+                    strip_to_lane.append(idx_lane)
+                    strip_is_road_mark.append(False)
             elif lane.side == 'center':
                 if lane.road_mark_type != 'none':
                     if lane.road_mark_type == 'solid' or \
@@ -725,6 +760,10 @@ class road:
                         strip_is_road_mark.append(True)
             else:
                 # lane.side == 'right'
+                # Vertical face at the inner edge of a curb lane
+                if self.has_vertical_curb_face(lane):
+                    strip_to_lane.append(idx_lane)
+                    strip_is_road_mark.append(False)
                 strip_to_lane.append(idx_lane)
                 strip_is_road_mark.append(False)
                 if lane.road_mark_type != 'none':
@@ -895,7 +934,7 @@ class road:
             Return dictionary with index of faces for each material.
         '''
         materials = {'asphalt': [], 'road_mark_white': [], 'road_mark_yellow': [], 'grass': [],
-                     'concrete': []}
+                     'curb': [], 'walking': []}
         idx_face = 0
         strip_to_lane, strip_is_road_mark = self.get_strip_to_lane_mapping(lanes)
         for idx_strip in range(len(strips_s_boundaries)):
@@ -924,8 +963,10 @@ class road:
             else:
                 if lanes[idx_lane].type == 'shoulder':
                     materials['grass'].append(idx_face)
-                elif lanes[idx_lane].type in ('curb', 'walking', 'sidewalk'):
-                    materials['concrete'].append(idx_face)
+                elif lanes[idx_lane].type == 'curb':
+                    materials['curb'].append(idx_face)
+                elif lanes[idx_lane].type in ('walking', 'sidewalk'):
+                    materials['walking'].append(idx_face)
                 else:
                     materials['asphalt'].append(idx_face)
                 idx_face += 1

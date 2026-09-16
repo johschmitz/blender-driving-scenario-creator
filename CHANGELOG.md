@@ -12,6 +12,9 @@
 ### Fixed
 - Junction joint snapping only offered driving lanes so that walking and biking
   lanes of the incoming roads could not be connected
+- Lane widths and curb heights were exported with the rounding errors of the
+  single precision Blender float properties, e.g. 0.15000000596046448
+  instead of 0.15
 
 ## [0.36.0] - 2026-09-14
 

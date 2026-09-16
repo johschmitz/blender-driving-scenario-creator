@@ -1028,6 +1028,7 @@ class DSC_OT_export(bpy.types.Operator):
                                       color=mapping_road_mark_color[color],
                                       marking_weight=mapping_road_mark_weight[weight])
             if width > 0.0:
+                width = helpers.round_float_property(width)
                 # Use the <type><line> element to define the road mark width
                 if marking_type == 'broken':
                     line = xodr.RoadLine(width=width, length=line_length,
@@ -1042,22 +1043,31 @@ class DSC_OT_export(bpy.types.Operator):
     def add_lane_height(self, lane, lane_type, height_inner, height_curb):
         '''
             Add the height record lifting a lane above the road surface and
-            return the height of its outer edge. Curb lanes ramp up from their
-            inner to their outer edge, all lanes behind them stay lifted.
+            return the height of its outer edge. A curb lane lifts all lanes
+            behind it, all other lanes keep the height they are lifted to.
+
+            OpenDRIVE interpolates linearly between the inner and the outer
+            height of a lane, hence a curb with different inner and outer
+            heights would describe a diagonal face. To get the vertical face of
+            a square curb (form B) the whole curb lane is put on the raised
+            level instead, which turns the lane border towards the road into a
+            height step, just like in the generated mesh.
         '''
         if lane_type == 'curb':
             height_outer = height_inner + height_curb
+            height_inner = height_outer
         else:
             height_outer = height_inner
         if height_inner != 0.0 or height_outer != 0.0:
-            lane.add_height(height_inner, height_outer)
+            lane.add_height(helpers.round_float_property(height_inner),
+                            helpers.round_float_property(height_outer))
         return height_outer
 
     def create_lanes(self, obj):
         lanes = xodr.Lanes()
         road_mark_line_length = obj.get('road_mark_line_length', 3.0)
         road_mark_line_space = obj.get('road_mark_line_space', 6.0)
-        height_curb = obj.get('height_curb', 0.0)
+        height_curb = helpers.round_float_property(obj.get('height_curb', 0.0))
         road_mark = self.get_road_mark(obj['lane_center_road_mark_type'],
                                        obj['lane_center_road_mark_weight'],
                                        obj['lane_center_road_mark_color'],
@@ -1102,10 +1112,10 @@ class DSC_OT_export(bpy.types.Operator):
             lanesection.add_right_lane(lane)
         lanes.add_lanesection(lanesection)
         lanes.add_laneoffset(xodr.LaneOffset(0,
-                                             obj['lane_offset_coefficients']['a'],
-                                             obj['lane_offset_coefficients']['b'] / obj['geometry_total_length'],
-                                             obj['lane_offset_coefficients']['c'] / obj['geometry_total_length']**2,
-                                             obj['lane_offset_coefficients']['d'] / obj['geometry_total_length']**3))
+            helpers.round_float_property(obj['lane_offset_coefficients']['a']),
+            helpers.round_float_property(obj['lane_offset_coefficients']['b'] / obj['geometry_total_length']),
+            helpers.round_float_property(obj['lane_offset_coefficients']['c'] / obj['geometry_total_length']**2),
+            helpers.round_float_property(obj['lane_offset_coefficients']['d'] / obj['geometry_total_length']**3)))
 
         return lanes
 
@@ -1123,7 +1133,8 @@ class DSC_OT_export(bpy.types.Operator):
             b = 0.0
             c = 3.0 / length_road**2 * (width_end - width_start)
             d = -2.0 / length_road**3 * (width_end - width_start)
-        return a, b, c, d
+        return helpers.round_float_property(a), b, \
+            helpers.round_float_property(c), helpers.round_float_property(d)
 
     def link_lanes(self, roads):
         '''

@@ -1095,13 +1095,25 @@ def mouse_to_road_surface_params(context, event):
             'slope': slope,
             }
 
+def round_float_property(value):
+    '''
+        Return a float property value rounded to the precision it can hold.
+        Blender stores float properties with single precision, hence a lane
+        width entered as 0.15 turns into 0.15000000596046448 as soon as it is
+        converted to a double precision Python float. Round tripping it through
+        the 7 significant digits of a single precision float restores the value
+        the user entered and keeps the exported files readable.
+    '''
+    return float('{:.7g}'.format(value))
+
 def assign_materials(obj):
     '''
         Assign materials for asphalt and markings to object.
     '''
     default_materials = {
         'road_asphalt': [.3, .3, .3, 1.0],
-        'road_concrete': [.55, .55, .55, 1.0],
+        'road_curb': [.75, .75, .75, 1.0],
+        'road_walking': [.48, .48, .48, 1.0],
         'road_mark_white': [.9, .9, .9, 1.0],
         'road_mark_yellow': [.85, .63, .0, 1.0],
         'grass': [.05, .6, .01, 1.0],
