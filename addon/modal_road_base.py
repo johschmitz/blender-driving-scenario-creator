@@ -259,6 +259,8 @@ class DSC_OT_modal_road_base(bpy.types.Operator):
             'lane_widths_right': [],
             'lane_types_left': [],
             'lane_types_right': [],
+            'lane_curb_width': 0.0,
+            'lane_curb_height': 0.0,
             'height_curb': 0.0,
         }
 

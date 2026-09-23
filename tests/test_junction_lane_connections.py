@@ -12,6 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from addon import helpers
+from addon.road import filter_asphalt_faces
 
 from mathutils import Vector
 from pytest import approx
@@ -106,3 +107,44 @@ def test_right_side_lanes_are_mirrored():
     assert lane_type == 'walking'
     assert contact_point.y == approx(-3.95)
     assert contact_point.z == approx(HEIGHT_CURB)
+
+
+def test_walking_connector_uses_adjacent_curb_on_left():
+    contact_point = Vector((0.0, 3.95, HEIGHT_CURB))
+    curb_width, curb_height, adjusted_point = helpers.get_joint_adjacent_curb_info(
+        JOINT, 4, 'walking', contact_point)
+
+    assert curb_width == approx(0.15)
+    assert curb_height == approx(HEIGHT_CURB)
+    assert adjusted_point.y == approx(3.8)
+    assert adjusted_point.z == approx(0.0, abs=1e-7)
+
+
+def test_walking_connector_uses_adjacent_curb_on_right():
+    contact_point = Vector((0.0, -3.95, HEIGHT_CURB))
+    curb_width, curb_height, adjusted_point = helpers.get_joint_adjacent_curb_info(
+        JOINT, -4, 'walking', contact_point)
+
+    assert curb_width == approx(0.15)
+    assert curb_height == approx(HEIGHT_CURB)
+    assert adjusted_point.y == approx(-3.8)
+    assert adjusted_point.z == approx(0.0, abs=1e-7)
+
+
+def test_junction_connector_face_filter_keeps_only_non_asphalt_faces():
+    faces = [
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15],
+    ]
+    materials = {
+        'asphalt': [0, 3],
+        'walking': [1],
+        'curb': [2],
+    }
+
+    filtered_faces, filtered_materials = filter_asphalt_faces(faces, materials)
+
+    assert filtered_faces == [faces[1], faces[2]]
+    assert filtered_materials == {'asphalt': [], 'walking': [0], 'curb': [1]}

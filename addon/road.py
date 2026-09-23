@@ -17,6 +17,29 @@ from mathutils import Vector
 from . import helpers
 
 
+def filter_asphalt_faces(faces, materials):
+    '''
+        Remove asphalt faces and remap material face indices to the filtered mesh.
+    '''
+    asphalt_face_indices = set(materials.get('asphalt', []))
+    material_face_indices = {
+        material: set(face_indices)
+        for material, face_indices in materials.items()
+    }
+    filtered_faces = []
+    filtered_materials = {material: [] for material in materials}
+    for face_index, face in enumerate(faces):
+        if face_index in asphalt_face_indices:
+            continue
+        filtered_index = len(filtered_faces)
+        filtered_faces.append(face)
+        for material, face_indices in material_face_indices.items():
+            if face_index in face_indices:
+                filtered_materials[material].append(filtered_index)
+                break
+    return filtered_faces, filtered_materials
+
+
 class road:
 
     def __init__(self, context, road_type, geometry, geometry_solver):
@@ -30,12 +53,8 @@ class road:
         '''
             Create the 3d Blender road object
         '''
-        if self.road_type == 'junction_connecting_road':
-            wireframe = True
-        else:
-            wireframe = False
         valid, mesh_road, matrix_world, materials = self.update_params_get_mesh(context,
-            params_input, wireframe=wireframe)
+            params_input, wireframe=False)
         if not valid:
             return None
         else:
@@ -192,6 +211,11 @@ class road:
         road_sample_points = self.get_road_sample_points(lanes, strips_s_boundaries)
         vertices, edges, faces = self.get_road_vertices_edges_faces(road_sample_points)
         materials = self.get_face_materials(lanes, strips_s_boundaries)
+        if self.road_type == 'junction_connecting_road' and not wireframe:
+            # The junction area already supplies asphalt beneath driving
+            # connectors. Keep only non-asphalt surfaces (e.g. curb/walking)
+            # to prevent z-fighting inside the junction.
+            faces, materials = filter_asphalt_faces(faces, materials)
         # Add guard rail geometry
         road_face_count = len(faces)
         gr_verts, gr_edges, gr_faces, gr_num_faces = \

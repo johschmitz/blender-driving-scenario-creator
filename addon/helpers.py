@@ -357,7 +357,8 @@ def create_reference_object_xodr_link(reference_object, id_object):
 
 
 def set_connecting_road_properties(context, joint_side_start, road_contact_point,
-                                   width_lane_incoming, width_lane_outgoing, lane_type='driving'):
+                                   width_lane_incoming, width_lane_outgoing, lane_type='driving',
+                                   width_curb_start=0.0, width_curb_end=0.0, height_curb=0.12):
     '''
         Set the properties for construction of a connecting road. The lane type
         is taken over from the connected lanes so that e.g. walking lanes stay
@@ -367,33 +368,43 @@ def set_connecting_road_properties(context, joint_side_start, road_contact_point
     if context.scene.dsc_properties.connecting_road_properties.cross_section_preset != 'junction_connecting_road':
         context.scene.dsc_properties.connecting_road_properties.cross_section_preset = 'junction_connecting_road'
         context.scene.dsc_properties.connecting_road_properties.update_cross_section()
+    connecting_props = context.scene.dsc_properties.connecting_road_properties
+    has_walking_curb = lane_type in ('walking', 'sidewalk')
     if joint_side_start == 'left':
-        context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 1
+        context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 2 if has_walking_curb else 1
         context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 0
-        # Set the type before the widths since it resets them to the defaults
-        context.scene.dsc_properties.connecting_road_properties.lanes[0].type = lane_type
-        if road_contact_point == 'start':
-            # We add lanes from left to right so first left has index 0, center lane index 1
-            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_start = width_lane_incoming
-            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_end = width_lane_outgoing
-        else:
-            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_start = width_lane_incoming
-            context.scene.dsc_properties.connecting_road_properties.lanes[0].width_end = width_lane_outgoing
+        # Left lanes are ordered outside-to-center: walking then curb.
+        walking_lane = connecting_props.lanes[0]
+        walking_lane.type = lane_type
+        walking_lane.width_start = width_lane_incoming
+        walking_lane.width_end = width_lane_outgoing
+        if has_walking_curb:
+            curb_lane = connecting_props.lanes[1]
+            curb_lane.type = 'curb'
+            curb_lane.width_start = width_curb_start
+            curb_lane.width_end = width_curb_end
     else:
         context.scene.dsc_properties.connecting_road_properties.num_lanes_left = 0
-        context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 1
-        # Set the type before the widths since it resets them to the defaults
-        context.scene.dsc_properties.connecting_road_properties.lanes[1].type = lane_type
-        if road_contact_point == 'start':
-            # We add lanes from left to right so center lane has index 0, first right index 1
-            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_start = width_lane_incoming
-            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_end = width_lane_outgoing
+        context.scene.dsc_properties.connecting_road_properties.num_lanes_right = 2 if has_walking_curb else 1
+        if has_walking_curb:
+            # Right lanes are ordered center-to-outside: curb then walking.
+            curb_lane = connecting_props.lanes[1]
+            walking_lane = connecting_props.lanes[2]
+            curb_lane.type = 'curb'
+            curb_lane.width_start = width_curb_start
+            curb_lane.width_end = width_curb_end
         else:
-            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_start = width_lane_incoming
-            context.scene.dsc_properties.connecting_road_properties.lanes[1].width_end = width_lane_outgoing
+            walking_lane = connecting_props.lanes[1]
+        # Set the type before widths since changing type resets lane widths.
+        walking_lane.type = lane_type
+        walking_lane.width_start = width_lane_incoming
+        walking_lane.width_end = width_lane_outgoing
+    if has_walking_curb:
+        # Use the curb height at the start when present, otherwise at the end.
+        connecting_props.height_curb = height_curb
     # Remove lane markings for connecting roads
-    context.scene.dsc_properties.connecting_road_properties.lanes[0].road_mark_type = 'none'
-    context.scene.dsc_properties.connecting_road_properties.lanes[1].road_mark_type = 'none'
+    for lane in connecting_props.lanes:
+        lane.road_mark_type = 'none'
 
 def calculate_lane_offset(s, lane_offset_coefficients, total_length):
     '''
@@ -666,7 +677,7 @@ def get_lane_center_from_road_surface_hit(obj, point):
         return lane_center_point, lane_heading
 
     if obj.name.startswith('junction_area'):
-        id_joint, point_type, contact_point, heading, slope, id_lane, lane_width, lane_type = \
+        id_joint, point_type, contact_point, heading, slope, id_lane, lane_width, lane_type, _, _ = \
             point_to_junction_joint_interior(obj, point, joint_side='both',
                                              lane_type_group='driving')
         del id_joint, point_type, slope
@@ -838,6 +849,44 @@ def get_closest_lane_contact_point(lane_contact_points, point):
 
         return joint, id_lane_cp, lane_width, lane_type, contact_point_vec
 
+def get_joint_adjacent_curb_info(joint, id_lane, lane_type, contact_point):
+    '''
+        Return the curb width and adjusted curb-inner-edge contact point for a
+        walking lane, if that lane has a curb immediately inside it.
+    '''
+    if lane_type not in ('walking', 'sidewalk') or id_lane == 0:
+        return 0.0, 0.0, contact_point
+
+    lane_idx = abs(id_lane) - 1
+    if id_lane > 0:
+        lane_types = joint['lane_types_left']
+        lane_widths = joint['lane_widths_left']
+    else:
+        lane_types = joint['lane_types_right']
+        lane_widths = joint['lane_widths_right']
+
+    curb_idx = lane_idx - 1
+    if curb_idx < 0 or lane_types[curb_idx] != 'curb':
+        return 0.0, 0.0, contact_point
+
+    curb_width = lane_widths[curb_idx]
+    curb_height = joint.get('height_curb', 0.0) if curb_width > 0.0 else 0.0
+    if curb_width <= 0.0:
+        return 0.0, 0.0, contact_point
+
+    # The walking-lane contact point is at the curb's outer, raised edge.
+    # Move to the curb's inner edge so the connecting road's reference line
+    # anchors the curb and walking lane in their correct positions.
+    lateral = Vector((1.0, 0.0, 0.0))
+    lateral.rotate(Matrix.Rotation(joint['heading'] + pi / 2, 4, 'Z'))
+    if id_lane > 0:
+        lateral_offset = -curb_width
+    else:
+        lateral_offset = curb_width
+    adjusted_point = contact_point + lateral * lateral_offset
+    adjusted_point.z -= curb_height
+    return curb_width, curb_height, adjusted_point
+
 def point_to_junction_joint_interior(obj, point, joint_side, lane_type_group=None):
     '''
         Get joint parameters for the interior side from closest joint including
@@ -857,10 +906,13 @@ def point_to_junction_joint_interior(obj, point, joint_side, lane_type_group=Non
         lane_contact_points, point)
 
     if joint_cp != None:
+        curb_width, curb_height, contact_point_vec = get_joint_adjacent_curb_info(
+            joint_cp, id_lane_cp, lane_type, contact_point_vec)
         return joint_cp['id_joint'], joint_cp['contact_point_type'], \
-            contact_point_vec, joint_cp['heading'] - pi, joint_cp['slope'], id_lane_cp, lane_width, lane_type
+            contact_point_vec, joint_cp['heading'] - pi, joint_cp['slope'], id_lane_cp, lane_width, lane_type, \
+            curb_width, curb_height
     else:
-        return None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, 0.0, 0.0
 
 def point_to_object_connector(obj, point):
     '''
@@ -914,6 +966,8 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both', lan
     lane_types_left = []
     lane_types_right = []
     height_curb = 0.0
+    lane_curb_width = 0.0
+    lane_curb_height = 0.0
     dsc_hit, raycast_point, raycast_normal, obj \
         = raycast_mouse_to_dsc_object(context, event)
     if dsc_hit:
@@ -947,7 +1001,8 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both', lan
         if road_type == 'junction_connecting_road':
             if obj.name.startswith('junction_area'):
                 # This path is for junction connecting road snapping
-                id_joint, point_type, snapped_point, heading, slope, id_lane, lane_width, lane_type = \
+                id_joint, point_type, snapped_point, heading, slope, id_lane, lane_width, lane_type, \
+                    lane_curb_width, lane_curb_height = \
                     point_to_junction_joint_interior(obj, raycast_point, joint_side=joint_side,
                                                      lane_type_group=lane_type_group)
                 if id_joint != None:
@@ -986,6 +1041,8 @@ def mouse_to_road_joint_params(context, event, road_type, joint_side='both', lan
             'lane_widths_right': lane_widths_right,
             'lane_types_left': lane_types_left,
             'lane_types_right': lane_types_right,
+            'lane_curb_width': lane_curb_width,
+            'lane_curb_height': lane_curb_height,
             'height_curb': height_curb,
             }
 

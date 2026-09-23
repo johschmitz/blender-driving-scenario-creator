@@ -138,17 +138,11 @@ class junction:
             obj.matrix_world = matrix_world
             helpers.link_object_opendrive(self.context, obj)
 
-            # Assign transparent junction area material
-            material = bpy.data.materials.get('junction_area')
-            if material is None:
-                # Create material
-                material = bpy.data.materials.new(name='junction_area')
-                material.diffuse_color = (.1, .1, .1, 1.0)
-                material.use_nodes = True
-                principled = material.node_tree.nodes.get('Principled BSDF')
-                if principled:
-                    principled.inputs['Base Color'].default_value = (.1, .1, .1, 1.0)
-            obj.data.materials.append(material)
+            # Assign the same asphalt material used for driving lanes.
+            helpers.assign_materials(obj)
+            asphalt_index = helpers.get_material_index(obj, 'road_asphalt')
+            for polygon in obj.data.polygons:
+                polygon.material_index = asphalt_index
 
             helpers.select_activate_object(self.context, obj)
 

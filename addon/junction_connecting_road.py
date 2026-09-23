@@ -31,6 +31,10 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
 
     width_start = 0.0
     width_end = 0.0
+    width_curb_start = 0.0
+    width_curb_end = 0.0
+    height_curb_start = 0.0
+    height_curb_end = 0.0
     lane_type = 'driving'
 
     def update_road_properties(self, context, road_contact_point):
@@ -45,6 +49,11 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
 
         if road_contact_point == 'start':
             self.width_start = width_lane_connecting
+            self.width_end = 0.0
+            self.width_curb_start = self.params_snap.get('lane_curb_width', 0.0)
+            self.height_curb_start = self.params_snap.get('lane_curb_height', 0.0)
+            self.width_curb_end = 0.0
+            self.height_curb_end = 0.0
             # The connected lanes determine the type of the connecting road,
             # the end is restricted to lanes of the same type group
             lane_type = self.get_snapped_lane_type()
@@ -52,7 +61,11 @@ class DSC_OT_junction_connecting_road(DSC_OT_road):
                 self.lane_type = lane_type
         else:
             self.width_end = width_lane_connecting
+            self.width_curb_end = self.params_snap.get('lane_curb_width', 0.0)
+            self.height_curb_end = self.params_snap.get('lane_curb_height', 0.0)
 
+        height_curb = self.height_curb_start if self.width_curb_start > 0.0 else self.height_curb_end
         helpers.set_connecting_road_properties(context, self.joint_side_start,
                                                road_contact_point, self.width_start, self.width_end,
-                                               self.lane_type)
+                                               self.lane_type, self.width_curb_start,
+                                               self.width_curb_end, height_curb)
