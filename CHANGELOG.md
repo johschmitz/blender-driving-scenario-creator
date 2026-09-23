@@ -2,19 +2,26 @@
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-09-23
+
 ### Added
 - Lane types walking, biking and curb
 - Cross section preset "Urban two lanes with curb and walkway" with two driving
   lanes separated by a broken line and border, curb and walking lanes on each side
 - Junction connecting roads for walking and biking lanes, the connecting road
   takes over the lane type and the curb height of the lanes it connects
+- Junction sidewalk rendering
+- Scenario entity property editing tool
+- README documentation for the OpenSCENARIO XML node editor
+- Trackpad panning as an alternative to the mouse wheel modifier
 
 ### Fixed
-- Junction joint snapping only offered driving lanes so that walking and biking
-  lanes of the incoming roads could not be connected
 - Lane widths and curb heights were exported with the rounding errors of the
   single precision Blender float properties, e.g. 0.15000000596046448
   instead of 0.15
+
+### Removed
+- Rule parameter from the Simulation Time Trigger node
 
 ## [0.36.0] - 2026-09-14
 
@@ -562,7 +569,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.36.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.37.0...HEAD
+[0.37.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.33.1...v0.34.0
