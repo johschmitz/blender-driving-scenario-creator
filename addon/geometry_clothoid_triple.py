@@ -97,3 +97,20 @@ class DSC_geometry_clothoid_triple(DSC_geometry):
                   + self.section_curves[idx_section].segments[idx_segment].dk * s_segment
         hdg = self.section_curves[idx_section].segments[idx_segment].Theta(s_segment)
         return x_s, y_s, hdg, curvature
+
+    def get_sampling_breakpoints(self):
+        '''
+            Return five evenly spaced samples within each clothoid segment.
+            This matches junction boundary sampling and prevents short middle
+            segments from being skipped by the road mesh's adaptive sampler.
+        '''
+        breakpoints = []
+        s = 0.0
+        for section_curve in self.section_curves:
+            for segment in section_curve.segments:
+                for idx_sample in range(1, 6):
+                    sample_s = s + segment.length * idx_sample / 5
+                    if sample_s < self.total_length - 1e-9:
+                        breakpoints.append(sample_s)
+                s += segment.length
+        return breakpoints

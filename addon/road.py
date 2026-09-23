@@ -633,6 +633,8 @@ class road:
             sample_points[2 * idx_t + 1][0].append(xyz_samples[idx_t + 1])
         # Concatenate vertices until end of road
         idx_boundaries_strips = [0] * len(strips_s_boundaries)
+        geometry_breakpoints = iter(self.geometry.get_sampling_breakpoints())
+        next_geometry_breakpoint = next(geometry_breakpoints, None)
         while s < length:
             # TODO: Make hardcoded sampling parameters configurable
             if curvature_abs == 0.0:
@@ -643,7 +645,12 @@ class road:
                     step = 1.0
             else:
                 step = max(1, min(5, 0.1 / abs(curvature_abs)))
-            s += step
+            s_next = s + step
+            while next_geometry_breakpoint is not None and next_geometry_breakpoint <= s:
+                next_geometry_breakpoint = next(geometry_breakpoints, None)
+            if next_geometry_breakpoint is not None and next_geometry_breakpoint < s_next:
+                s_next = next_geometry_breakpoint
+            s = s_next
             if s >= length:
                 s = length
 

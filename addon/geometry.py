@@ -366,6 +366,12 @@ class DSC_geometry():
         '''
         return NotImplementedError()
 
+    def get_sampling_breakpoints(self):
+        '''
+            Return additional s values that road mesh sampling must include.
+        '''
+        return []
+
     def get_closest_ref_line_x_y_heading_s_t(self, point):
         '''
             Return the x, y and heading of the closest point on the reference
