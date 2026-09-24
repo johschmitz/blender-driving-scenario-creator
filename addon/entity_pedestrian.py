@@ -42,6 +42,17 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
         edges = []
         faces = []
 
+        def _add_box_edges(base):
+            '''Add the twelve perimeter and corner edges for a box primitive.'''
+            edges.extend([
+                (base+0, base+1), (base+1, base+2),
+                (base+2, base+3), (base+3, base+0),
+                (base+4, base+5), (base+5, base+6),
+                (base+6, base+7), (base+7, base+4),
+                (base+0, base+4), (base+1, base+5),
+                (base+2, base+6), (base+3, base+7),
+            ])
+
         def _box(x0, x1, y0, y1, z0, z1):
             '''Axis-aligned box.'''
             b = len(verts)
@@ -49,6 +60,7 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
                 (x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
                 (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1),
             ])
+            _add_box_edges(b)
             faces.extend([
                 (b+0, b+1, b+5, b+4),
                 (b+1, b+2, b+6, b+5),
@@ -65,6 +77,7 @@ class DSC_OT_entity_pedestrian(DSC_OT_entity):
                 (x0b, y0b, z0), (x1b, y0b, z0), (x1b, y1b, z0), (x0b, y1b, z0),
                 (x0t, y0t, z1), (x1t, y0t, z1), (x1t, y1t, z1), (x0t, y1t, z1),
             ])
+            _add_box_edges(b)
             faces.extend([
                 (b+0, b+1, b+5, b+4),
                 (b+1, b+2, b+6, b+5),
