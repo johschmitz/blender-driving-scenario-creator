@@ -33,10 +33,12 @@ class DSC_OT_entity_car(DSC_OT_entity):
     wheel_radius = 0.35
     wheel_half_width = 0.1125  # 225 mm total width
     wheel_segments = 12
-    # Wheel center positions relative to entity origin (x_front, x_rear, y_half_track)
+    # Wheel center positions in the centered model coordinates.
     wheel_x_front = 1.5
     wheel_x_rear = -1.4
     wheel_y_half_track = 0.8775  # outer edge 10 mm inside body (y=1.0)
+    # Local origin is on the ground directly below the rear axle center.
+    origin_offset_x = -wheel_x_rear
 
     def get_vertices_edges_faces(self):
         # Body raised slightly for ground clearance above the wheels
@@ -81,6 +83,7 @@ class DSC_OT_entity_car(DSC_OT_entity):
             (-1.60, 1.58 + clearance),        # 16: roof rear
             (-2.20, 0.80 + clearance),        # 17: rear upper
         ]
+        profile_xz = [(x + self.origin_offset_x, z) for x, z in profile_xz]
 
         n = len(profile_xz)  # 18
 
@@ -145,9 +148,13 @@ class DSC_OT_entity_car(DSC_OT_entity):
 
         z_center = r  # wheel center at radius height (bottom touches ground)
         configs = [
-            ('wheel_fl', (xf,  yt, z_center), verts, edges, faces),
-            ('wheel_fr', (xf, -yt, z_center), verts, edges, faces),
-            ('wheel_rl', (xr,  yt, z_center), verts, edges, faces),
-            ('wheel_rr', (xr, -yt, z_center), verts, edges, faces),
+            ('wheel_fl',
+             (xf + self.origin_offset_x,  yt, z_center), verts, edges, faces),
+            ('wheel_fr',
+             (xf + self.origin_offset_x, -yt, z_center), verts, edges, faces),
+            ('wheel_rl',
+             (xr + self.origin_offset_x,  yt, z_center), verts, edges, faces),
+            ('wheel_rr',
+             (xr + self.origin_offset_x, -yt, z_center), verts, edges, faces),
         ]
         return configs
