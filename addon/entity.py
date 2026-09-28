@@ -22,12 +22,15 @@ from . import helpers
 class entity:
 
     def __init__(self, context, entity_type, entity_subtype, get_vertices_edges_faces,
-                 get_wheel_configs=None):
+                 get_wheel_configs=None, get_face_materials=None,
+                 setup_entity_object=None):
         self.context = context
         self.entity_type = entity_type
         self.entity_subtype = entity_subtype
         self.get_vertices_edges_faces = get_vertices_edges_faces
         self.get_wheel_configs = get_wheel_configs
+        self.get_face_materials = get_face_materials
+        self.setup_entity_object = setup_entity_object
         self.params = {}
 
     def create_object_3d(self, context, params_input):
@@ -84,6 +87,30 @@ class entity:
                         w_obj.data.polygons[poly_idx].material_index = \
                             helpers.get_material_index(w_obj,
                                 helpers.get_paint_material_name(wheel_color))
+
+            if self.get_face_materials is not None:
+                material_indices = {}
+                for index, assignment in enumerate(self.get_face_materials()):
+                    if assignment is None:
+                        continue
+                    name, color = assignment
+                    material_name = 'entity_detail_' + name
+                    if material_name not in material_indices:
+                        material = bpy.data.materials.get(material_name)
+                        if material is None:
+                            material = bpy.data.materials.new(name=material_name)
+                            material.diffuse_color = color
+                            material.use_nodes = True
+                            shader = material.node_tree.nodes.get('Principled BSDF')
+                            if shader:
+                                shader.inputs['Base Color'].default_value = color
+                                shader.inputs['Roughness'].default_value = 0.28
+                        obj.data.materials.append(material)
+                        material_indices[material_name] = len(obj.data.materials) - 1
+                    obj.data.polygons[index].material_index = material_indices[material_name]
+
+            if self.setup_entity_object is not None:
+                self.setup_entity_object(context, obj)
 
         return obj
 

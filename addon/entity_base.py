@@ -38,8 +38,12 @@ class DSC_OT_entity(DSC_OT_modal_two_point_base):
             Create a model object instance
         '''
         get_wheel_configs = getattr(self, 'get_wheel_configs', None)
+        get_face_materials = getattr(self, 'get_face_materials', None)
+        setup_entity_object = getattr(self, 'setup_entity_object', None)
         self.entity = entity(context, self.entity_type, self.entity_subtype,
-            self.get_vertices_edges_faces, get_wheel_configs=get_wheel_configs)
+            self.get_vertices_edges_faces, get_wheel_configs=get_wheel_configs,
+            get_face_materials=get_face_materials,
+            setup_entity_object=setup_entity_object)
 
     def create_object_3d(self, context):
         '''

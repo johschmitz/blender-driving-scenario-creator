@@ -240,7 +240,8 @@ class DSC_OT_export(bpy.types.Operator):
                     body_export.location = (0, 0, 0)
                     body_export.rotation_euler = (0, 0, 0)
                     copies = [root_export, body_export]
-                    # Copy wheel children
+                    child_copies = {}
+                    # Copy wheel and modifier-cage children.
                     for child in obj.children:
                         child_export = child.copy()
                         if child_export.data is not None:
@@ -252,6 +253,14 @@ class DSC_OT_export(bpy.types.Operator):
                         child_export.location = child.location.copy()
                         child_export.rotation_euler = child.rotation_euler.copy()
                         copies.append(child_export)
+                        child_copies[child.name] = child_export
+                    # Reconnect modifiers to the copied lattice cage so its
+                    # local deformation remains correct in the export hierarchy.
+                    for exported in (body_export, *child_copies.values()):
+                        for modifier in exported.modifiers:
+                            if (modifier.type == 'LATTICE' and modifier.object
+                                    and modifier.object.name in child_copies):
+                                modifier.object = child_copies[modifier.object.name]
                     # Select all copies for export
                     bpy.ops.object.select_all(action='DESELECT')
                     for c in copies:
