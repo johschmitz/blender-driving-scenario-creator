@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-14
+
+### Added
+- Additional vehicle types (car, motorcycle, bicycle, van, bus, truck), a
+  semi-trailer and a child pedestrian
+
+### Changed
+- Car origin shifted toward the rear axle at ground level
+
+### Fixed
+- Pedestrian and wheel wireframe preview
+- Triple clothoid road sampling
+
 ## [0.37.0] - 2026-09-23
 
 ### Added
@@ -569,7 +582,8 @@ end of restrictions, stop, yield, right of way)
 - Export meshes as .osgb files for esmini using osgconv
 
 
-[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/johschmitz/blender-driving-scenario-creator/compare/v0.34.0...v0.35.0
