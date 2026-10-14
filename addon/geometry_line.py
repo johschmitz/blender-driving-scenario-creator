@@ -15,7 +15,7 @@ from . geometry import DSC_geometry
 from . import helpers
 
 from mathutils import Vector, Matrix
-from math import pi
+from math import atan2, pi
 
 
 class DSC_geometry_line(DSC_geometry):
@@ -29,17 +29,32 @@ class DSC_geometry_line(DSC_geometry):
 
     def update_plan_view(self, params, geometry_solver='default'):
 
+        point_start = params['points'][-2]
+        point_end = params['points'][-1]
+        if len(self.sections) == 1:
+            heading_start = params['heading_start']
+        else:
+            direction = point_end - point_start
+            heading_start = atan2(direction.y, direction.x)
+            heading_local = heading_start - self.sections[0]['heading_start']
+            # The base geometry update initializes each new section with the
+            # first-section heading. A polyline line segment needs its own
+            # tangent so samples follow the authored control points.
+            self.sections[-1]['matrix_local'] = (
+                Matrix.Translation(self.point_start_local)
+                @ Matrix.Rotation(heading_local, 4, 'Z'))
+
         # Local starting point is 0 vector so length becomes length of end point vector
         length = (self.point_end_local - self.point_start_local).to_2d().length
 
         # Remember geometry parameters
         self.sections[-1]['curve_type'] = 'line'
         self.sections[-1]['geometry_solver'] = 'default'
-        self.sections[-1]['point_start'] = params['points'][-2]
-        self.sections[-1]['heading_start'] = params['heading_start']
+        self.sections[-1]['point_start'] = point_start
+        self.sections[-1]['heading_start'] = heading_start
         self.sections[-1]['curvature_start'] = 0
-        self.sections[-1]['point_end'] = params['points'][-1]
-        self.sections[-1]['heading_end'] = params['heading_start']
+        self.sections[-1]['point_end'] = point_end
+        self.sections[-1]['heading_end'] = heading_start
         self.sections[-1]['curvature_end'] = 0
         self.sections[-1]['length'] = length
         self.sections[-1]['valid'] = True

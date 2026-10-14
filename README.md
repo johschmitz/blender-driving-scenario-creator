@@ -298,6 +298,12 @@ For development of the add-on the [Blender VS Code
 extension](https://github.com/JacquesLucke/blender_vscode) is very
 recommendable. It allows hot reloading and rapid iterations.
 
+To regenerate sign, stencil, or entity preview images, install librsvg and
+ImageMagick. Use `brew install librsvg imagemagick` on macOS or `sudo apt
+install librsvg2-bin imagemagick` on Ubuntu/Debian. All conversion scripts use
+`rsvg-convert` to render SVGs before ImageMagick performs any PNG resizing or
+cropping.
+
 # How to run the tests
 
 There is a handful of tests for the geometries in the `tests/` directory. They

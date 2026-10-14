@@ -25,6 +25,10 @@ import subprocess
 import json
 import xml.etree.ElementTree as ET
 from .scenario_nodes import write_node_storyboard
+from .entity_connections import (
+    add_connections_to_vehicle_catalog,
+    order_entities_for_scenario,
+)
 
 
 class DSC_ParkingSpaceObject(xodr.Object):
@@ -124,12 +128,47 @@ mapping_road_mark_color = {
     'yellow': xodr.RoadMarkColor.yellow,
 }
 
+
+def _resolve_vehicle_category(category_key, *candidate_names):
+    for name in candidate_names:
+        if hasattr(xosc.VehicleCategory, name):
+            return getattr(xosc.VehicleCategory, name)
+
+    # Keep addon load robust across scenariogeneration versions.
+    # If a category is missing, fall back to a generic vehicle enum.
+    if hasattr(xosc.VehicleCategory, 'car'):
+        print("[DSC] VehicleCategory '{}' not available (checked: {}). Falling back to 'car'."
+              .format(category_key, ', '.join(candidate_names)))
+        return xosc.VehicleCategory.car
+
+    # Last-resort fallback for very old/unknown enum layouts.
+    first_attr = next(
+        (name for name in dir(xosc.VehicleCategory)
+         if not name.startswith('_') and not callable(getattr(xosc.VehicleCategory, name))),
+        None)
+    if first_attr is not None:
+        print("[DSC] VehicleCategory '{}' not available. Falling back to '{}'."
+              .format(category_key, first_attr))
+        return getattr(xosc.VehicleCategory, first_attr)
+
+    raise AttributeError("VehicleCategory has no usable enum members.")
+
+
 mapping_vehicle_type = {
-    'car': xosc.VehicleCategory.car,
+    'car': _resolve_vehicle_category('car', 'car'),
+    'motorcycle': _resolve_vehicle_category('motorcycle', 'motorcycle', 'motorcycle'),
+    'bicycle': _resolve_vehicle_category('bicycle', 'bicycle'),
+    'bus': _resolve_vehicle_category('bus', 'bus'),
+    'heavyTruck': _resolve_vehicle_category('heavyTruck', 'heavyTruck', 'heavy_truck', 'truck'),
+    'semiTrailer': _resolve_vehicle_category(
+        'semiTrailer', 'semiTrailer', 'semitrailer', 'semi_trailer', 'trailer', 'truck'),
+    'van': _resolve_vehicle_category('van', 'van', 'car'),
 }
 
 mapping_pedestrian_type = {
     'pedestrian': xosc.PedestrianCategory.pedestrian,
+    'adult': xosc.PedestrianCategory.pedestrian,
+    'child': xosc.PedestrianCategory.pedestrian,
 }
 
 mapping_contact_point = {
@@ -169,7 +208,8 @@ class DSC_OT_export(bpy.types.Operator):
         row.prop(self, "mesh_file_type", expand=True)
 
     def execute(self, context):
-        self.export_entity_models(context)
+        if self.export_entity_models(context) is False:
+            return {'CANCELLED'}
         self.export_static_scene_model()
         if self.export_openscenario() is False:
             return {'CANCELLED'}
@@ -240,7 +280,8 @@ class DSC_OT_export(bpy.types.Operator):
                     body_export.location = (0, 0, 0)
                     body_export.rotation_euler = (0, 0, 0)
                     copies = [root_export, body_export]
-                    # Copy wheel children
+                    child_copies = {}
+                    # Copy wheel and modifier-cage children.
                     for child in obj.children:
                         child_export = child.copy()
                         if child_export.data is not None:
@@ -252,6 +293,14 @@ class DSC_OT_export(bpy.types.Operator):
                         child_export.location = child.location.copy()
                         child_export.rotation_euler = child.rotation_euler.copy()
                         copies.append(child_export)
+                        child_copies[child.name] = child_export
+                    # Reconnect modifiers to the copied lattice cage so its
+                    # local deformation remains correct in the export hierarchy.
+                    for exported in (body_export, *child_copies.values()):
+                        for modifier in exported.modifiers:
+                            if (modifier.type == 'LATTICE' and modifier.object
+                                    and modifier.object.name in child_copies):
+                                modifier.object = child_copies[modifier.object.name]
                     # Select all copies for export
                     bpy.ops.object.select_all(action='DESELECT')
                     for c in copies:
@@ -312,6 +361,31 @@ class DSC_OT_export(bpy.types.Operator):
                 else:
                     print('Unknown entity type:', obj['entity_type'])
                     self.report({'ERROR'}, 'Unknown entity type: {}'.format(obj['entity_type']))
+                    return False
+
+            return self.export_vehicle_connections(context, vehicle_catalog_path)
+
+    def export_vehicle_connections(self, context, vehicle_catalog_path):
+        """Patch connection anchors and attached-trailer refs into the catalog."""
+        if not helpers.collection_exists(['OpenSCENARIO', 'entities']):
+            return True
+        records = []
+        for obj in bpy.data.collections['OpenSCENARIO'].children['entities'].objects:
+            if obj.parent is not None or obj.get('dsc_type') != 'entity':
+                continue
+            if obj.get('entity_type') != 'vehicle':
+                continue
+            records.append((obj.name, obj.get('entity_subtype'),
+                            obj.get('trailer_entity')))
+        if not any(record[1] in {'heavyTruck', 'semiTrailer'}
+                   for record in records):
+            return True
+        if not add_connections_to_vehicle_catalog(vehicle_catalog_path, records):
+            message = 'Could not add vehicle/trailer connection data to VehicleCatalog.'
+            self.report({'ERROR'}, message)
+            print('[DSC] ' + message)
+            return False
+        return True
 
     def export_mesh(self, file_path):
         '''
@@ -861,43 +935,46 @@ class DSC_OT_export(bpy.types.Operator):
         init = xosc.Init()
         entities = xosc.Entities()
         if helpers.collection_exists(['OpenSCENARIO','entities']):
-            for obj in bpy.data.collections['OpenSCENARIO'].children['entities'].objects:
+            entity_collection = bpy.data.collections['OpenSCENARIO'].children['entities']
+            entity_objects = [
+                obj for obj in entity_collection.objects
+                if obj.parent is None and obj.get('dsc_type') == 'entity'
+            ]
+            for obj in order_entities_for_scenario(entity_objects):
                 # Skip child objects (e.g. wheels, body); they belong to their parent entity
-                if obj.parent is not None:
-                    continue
-                if 'dsc_type' in obj and obj['dsc_type'] == 'entity':
-                    entity_name = obj.name
-                    print('Add entity with name', obj.name)
-                    position_world, heading_world = helpers.get_object_world_position_heading(obj)
-                    if obj['entity_type'] == 'vehicle':
-                        catalog = 'VehicleCatalog'
-                    elif obj['entity_type'] == 'pedestrian':
-                        catalog = 'PedestrianCatalog'
-                    else:
-                        self.report({'ERROR'}, 'Unknown entity type {}'.format(obj['dsc_type']))
-                    entities.add_scenario_object(entity_name,xosc.CatalogReference(catalog, entity_name))
-                    # Teleport to initial position
-                    init.add_init_action(entity_name,
-                        xosc.TeleportAction(
-                            xosc.WorldPosition(
-                                x=position_world.x, y=position_world.y, z=position_world.z,
-                                h=heading_world)))
-                    # Get pitch and roll from road
-                    init.add_init_action(entity_name,
-                        xosc.TeleportAction(
-                            xosc.RelativeRoadPosition(0, 0, entity_name,
-                                xosc.Orientation(h=heading_world, p=0, r=0,
-                                    reference=xosc.ReferenceContext.absolute))))
-                    # Begin driving/walking
-                    init.add_init_action(entity_name,
-                        xosc.AbsoluteSpeedAction(helpers.kmh_to_ms(obj['speed_initial']),
-                            xosc.TransitionDynamics(xosc.DynamicsShapes.step,
-                                                    xosc.DynamicsDimension.time, 1)))
-                    # Center on closest lane
-                    init.add_init_action(entity_name,
-                        xosc.RelativeLaneChangeAction(0, entity_name,
-                            xosc.TransitionDynamics(xosc.DynamicsShapes.cubic,
-                                                    xosc.DynamicsDimension.rate, 2.0)))
+                entity_name = obj.name
+                print('Add entity with name', obj.name)
+                position_world, heading_world = helpers.get_object_world_position_heading(obj)
+                if obj['entity_type'] == 'vehicle':
+                    catalog = 'VehicleCatalog'
+                elif obj['entity_type'] == 'pedestrian':
+                    catalog = 'PedestrianCatalog'
+                else:
+                    self.report({'ERROR'}, 'Unknown entity type {}'.format(obj['dsc_type']))
+                    return False
+                entities.add_scenario_object(entity_name,xosc.CatalogReference(catalog, entity_name))
+                # Teleport to initial position
+                init.add_init_action(entity_name,
+                    xosc.TeleportAction(
+                        xosc.WorldPosition(
+                            x=position_world.x, y=position_world.y, z=position_world.z,
+                            h=heading_world)))
+                # Get pitch and roll from road
+                init.add_init_action(entity_name,
+                    xosc.TeleportAction(
+                        xosc.RelativeRoadPosition(0, 0, entity_name,
+                            xosc.Orientation(h=heading_world, p=0, r=0,
+                                reference=xosc.ReferenceContext.absolute))))
+                # Begin driving/walking
+                init.add_init_action(entity_name,
+                    xosc.AbsoluteSpeedAction(helpers.kmh_to_ms(obj['speed_initial']),
+                        xosc.TransitionDynamics(xosc.DynamicsShapes.step,
+                                                xosc.DynamicsDimension.time, 1)))
+                # Center on closest lane
+                init.add_init_action(entity_name,
+                    xosc.RelativeLaneChangeAction(0, entity_name,
+                        xosc.TransitionDynamics(xosc.DynamicsShapes.cubic,
+                                                xosc.DynamicsDimension.rate, 2.0)))
         if helpers.collection_exists(['OpenSCENARIO','trajectories']):
             for obj in bpy.data.collections['OpenSCENARIO'].children['trajectories'].objects:
                 if 'dsc_type' in obj and obj['dsc_type'] == 'trajectory':

@@ -119,6 +119,9 @@ class DSC_OT_popup_entity_edit_properties(bpy.types.Operator):
             self.entity, helpers.get_paint_material_name(self.entity['color']))
         if material_index is not None:
             for polygon in self.entity.data.polygons:
+                material = self.entity.data.materials[polygon.material_index]
+                if material and material.name.startswith('entity_detail_'):
+                    continue
                 polygon.material_index = material_index
 
     def invoke(self, context, event):

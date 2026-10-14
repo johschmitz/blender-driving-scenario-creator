@@ -12,7 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from addon.geometry_line import DSC_geometry_line
-from . helpers_test import params_input, get_heading_start
+from .test_helpers import params_input, get_heading_start
 
 from mathutils import Vector
 from pytest import approx
@@ -94,8 +94,7 @@ def test_geometry_line_2d_projection():
     length_section = geometry.sections[1]['length']
     xyz_local, h, c = geometry.sample_cross_section(s=length-length_section/2, t_vec=[0.0], with_lane_offset=False)
     xyz_global = geometry.matrix_world @ Vector(xyz_local[0])
-    # FIXME there seems to be a small error in the projection
-    assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([80.0, 40.0, 0.0], 1e-5)
+    assert [xyz_global.x, xyz_global.y, xyz_global.z] == approx([75.0, 50.0, 0.0], 1e-5)
 
 def test_geometry_line_3d():
     '''

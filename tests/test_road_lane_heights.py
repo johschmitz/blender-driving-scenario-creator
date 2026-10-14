@@ -14,7 +14,7 @@
 from addon.road import road
 from addon.geometry_line import DSC_geometry_line
 from addon.params_cross_section import params_cross_section
-from . helpers_test import params_input, get_heading_start
+from .test_helpers import params_input, get_heading_start
 
 from mathutils import Vector
 from pytest import approx

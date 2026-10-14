@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from math import atan2, cos, sin
 from mathutils import Euler, Vector
 
+from .entity_connections import order_entities_for_scenario
 from .scenario_nodes import DSC_NO_ENTITY
 
 
@@ -271,9 +272,9 @@ class EsminiBindings:
             raise EsminiLibraryError('SE_GetObjectState returned {} for index {}'.format(rc, object_index))
         return state
 
-    def get_object_name(self, object_index, fallback_name=''):
+    def get_object_name(self, object_id, fallback_name=''):
         if self.fn_get_object_name is not None:
-            value = self.fn_get_object_name(object_index)
+            value = self.fn_get_object_name(object_id)
             if value:
                 return value.decode('utf-8', errors='ignore')
         if fallback_name:
@@ -371,15 +372,16 @@ def _collect_entities_for_preview():
         raise RuntimeError('OpenSCENARIO/entities collection not found.')
 
     object_states = []
-    for obj in entities_collection.objects:
-        if 'dsc_type' in obj and obj['dsc_type'] == 'entity':
-            object_states.append(
-                PreviewObjectState(
-                    name=obj.name,
-                    object_ref=obj,
-                    original_matrix=obj.matrix_world.copy(),
-                )
+    entities = [obj for obj in entities_collection.objects
+                if obj.parent is None and obj.get('dsc_type') == 'entity']
+    for obj in order_entities_for_scenario(entities):
+        object_states.append(
+            PreviewObjectState(
+                name=obj.name,
+                object_ref=obj,
+                original_matrix=obj.matrix_world.copy(),
             )
+        )
 
     if not object_states:
         raise RuntimeError('No OpenSCENARIO entities found for preview.')
@@ -408,13 +410,8 @@ def _resolve_object_for_state(session, object_index):
         state_name = session.object_name_by_index[object_index]
         return session.objects_by_name.get(state_name)
 
-    fallback_name = session.ordered_names[object_index] if object_index < len(session.ordered_names) else ''
-    state_name = session.bindings.get_object_name(object_index, fallback_name=fallback_name)
-
-    # Fallback to index order if name lookup is unavailable or returns unknown values.
-    if state_name not in session.objects_by_name and fallback_name in session.objects_by_name:
-        state_name = fallback_name
-
+    object_id = session.bindings.get_object_id(object_index)
+    state_name = session.bindings.get_object_name(object_id, fallback_name='')
     if state_name not in session.objects_by_name:
         return None
     return session.objects_by_name[state_name]
@@ -456,50 +453,12 @@ def _collect_sim_states(session):
 
 
 def _calibrate_coordinate_mapping(session):
-    sim_states = _collect_sim_states(session)
-    if not sim_states:
-        _log('Calibration skipped (no simulation states available at startup).')
-        return
-
-    best_map = (1.0, 0.0, 0.0, 1.0)
-    best_error = float('inf')
-
-    for candidate in _candidate_xy_mappings():
-        a, b, c, d = candidate
-        available_indices = [idx for idx, _, _ in sim_states]
-        error = 0.0
-
-        # Greedy nearest fit from authored Blender entity positions to sim states.
-        for preview_state in session.object_states:
-            if not available_indices:
-                break
-
-            obj_x = preview_state.object_ref.location.x
-            obj_y = preview_state.object_ref.location.y
-            best_local_idx = None
-            best_local_error = float('inf')
-
-            for sim_idx in available_indices:
-                sim_state = sim_states[sim_idx][2]
-                x_mapped = a * sim_state.x + b * sim_state.y
-                y_mapped = c * sim_state.x + d * sim_state.y
-                dx = obj_x - x_mapped
-                dy = obj_y - y_mapped
-                local_error = dx * dx + dy * dy
-                if local_error < best_local_error:
-                    best_local_error = local_error
-                    best_local_idx = sim_idx
-
-            if best_local_idx is not None:
-                error += best_local_error
-                available_indices.remove(best_local_idx)
-
-        if error < best_error:
-            best_error = error
-            best_map = candidate
-
-    session.xy_map = best_map
-    _log('Coordinate mapping selected: {} (fit error {:.6f})'.format(session.xy_map, best_error))
+    # OpenSCENARIO and Blender both use world X/Y coordinates here. Earlier
+    # preview code guessed a signed axis permutation by greedily matching
+    # nearby anonymous states to entities; a truck and trailer starting close
+    # together could make that guess reflect or swap the entire simulation.
+    session.xy_map = (1.0, 0.0, 0.0, 1.0)
+    _log('Coordinate mapping: identity (OpenSCENARIO world XY)')
 
 
 def _build_fixed_object_index_mapping(session):
@@ -511,46 +470,25 @@ def _build_fixed_object_index_mapping(session):
         _log('Object index mapping skipped (no simulation states available).')
         return
 
-    available_indices = [idx for idx, _, _ in sim_states]
-
-    # Prefer explicit name matches when available from esmini.
     for object_index, object_id, state in sim_states:
-        sim_name = session.bindings.get_object_name(object_index, fallback_name='')
+        sim_name = session.bindings.get_object_name(object_id, fallback_name='')
         if sim_name in session.objects_by_name and sim_name not in session.object_index_by_name:
             session.object_index_by_name[sim_name] = object_index
             session.object_name_by_index[object_index] = sim_name
-            if object_index in available_indices:
-                available_indices.remove(object_index)
 
-    # Fill missing assignments by nearest mapped position.
-    for preview_state in session.object_states:
-        obj_name = preview_state.name
-        if obj_name in session.object_index_by_name:
-            continue
-        if not available_indices:
-            break
-
-        obj_loc = preview_state.object_ref.location
-        best_idx = None
-        best_error = float('inf')
-        for sim_idx in available_indices:
-            sim_state = sim_states[sim_idx][2]
-            x_mapped, y_mapped = _map_xy(session, sim_state.x, sim_state.y)
-            dx = obj_loc.x - x_mapped
-            dy = obj_loc.y - y_mapped
-            dz = obj_loc.z - sim_state.z
-            error = dx * dx + dy * dy + dz * dz
-            if error < best_error:
-                best_error = error
-                best_idx = sim_idx
-
-        if best_idx is not None:
-            session.object_index_by_name[obj_name] = best_idx
-            session.object_name_by_index[best_idx] = obj_name
-            available_indices.remove(best_idx)
+    # If this esmini build has no name function, index-order fallback is only
+    # safe when counts match and export/preview use the same dependency order.
+    # Never replace a failed name lookup with a nearest-position guess.
+    if (getattr(session.bindings, 'fn_get_object_name', None) is None
+            and len(sim_states) == len(session.ordered_names)):
+        for object_index, obj_name in enumerate(session.ordered_names):
+            if object_index in session.object_name_by_index:
+                continue
+            session.object_index_by_name[obj_name] = object_index
+            session.object_name_by_index[object_index] = obj_name
 
     if not session.object_name_by_index:
-        _log('No fixed object index mappings established. Fallback matching will be used.')
+        _log('No fixed object mappings established; unmatched esmini objects will not move Blender entities.')
         return
 
     _log('Fixed object mappings (Blender -> esmini index):')

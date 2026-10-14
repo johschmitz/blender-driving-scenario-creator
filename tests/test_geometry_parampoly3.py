@@ -12,7 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from addon.geometry_parampoly3 import DSC_geometry_parampoly3
-from .helpers_test import params_input, get_heading_start
+from .test_helpers import params_input, get_heading_start
 
 from mathutils import Vector
 from pytest import approx

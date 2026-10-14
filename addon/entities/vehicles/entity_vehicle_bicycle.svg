@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="256" height="128" fill="#4d4d4d" stroke="none"/>
+  <g transform="translate(128 112) scale(56.55 -56.55) translate(0.0936 0)" stroke-width="0.045">
+    <circle cx="-0.64" cy="0.3556" r="0.3556"/>
+    <circle cx="0.4528" cy="0.3556" r="0.3556"/>
+    <!-- Frame tubes and components follow the current model joints. -->
+    <path d="M-0.64 0.3556L-0.31 0.82L-0.1971 0.34L0.22 0.86L-0.31 0.82M0.22 0.86L-0.1971 0.34M0.22 0.86L0.28 0.73L0.4528 0.3556M-0.64 0.3556L-0.1971 0.34M-0.31 0.82L-0.3347 0.925M0.22 0.86L0.295 0.95M0.275 0.95L0.295 0.95"/>
+    <!-- Solid saddle, replacing the hollow seat-box outline. -->
+    <path d="M-0.47 0.9125L-0.21 0.9125L-0.21 0.9675L-0.47 0.9675Z" fill="#ffffff" stroke="none"/>
+    <!-- Seated cyclist: torso, neck/head/hair, bent arms, legs to pedals. -->
+    <path d="M-0.44 0.97L-0.18 0.97L0.085 1.29L-0.105 1.29Z"/>
+    <path d="M-0.03 1.27L0.015 1.34M-0.08 1.345L0.11 1.345L0.11 1.575L-0.08 1.575Z"/>
+    <!-- Rider legs use the current alternating knees, ankles, and shoe positions. -->
+    <path d="M-0.31 1.02L-0.04 0.65L-0.1321 0.275M-0.31 1.02L-0.15 0.75L-0.3921 0.515"/>
+    <path d="M-0.1171 0.20L-0.0171 0.20L-0.0171 0.24L-0.1171 0.24Z M-0.3771 0.44L-0.2771 0.44L-0.2771 0.48L-0.3771 0.48Z" fill="#ffffff"/>
+    <path d="M-0.1971 0.34L-0.0671 0.22M-0.1971 0.34L-0.3271 0.46"/>
+    <path d="M-0.1971 0.24L0.0229 0.24L0.0229 0.265L-0.1971 0.265Z M-0.4571 0.48L-0.2371 0.48L-0.2371 0.505L-0.4571 0.505Z" stroke-width="0.028"/>
+    <path d="M-0.015 1.26L0.10 1.12L0.275 0.95"/>
+  </g>
+</svg>

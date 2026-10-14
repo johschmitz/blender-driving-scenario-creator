@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="256" height="128" fill="#4d4d4d" stroke="none"/>
+  <!-- Tractor unit only; the semitrailer has its own preview icon. -->
+  <g transform="translate(128 120) scale(26.5 -26.5) translate(-2.28 0)" stroke-width="0.11">
+    <path d="M0.7 0.3L3.25 0.3L3.25 0.5L3.3304 0.8L3.55 1.0196L3.85 1.1L4.15 1.0196L4.3696 0.8L4.45 0.5L4.45 0.3L5.3 0.3L5.3 1.98L5.18 3.2L4.95 4L2.55 4L2.55 1.03L0.7 1.03Z"/>
+    <!-- Separate flat tractor fender above the rear wheel. -->
+    <path d="M-0.74 0.32L-0.64 1.025L0.54 1.025L0.64 0.32"/>
+    <circle cx="3.85" cy="0.5" r="0.5"/>
+    <circle cx="0" cy="0.5" r="0.5"/>
+  </g>
+</svg>

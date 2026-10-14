@@ -19,15 +19,59 @@ from math import pi
 from . import helpers
 
 
+VEHICLE_PAINT_MATERIALS = {
+    'car': frozenset(),
+    'motorcycle': frozenset({'body_highlight', 'frame'}),
+    'bicycle': frozenset({'frame'}),
+    'van': frozenset({'body_highlight'}),
+    'bus': frozenset({'body_highlight'}),
+    'heavyTruck': frozenset({'cab_paint'}),
+    'semiTrailer': frozenset({'trailer_paint'}),
+}
+
+
+def _apply_entity_detail_materials(obj, assignments, paint_materials,
+                                  paint_material_name):
+    """Assign per-face detail materials, preserving entity paint overrides."""
+    material_indices = {}
+    paint_material_index = helpers.get_material_index(obj, paint_material_name)
+    for index, assignment in enumerate(assignments):
+        if assignment is None:
+            continue
+        name, color = assignment
+        if name in paint_materials:
+            obj.data.polygons[index].material_index = paint_material_index
+            continue
+
+        material_name = 'entity_detail_' + name
+        if material_name not in material_indices:
+            material = bpy.data.materials.get(material_name)
+            if material is None:
+                material = bpy.data.materials.new(name=material_name)
+            material.diffuse_color = color
+            material.use_nodes = True
+            shader = material.node_tree.nodes.get('Principled BSDF')
+            if shader:
+                shader.inputs['Base Color'].default_value = color
+                shader.inputs['Roughness'].default_value = 0.28
+            obj.data.materials.append(material)
+            material_indices[material_name] = len(obj.data.materials) - 1
+        obj.data.polygons[index].material_index = material_indices[material_name]
+
+
 class entity:
 
     def __init__(self, context, entity_type, entity_subtype, get_vertices_edges_faces,
-                 get_wheel_configs=None):
+                 get_wheel_configs=None, get_face_materials=None,
+                 setup_entity_object=None, get_additional_meshes=None):
         self.context = context
         self.entity_type = entity_type
         self.entity_subtype = entity_subtype
         self.get_vertices_edges_faces = get_vertices_edges_faces
         self.get_wheel_configs = get_wheel_configs
+        self.get_face_materials = get_face_materials
+        self.setup_entity_object = setup_entity_object
+        self.get_additional_meshes = get_additional_meshes
         self.params = {}
 
     def create_object_3d(self, context, params_input):
@@ -51,9 +95,15 @@ class entity:
             # Assign materials
             obj['color'] = self.params['color']
             helpers.assign_object_materials(obj, obj['color'])
+            paint_material_name = helpers.get_paint_material_name(obj['color'])
+            paint_material_index = helpers.get_material_index(
+                obj, paint_material_name)
+            paint_materials = (
+                VEHICLE_PAINT_MATERIALS.get(self.entity_subtype, frozenset())
+                if self.entity_type == 'vehicle' else frozenset())
             for idx in range(len(obj.data.polygons)):
                 obj.data.polygons[idx].material_index = \
-                    helpers.get_material_index(obj, helpers.get_paint_material_name(obj['color']))
+                    paint_material_index
 
             # Metadata
             obj['dsc_category'] = 'OpenSCENARIO'
@@ -85,6 +135,38 @@ class entity:
                             helpers.get_material_index(w_obj,
                                 helpers.get_paint_material_name(wheel_color))
 
+            if self.get_face_materials is not None:
+                _apply_entity_detail_materials(
+                    obj, self.get_face_materials(), paint_materials,
+                    paint_material_name)
+
+            if self.get_additional_meshes is not None:
+                for component in self.get_additional_meshes() or ():
+                    if component is None:
+                        continue
+                    component_name, component_data = component
+                    component_vertices, component_edges, component_faces, component_materials = component_data
+                    component_mesh = bpy.data.meshes.new(component_name)
+                    component_mesh.from_pydata(
+                        component_vertices, component_edges, component_faces)
+                    component_obj = bpy.data.objects.new(component_name, component_mesh)
+                    component_obj.parent = obj
+                    component_obj.location = (0.0, 0.0, 0.0)
+                    helpers.link_object_openscenario(
+                        context, component_obj, subcategory='entities')
+                    component_obj['dsc_component'] = component_name
+                    helpers.assign_object_materials(component_obj, obj['color'])
+                    for polygon in component_obj.data.polygons:
+                        polygon.material_index = helpers.get_material_index(
+                            component_obj,
+                            helpers.get_paint_material_name(obj['color']))
+                    _apply_entity_detail_materials(
+                        component_obj, component_materials, paint_materials,
+                        paint_material_name)
+
+            if self.setup_entity_object is not None:
+                self.setup_entity_object(context, obj)
+
         return obj
 
     def update_params_get_mesh(self, context, params_input, wireframe):
@@ -112,6 +194,28 @@ class entity:
                        'speed_initial': entity_properties.speed_initial,
                        'color': entity_properties.color}
         vertices, edges, faces = self.get_vertices_edges_faces()
+        if wireframe and self.get_wheel_configs is not None:
+            vertices = list(vertices)
+            edges = list(edges)
+            edge_keys = {tuple(sorted(edge)) for edge in edges}
+            for _name, position, wheel_vertices, wheel_edges, wheel_faces in \
+                    self.get_wheel_configs():
+                vertex_offset = len(vertices)
+                vertices.extend((vertex[0] + position[0],
+                                 vertex[1] + position[1],
+                                 vertex[2] + position[2])
+                                for vertex in wheel_vertices)
+                wheel_edge_indices = list(wheel_edges)
+                for face in wheel_faces:
+                    wheel_edge_indices.extend(
+                        (face[index], face[(index + 1) % len(face)])
+                        for index in range(len(face)))
+                for first, second in wheel_edge_indices:
+                    edge = (vertex_offset + first, vertex_offset + second)
+                    edge_key = tuple(sorted(edge))
+                    if edge_key not in edge_keys:
+                        edges.append(edge)
+                        edge_keys.add(edge_key)
         mat_translation = Matrix.Translation(params_input['point_start'])
         vec_up = Vector((0.0, 0.0, 1.0))
         vec_normal = params_input['normal_start']

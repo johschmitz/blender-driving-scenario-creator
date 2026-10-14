@@ -506,6 +506,10 @@ def raycast_mouse_to_dsc_object(context, event):
         direction=view_vector_mouse)
     # Filter object type
     if hit:
+        # Entity component meshes (wheels, mirrors, coupling hardware) inherit
+        # the semantic identity of their tagged entity root for picking.
+        while obj is not None and 'dsc_category' not in obj and obj.parent is not None:
+            obj = obj.parent
         # Return hit only if not filtered out
         if 'dsc_category' in obj:
             return True, point, normal, obj
@@ -514,6 +518,31 @@ def raycast_mouse_to_dsc_object(context, event):
     else:
         # No hit
         return False, point, normal, None
+
+def raycast_mouse_to_dsc_object_excluding(context, event, exclude_objects=()):
+    """Raycast while temporarily hiding excluded objects and their children."""
+    hidden_objects = []
+    excluded = []
+    excluded_ids = set()
+    for root in exclude_objects:
+        if root is None:
+            continue
+        for obj in (root, *root.children_recursive):
+            if id(obj) not in excluded_ids:
+                excluded.append(obj)
+                excluded_ids.add(id(obj))
+
+    try:
+        for obj in excluded:
+            hidden = obj.hide_get()
+            hidden_objects.append((obj, hidden))
+            if not hidden:
+                obj.hide_set(True)
+        return raycast_mouse_to_dsc_object(context, event)
+    finally:
+        for obj, was_hidden in hidden_objects:
+            if not was_hidden:
+                obj.hide_set(False)
 
 def get_object_world_position_heading(obj):
     '''
@@ -1114,7 +1143,7 @@ def mouse_to_entity_params(context, event):
             'slope': slope,
             }
 
-def mouse_to_road_surface_params(context, event):
+def mouse_to_road_surface_params(context, event, exclude_objects=()):
     '''
         Check if a road surface is hit and return a snapping parameters.
     '''
@@ -1131,7 +1160,8 @@ def mouse_to_road_surface_params(context, event):
     slope = 0
     # Do the raycasting
     dsc_hit, raycast_point, raycast_normal, obj \
-        = raycast_mouse_to_dsc_object(context, event)
+        = raycast_mouse_to_dsc_object_excluding(
+            context, event, exclude_objects)
     if dsc_hit:
         # DSC mesh hit
         if obj['dsc_category'] == 'OpenDRIVE':

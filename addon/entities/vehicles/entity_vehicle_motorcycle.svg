@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="256" height="128" fill="#4d4d4d" stroke="none"/>
+  <g transform="translate(128 112) scale(45.28 -45.28)" stroke-width="0.055">
+    <circle cx="-0.73" cy="0.33" r="0.33"/>
+    <circle cx="0.73" cy="0.33" r="0.33"/>
+    <!-- Current swingarm, split rear frame, tank, engine, and fork geometry. -->
+    <path d="M-0.73 0.33L-0.32 0.3886L-0.10 0.42L0.43 0.90L0.4511 0.86L0.5163 0.736L0.73 0.33M-0.32 0.3886L-0.10 0.42M-0.73 0.33L-0.32 0.3886M-0.73 0.71L-0.73 0.79L-0.18 0.79L0.24 0.79L0.18 0.71Z"/>
+    <path d="M-0.24 0.34L0.12 0.34L0.18 0.71L-0.12 0.71Z M-0.18 0.79L-0.02 0.98L0.30 1.03L0.43 0.90L0.24 0.79Z"/>
+    <!-- Handlebar and fork top are positioned from the current steering assembly. -->
+    <path d="M0.43 0.90L0.3353 1.08M0.4511 0.86L0.5163 0.736"/>
+    <!-- Seated rider body, helmet/visor, arms to bar, and folded legs/feet. -->
+    <path d="M-0.51 0.78L-0.25 0.78L0.02 1.25L-0.17 1.25Z"/>
+    <path d="M-0.095 1.205L-0.075 1.22L-0.06 1.36M-0.19 1.37L0.04 1.37L0.04 1.61L-0.19 1.61Z M0.0175 1.44L0.0525 1.44L0.0525 1.53L0.0175 1.53Z"/>
+    <path d="M-0.08 1.205L0.065 1.165L0.3353 1.08M-0.38 0.83L0 0.75L0.04 0.46M-0.41 0.34L-0.19 0.34L-0.19 0.45L-0.41 0.45Z"/>
+    <!-- Current rider shoe is 220 mm long but only 45 mm high. -->
+    <path d="M-0.025 0.425L0.195 0.425L0.195 0.47L-0.025 0.47Z"/>
+  </g>
+</svg>

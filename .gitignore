@@ -6,3 +6,5 @@ __pycache__/
 .idea/
 addon/signs/*/*.png
 addon/stencils/*/*.png
+addon/entities/*/*.png
+addon/entities/*/*.png

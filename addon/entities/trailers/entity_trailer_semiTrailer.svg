@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="256" height="128" fill="#4d4d4d" stroke="none"/>
+  <!-- Standalone semitrailer side profile, relative to its rear axle. -->
+  <g transform="translate(128 103) scale(16.2 -16.2) translate(-5.525 0)" stroke-width="0.185">
+    <path d="M-1.15 1.15L12.2 1.15L12.2 4L-1.15 4Z"/>
+    <!-- Side underrun guard and flat fender spanning the three axles. -->
+    <path d="M2.95 0.3L2.95 1.15L6.95 1.15L6.95 0.3Z"/>
+    <path d="M2.876 0.3024L2.776 1.117L-0.576 1.117L-0.676 0.3024"/>
+    <circle cx="2.2" cy="0.536" r="0.536"/>
+    <circle cx="1.1" cy="0.536" r="0.536"/>
+    <circle cx="0" cy="0.536" r="0.536"/>
+  </g>
+</svg>

@@ -13,10 +13,71 @@
 
 import bpy
 
-from mathutils import Vector
+from mathutils import Matrix, Vector
 from math import atan2
 
 from . import helpers
+from .entity_base import (
+    _choose_trailer_road_solution,
+    _heading_after_pointer_rotation,
+    _quantize_rotation_delta,
+    _trailer_road_circle_intersections,
+    _trailer_road_lane,
+    _trailer_rotation_uses_lane_snap,
+)
+from .entity_connections import (
+    ENTITY_CONNECTION_POINTS,
+    clear_entity_connection,
+    get_entity_position_from_connection_anchor,
+    get_connection_snap,
+    record_entity_connection,
+)
+
+
+def _fallback_move_point(context, event, selected_elevation):
+    """Project normal off-road movement at the latest snapped elevation."""
+    return helpers.mouse_to_xy_parallel_plane(context, event, selected_elevation)
+
+
+def _heading_only_target(context, event, current_location, current_heading):
+    """Get an off-road heading target without road or lane snapping."""
+    point = helpers.mouse_to_xy_parallel_plane(
+        context, event, current_location.z)
+    direction = point - current_location
+    heading = (atan2(direction.y, direction.x)
+               if direction.to_2d().length > 0.0001
+               else current_heading)
+    return point, heading
+
+
+def _entity_transform_matrix(location, heading, normal, scale):
+    """Match entity placement's translation, surface alignment, and heading."""
+    normal_rotation = Vector((0.0, 0.0, 1.0)).rotation_difference(
+        normal.normalized())
+    heading_rotation = Matrix.Rotation(heading, 4, 'Z').to_3x3()
+    rotation = normal_rotation.to_matrix() @ heading_rotation
+    return Matrix.LocRotScale(location, rotation.to_quaternion(), scale)
+
+
+def _set_cursor_to_object_origin(context, obj):
+    """Keep Blender's 3D cursor on the moved scenario object's world origin."""
+    context.scene.cursor.location = obj.matrix_world.translation.copy()
+
+
+def _move_entity_origin(initial_location, anchor_point, target_point):
+    """Move the entity root by the pointer delta from its initial origin."""
+    return initial_location + target_point - anchor_point
+
+
+def _should_rotate_connected_trailer(obj_type, obj, connection_target):
+    """Only a semitrailer snapped to a heavy truck enters pivot rotation."""
+    return (
+        obj_type == 'entity'
+        and obj is not None
+        and obj.get('entity_subtype') == 'semiTrailer'
+        and connection_target is not None
+        and connection_target.get('entity_subtype') == 'heavyTruck'
+    )
 
 
 class DSC_OT_scenario_entity_move(bpy.types.Operator):
@@ -40,24 +101,28 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
         return context.area.type == 'VIEW_3D'
 
     def _raycast_to_movable_target(self, context, event):
-        dsc_hit, raycast_point, raycast_normal, obj = helpers.raycast_mouse_to_dsc_object(context, event)
-        del raycast_point, raycast_normal
+        dsc_hit, _raycast_point, _raycast_normal, obj = \
+            helpers.raycast_mouse_to_dsc_object(context, event)
         if not dsc_hit:
             return None
         if obj.get('dsc_category') != 'OpenSCENARIO':
             return None
+        # Wheels and coupling hardware are child objects; move their entity
+        # root just as placement creates and exports the entity root.
+        if obj.parent is not None and obj.parent.get('dsc_type') == 'entity':
+            obj = obj.parent
         if obj.get('dsc_type') not in {'entity', 'trajectory'}:
             return None
         return obj
 
     def _raycast_to_road_surface(self, context, event):
-        restore_visibility = None
-        if self.state == 'MOVE' and self.selected_obj is not None:
-            restore_visibility = self.selected_obj.hide_get()
-            self.selected_obj.hide_set(True)
-        dsc_hit, raycast_point, raycast_normal, obj = helpers.raycast_mouse_to_dsc_object(context, event)
-        if restore_visibility is not None:
-            self.selected_obj.hide_set(restore_visibility)
+        exclude_objects = (
+            (self.selected_obj,)
+            if self.state in {'MOVE', 'ROTATE_TRAILER'}
+            and self.selected_obj is not None else ())
+        dsc_hit, raycast_point, raycast_normal, obj = \
+            helpers.raycast_mouse_to_dsc_object_excluding(
+                context, event, exclude_objects)
         if not dsc_hit:
             return None, None, None
         if obj.get('dsc_category') != 'OpenDRIVE':
@@ -72,16 +137,44 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
             heading,
         )
 
-    def _update_transform(self, context, event):
-        point, normal, road_obj = self._raycast_to_road_surface(context, event)
-        del normal
+    def _set_entity_transform(self, location, heading, normal=None):
+        """Apply placement-equivalent location, heading, and road normal."""
+        if normal is None:
+            normal = self.initial_matrix.to_3x3() @ Vector((0.0, 0.0, 1.0))
+        self.selected_obj.matrix_world = _entity_transform_matrix(
+            location, heading, normal, self.initial_matrix.to_scale())
 
-        # ALT heading mode should also work away from road surfaces.
-        if point is None and event.alt and self.selected_obj_type == 'entity':
-            point = helpers.mouse_to_xy_parallel_plane(context, event, self.selected_obj.location.z)
-            road_obj = None
-        if point is None:
+    def _update_transform(self, context, event):
+        if event.alt:
+            # ALT is a pure in-place heading adjustment: do not raycast roads,
+            # find lane centers, or inherit a surface normal from the pointer.
+            current_location, current_heading = \
+                helpers.get_object_world_position_heading(self.selected_obj)
+            target_point, heading_target = _heading_only_target(
+                context, event, current_location, current_heading)
+            if self.selected_obj_type == 'entity':
+                current_normal = (self.selected_obj.matrix_world.to_3x3()
+                                  @ Vector((0.0, 0.0, 1.0))).normalized()
+                self._set_entity_transform(
+                    current_location, heading_target, current_normal)
+            else:
+                self._apply_entity_heading(heading_target)
+            context.scene.cursor.location = target_point.copy()
+            self.transform_changed = True
+            self.pending_connection_target = None
+            self.pending_connection_anchor = None
             return
+
+        point, normal, road_obj = self._raycast_to_road_surface(context, event)
+
+        # Match entity placement: when the pointer is not over a road, project
+        # onto a horizontal plane and keep the elevation from the drag anchor.
+        # This is needed in normal mode too so vehicles can leave the road.
+        if point is None:
+            point = _fallback_move_point(
+                context, event, self.selected_elevation)
+            normal = Vector((0.0, 0.0, 1.0))
+            road_obj = None
 
         target_point = point.copy()
         heading_lane = None
@@ -91,28 +184,144 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
                 target_point = lane_center_point
                 heading_lane = lane_heading
 
-        context.scene.cursor.location = target_point
-
         if not event.alt:
-            delta = target_point - self.anchor_point
-            self.selected_obj.location = self.initial_location + delta
+            # Like placement, retain the latest road/lane elevation when the
+            # cursor subsequently leaves the road surface.
+            self.selected_elevation = target_point.z
 
-        if event.alt:
-            if heading_lane is not None:
-                heading_target = heading_lane
-            else:
-                vec_to_target = target_point - self.initial_location
-                if vec_to_target.to_2d().length > 0.0001:
-                    heading_target = atan2(vec_to_target.y, vec_to_target.x)
-                else:
-                    heading_target = self.initial_rotation_euler.z
-            self._apply_entity_heading(heading_target)
-        elif self.selected_obj_type == 'entity':
-            if heading_lane is not None:
-                self._apply_entity_heading(heading_lane)
+        # In move mode, just as in placement, the 3D cursor marks the current
+        # pointer target. The entity origin follows that target in normal mode.
+        context.scene.cursor.location = target_point.copy()
+
+        target_location = _move_entity_origin(
+            self.initial_location, self.anchor_point, target_point)
+        target_heading = helpers.get_object_world_position_heading(
+            self.selected_obj)[1]
+        if heading_lane is not None:
+            target_heading = heading_lane
+
+        connection_snap = None
+        if self.selected_obj_type == 'entity':
+            subtype = self.selected_obj.get('entity_subtype')
+            if subtype in ENTITY_CONNECTION_POINTS:
+                connection_snap = get_connection_snap(
+                    context, target_location, target_heading, normal, subtype,
+                    moving_obj=self.selected_obj)
+        if connection_snap is not None:
+            target_obj, target_anchor = connection_snap
+            target_normal = (target_obj.matrix_world.to_3x3()
+                             @ Vector((0.0, 0.0, 1.0))).normalized()
+            local_anchor = ENTITY_CONNECTION_POINTS[
+                self.selected_obj['entity_subtype']]
+            anchor_offset = Vector((local_anchor['x'], 0.0,
+                                    local_anchor['z']))
+            normal_rotation = Vector((0.0, 0.0, 1.0)).rotation_difference(
+                target_normal).to_matrix().to_4x4()
+            anchor_offset = (normal_rotation
+                             @ Matrix.Rotation(target_heading, 4, 'Z')
+                             @ anchor_offset.to_4d()).to_3d()
+            target_location = target_anchor - anchor_offset
+            normal = target_normal
+            self.pending_connection_target = target_obj
+            self.pending_connection_anchor = target_anchor.copy()
+        else:
+            self.pending_connection_target = None
+            self.pending_connection_anchor = None
+
+        if self.selected_obj_type == 'entity':
+            self._set_entity_transform(target_location, target_heading, normal)
+        else:
+            self.selected_obj.location = target_location
 
         if self.selected_obj_type == 'entity':
             helpers.clear_legacy_entity_transform_properties(self.selected_obj)
+        self.transform_changed = True
+
+    def _start_trailer_rotation(self, context, event):
+        self.rotation_pivot = self.pending_connection_anchor.copy()
+        self.rotation_start_heading = helpers.get_object_world_position_heading(
+            self.selected_obj)[1]
+        self.rotation_normal = (self.pending_connection_target.matrix_world
+                                .to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+        self.rotation_reference_origin = \
+            self.selected_obj.matrix_world.translation.copy()
+        self.rotation_road_solution_key = None
+        self.rotation_road_solution = None
+        pointer = helpers.mouse_to_xy_parallel_plane(
+            context, event, self.rotation_pivot.z)
+        direction = pointer - self.rotation_pivot
+        self.rotation_start_pointer_angle = (
+            atan2(direction.y, direction.x)
+            if direction.to_2d().length > 0.0001 else None)
+        context.scene.cursor.location = self.rotation_reference_origin.copy()
+        context.workspace.status_text_set(
+            'MOUSEMOVE: rotate trailer around coupler, '
+            'hold SHIFT: free rotation, hold ALT: free rotation in 15° steps, '
+            'LEFTMOUSE: confirm, RIGHTMOUSE/ESCAPE: cancel move'
+        )
+        self.state = 'ROTATE_TRAILER'
+
+    def _update_trailer_rotation(self, context, event):
+        if _trailer_rotation_uses_lane_snap(event):
+            params_snap = helpers.mouse_to_road_surface_params(
+                context, event, (self.selected_obj,))
+            if params_snap['hit_type'] == 'road_surface':
+                road_obj = bpy.data.objects.get(params_snap['id_obj'])
+                lane_info = (_trailer_road_lane(road_obj, params_snap['point'])
+                             if road_obj is not None else None)
+                if lane_info is None:
+                    return
+                geometry, side, lane_index = lane_info
+                solution_key = (road_obj.name, side, lane_index)
+                if solution_key != self.rotation_road_solution_key:
+                    intersections = _trailer_road_circle_intersections(
+                        road_obj, geometry, side, lane_index,
+                        self.rotation_pivot,
+                        abs(ENTITY_CONNECTION_POINTS['semiTrailer']['x']))
+                    solution = _choose_trailer_road_solution(
+                        intersections, self.rotation_pivot,
+                        self.rotation_reference_origin)
+                    if solution is None:
+                        return
+                    self.rotation_road_solution_key = solution_key
+                    self.rotation_road_solution = solution
+                origin, heading = self.rotation_road_solution
+                self._set_entity_transform(
+                    origin, heading, self.rotation_normal)
+                context.scene.cursor.location = origin.copy()
+                self.transform_changed = True
+                return
+
+        pointer = helpers.mouse_to_xy_parallel_plane(
+            context, event, self.rotation_pivot.z)
+        direction = pointer - self.rotation_pivot
+        if direction.to_2d().length <= 0.0001:
+            return
+        pointer_angle = atan2(direction.y, direction.x)
+        if self.rotation_start_pointer_angle is None:
+            self.rotation_start_pointer_angle = pointer_angle
+            return
+        heading = _heading_after_pointer_rotation(
+            self.rotation_start_heading,
+            self.rotation_start_pointer_angle, pointer_angle)
+        if event.alt:
+            heading = (self.rotation_start_heading
+                       + _quantize_rotation_delta(
+                           heading - self.rotation_start_heading))
+        origin = get_entity_position_from_connection_anchor(
+            self.rotation_pivot, heading, self.rotation_normal, 'semiTrailer')
+        self._set_entity_transform(origin, heading, self.rotation_normal)
+        context.scene.cursor.location = origin.copy()
+        self.transform_changed = True
+
+    def _commit_connection(self):
+        if (self.selected_obj_type != 'entity'
+                or not getattr(self, 'transform_changed', False)):
+            return
+        clear_entity_connection(self.selected_obj)
+        if self.pending_connection_target is not None:
+            record_entity_connection(
+                self.selected_obj, self.pending_connection_target)
 
     def _start_move(self, context, event):
         self.selected_obj = self.hovered_obj
@@ -120,22 +329,26 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
         self.initial_location = self.selected_obj.location.copy()
         self.initial_rotation_euler = self.selected_obj.rotation_euler.copy()
         self.initial_matrix = self.selected_obj.matrix_world.copy()
+        self.pending_connection_target = None
+        self.pending_connection_anchor = None
+        self.transform_changed = False
 
-        point, normal, road_obj = self._raycast_to_road_surface(context, event)
-        del normal, road_obj
-        if point is None:
-            self.anchor_point = self.initial_location.copy()
-        else:
-            self.anchor_point = point.copy()
+        # Match the placement operator's origin-at-pointer behavior: the
+        # selected entity starts at the cursor, then its root follows the
+        # cursor directly rather than preserving an arbitrary body click offset.
+        self.anchor_point = self.initial_location.copy()
+        self.selected_elevation = self.initial_location.z
+        _set_cursor_to_object_origin(context, self.selected_obj)
         self.state = 'MOVE'
         helpers.select_activate_object(context, self.selected_obj)
 
     def modal(self, context, event):
         if self.state == 'INIT':
             context.workspace.status_text_set(
-                'LEFTMOUSE: select entity or trajectory and place repeatedly, lane center and orientation snap, '
+                'LEFTMOUSE: select entity or trajectory and move repeatedly, '
+                'lane center/orientation and hitch-coupler snap, '
                 'hold SHIFT: disable lane snapping, '
-                'hold ALT: heading-only mode, '
+                'hold ALT: heading-only mode / trailer 15° rotation steps, '
                 'RIGHTMOUSE: cancel current move / exit from selection, ESC: exit, '
                 'ALT+MIDDLEMOUSE: move view center'
             )
@@ -150,6 +363,8 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
                 self.hovered_obj = self._raycast_to_movable_target(context, event)
             elif self.state == 'MOVE':
                 self._update_transform(context, event)
+            elif self.state == 'ROTATE_TRAILER':
+                self._update_trailer_rotation(context, event)
 
         elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             if self.state == 'SELECT_TARGET':
@@ -159,7 +374,23 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
                 self._start_move(context, event)
                 return {'RUNNING_MODAL'}
             if self.state == 'MOVE':
+                if _should_rotate_connected_trailer(
+                    self.selected_obj_type, self.selected_obj,
+                    self.pending_connection_target):
+                    self._start_trailer_rotation(context, event)
+                    return {'RUNNING_MODAL'}
+
+                self._commit_connection()
+                self.selected_obj = None
+                self.selected_obj_type = None
+                self.initial_rotation_euler = None
+                self.initial_matrix = None
+                bpy.ops.object.select_all(action='DESELECT')
+                self.state = 'SELECT_TARGET'
+                return {'RUNNING_MODAL'}
+            if self.state == 'ROTATE_TRAILER':
                 # Keep operator active for multi-step placement.
+                self._commit_connection()
                 self.selected_obj = None
                 self.selected_obj_type = None
                 self.initial_rotation_euler = None
@@ -169,12 +400,16 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
                 return {'RUNNING_MODAL'}
 
         elif event.type == 'RIGHTMOUSE' and event.value == 'RELEASE':
-            if self.state == 'MOVE' and self.selected_obj is not None and self.initial_matrix is not None:
+            if (self.state in {'MOVE', 'ROTATE_TRAILER'}
+                    and self.selected_obj is not None
+                    and self.initial_matrix is not None):
                 self.selected_obj.matrix_world = self.initial_matrix.copy()
                 self.selected_obj = None
                 self.selected_obj_type = None
                 self.initial_rotation_euler = None
                 self.initial_matrix = None
+                self.pending_connection_target = None
+                self.pending_connection_anchor = None
                 bpy.ops.object.select_all(action='DESELECT')
                 self.state = 'SELECT_TARGET'
                 return {'RUNNING_MODAL'}
@@ -182,7 +417,9 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
             return {'FINISHED'}
 
         elif event.type == 'ESC':
-            if self.state == 'MOVE' and self.selected_obj is not None and self.initial_matrix is not None:
+            if (self.state in {'MOVE', 'ROTATE_TRAILER'}
+                    and self.selected_obj is not None
+                    and self.initial_matrix is not None):
                 self.selected_obj.matrix_world = self.initial_matrix.copy()
             self.clean_up(context)
             return {'FINISHED'}
@@ -205,6 +442,8 @@ class DSC_OT_scenario_entity_move(bpy.types.Operator):
         self.selected_obj_type = None
         self.initial_rotation_euler = None
         self.initial_matrix = None
+        self.pending_connection_target = None
+        self.pending_connection_anchor = None
         bpy.ops.object.select_all(action='DESELECT')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
